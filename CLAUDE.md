@@ -1,0 +1,111 @@
+# ballot.ai — instructions for AI assistants
+
+This file auto-loads in every Claude Code session in this repo. **Read it fully before doing any work.**
+
+For deeper context (decisions, history, open questions): `~/.claude/projects/<this-folder>/memory/project_ballot_ai.md` and the last 10–15 git commits (`git log --oneline -15`) — both have rich notes.
+
+---
+
+## What this is
+A live, source-grounded voter guide. Given a ZIP and an election, it shows every race + candidate on the voter's ballot, profiled in depth, with live news feeds. Goal: nationally scalable, fully data-driven.
+
+## Stack
+Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabase Postgres (with RLS + Realtime) · Vercel · IBM Plex serif/sans/mono. Brand is **`ballot.ai`** (lowercase `b`).
+
+---
+
+## Hard rules — do NOT violate
+
+### Brand & copy
+- The product name is **`ballot.ai`** (lowercase `b`). Not "Ballot.ai", not "Ballotwise", not "Voterly".
+- Slogan: **"a guide to your ballot"**. Not "your live sample ballot".
+- Tab titles: landing = `ballot.ai • your voting guide`; ballot = `ballot.ai • your voting guide for [ZIP]`.
+
+### Color discipline (this is load-bearing)
+- **Yellow accent** (`--color-accent`, golden ~`oklch(80% 0.155 82)`): ONLY for `<mark>` highlights and small UI accents (icons in section eyebrows, hover states, the polling rail). NEVER as a tinted background on cards/tables/profiles.
+- **Red and blue**: reserved EXCLUSIVELY for Republican / Democratic party encoding. Never use them for status, errors, links, or anything else.
+- **Trend-down** uses `--color-trend-down` (a muted red, distinct from rep red).
+- **Backgrounds**: chroma is pulled to ~0.003 so cards/tables/profiles read as honest gray, not yellow-tinted. If you reach for a yellow-tinted bg, that's wrong.
+- **Supplementary tints** (orange / green / teal / purple / pink): allowed for data encoding (key-section pillars, endorsement categories) but never as primary surface bg.
+
+### Highlights (`<mark>`)
+- Solid-fill bar (no gradient) with rounded corners. Already styled in `globals.css`.
+- Auto-highlight algorithm in `src/components/Highlight.tsx` runs at render. Manual `<mark>` tags pass through. Don't disable it without a reason.
+- For Phase 4 synthesis: the LLM prompt should wrap 2–3 load-bearing phrases per text field in `<mark>`.
+
+### Sticky behavior pattern
+- Sticky elements use **`top-4`** (16px from viewport top) for breathing room.
+- Each sticky element MUST include a `::before` gap shield: `before:content-[''] before:absolute before:inset-x-[-1px] before:top-[-16px] before:h-4 before:bg-[var(--color-ink-0)] before:z-[-1]`. Without this, content peeks through the 16px gap.
+- Comparison table toolbar: `sticky top-4 z-40 bg-[var(--color-ink-0)]` (opaque, page-bg).
+- Profile headers: each candidate `<button>` is `sticky top-4 z-30 bg-[var(--color-ink-1)] rounded-t-xl`.
+
+### Section headings (3 places must match)
+"In the news" / "Side-by-side" / "Candidate profiles" all use the SAME shape: `font-mono-cap text-[11px] text-paper + lucide icon size=12 className="text-accent" + tracking-[0.16em]`. Don't drift one of them.
+
+### Sidebar
+- Brand renders as `ballot` + `<span className="text-paper-3">.ai</span>`. Lowercase, the dot+ai is gray.
+- Race nav dropdowns expand on EITHER hover OR scroll-spy active. Don't change to one or the other.
+- "Top" button is always visible — disabled (muted gray) when at top, enabled when scrolled.
+- "Change" button is a `<Link href="/">` (back to landing).
+
+### Other rules
+- DB column was renamed `current_role` → `current_position` (Postgres reserved word). TS still uses `currentRole`; the mapper in `src/lib/db/getBallot.ts` translates.
+- The Update button is **Realtime-driven**: disabled until a row changes in `candidates`/`races`/`endorsements`/`polls`. Don't make it always-clickable.
+- News updates push via Supabase Realtime separately — don't use the Update button for news.
+- Suspended candidates render with a red status pill, NOT yellow/orange.
+
+---
+
+## Behavioral expectations
+
+1. **Verify in browser before claiming done.** A preview server is running. Use the Claude_Preview MCP (`preview_eval`, `preview_screenshot`, `preview_inspect`) for any visible change.
+2. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
+3. **Check the memory file + recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
+4. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
+5. **Ask before changing the design system.** If a request implies "use a different color" or "change the spacing rhythm", confirm before doing it.
+
+---
+
+## Where things live
+
+```
+src/
+├── app/
+│   ├── page.tsx                       Landing (ZIP picker)
+│   ├── ballot/[zip]/[electionId]/page.tsx   Ballot view
+│   ├── api/zip/[zip]/route.ts         ZIP → jurisdiction lookup
+│   ├── layout.tsx                     Root metadata, fonts
+│   └── globals.css                    Design tokens, mark styles, animations
+├── components/                        UI components (one per concern)
+├── data/                              Seed-data TS files (governor, scaffolds, county) — being phased out as Supabase fills in
+└── lib/
+    ├── db/                            Server-side fetchers (getBallot, getElection, getJurisdiction, resolveZip)
+    └── supabase/                      Typed clients (server/browser/admin) + DB types
+supabase/
+└── migrations/                        SQL migrations
+scripts/
+└── seed.ts                            Seeds Supabase from TS data files (`npm run seed`)
+```
+
+---
+
+## Local dev
+- `npm run dev` (port 3000)
+- Or use `preview_start` via the Claude_Preview MCP — config in `.claude/launch.json`
+- `npm run seed` to (re)populate Supabase from the TS data files
+- `npm run build` to typecheck + production build
+- Env vars in `.env.local` (gitignored). `.env.example` lists all required vars.
+
+## Deployment
+- Vercel auto-deploys from `main` to `ballot-ai.vercel.app`
+- Environment variables set in the Vercel dashboard
+
+## Status
+Current phase status and the `[NEXT]` queue are in the memory file (`project_ballot_ai.md`). Phases 1 + 2 are done; Phases 3 (data ingestion), 4 (AI synthesis), and 5 (mobile responsive) are open. **There's an unresolved product question on candidate-coverage rules** — see memory.
+
+---
+
+## When in doubt
+1. `git log --oneline -15` — recent commits with detailed messages
+2. Memory file — decisions, rationale, open questions
+3. **Ask the user before doing anything structural.** Better to confirm than to undo.
