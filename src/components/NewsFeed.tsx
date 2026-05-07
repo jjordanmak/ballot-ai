@@ -188,33 +188,36 @@ export function NewsFeed({
 
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-6 py-7">
-          <div className="text-[13px] text-[var(--color-paper-2)]">
+          <div className="font-mono text-[13px] font-bold text-[var(--color-paper-2)]">
             No recent news in our feed yet.
           </div>
-          <div className="text-[12px] text-[var(--color-paper-2)] mt-1">
+          <div className="font-mono text-[12px] text-[var(--color-paper-2)] mt-1">
             Live coverage rolls in here as it&rsquo;s published.
           </div>
         </div>
       ) : (
         <div className="relative">
+          {/* Edge fades — match the timeline's softer treatment. Bands
+              are narrower (w-12) and the gradient stops earlier (80%) so
+              the transition reads as a hint rather than a hard wash. */}
           <div
             aria-hidden
-            className={`pointer-events-none absolute left-0 top-0 bottom-1 w-16 z-10 transition-opacity duration-300 ${
+            className={`pointer-events-none absolute left-0 top-0 bottom-1 w-12 z-10 transition-opacity duration-300 ${
               canLeft ? "opacity-100" : "opacity-0"
             }`}
             style={{
               background:
-                "linear-gradient(to right, var(--color-ink-0) 0%, transparent 100%)",
+                "linear-gradient(to right, var(--color-ink-0) 0%, transparent 80%)",
             }}
           />
           <div
             aria-hidden
-            className={`pointer-events-none absolute right-0 top-0 bottom-1 w-16 z-10 transition-opacity duration-300 ${
+            className={`pointer-events-none absolute right-0 top-0 bottom-1 w-12 z-10 transition-opacity duration-300 ${
               canRight ? "opacity-100" : "opacity-0"
             }`}
             style={{
               background:
-                "linear-gradient(to left, var(--color-ink-0) 0%, transparent 100%)",
+                "linear-gradient(to left, var(--color-ink-0) 0%, transparent 80%)",
             }}
           />
           <div ref={scrollRef} className="overflow-x-auto scrollbar-hide">

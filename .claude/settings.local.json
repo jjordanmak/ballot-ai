@@ -32,7 +32,8 @@
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 1: Supabase data layer *)",
       "Bash(mkdir -p /Users/jordanmak/Claude_Projects/voter-guide/src/app/ballot/\\\\[zip\\\\]/\\\\[electionId\\\\] && \\\\ *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 2: Landing page + ZIP-driven ballot routing *)",
-      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: slogan refresh, neutral grays, solid highlights, smarter UpdateBar *)"
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: slogan refresh, neutral grays, solid highlights, smarter UpdateBar *)",
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: subhead rewrite, microcopy placement, gradient softening *)"
     ]
   }
 }

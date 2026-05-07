@@ -11,7 +11,7 @@ export function SuspendedList({ candidates }: { candidates: Candidate[] }) {
   if (candidates.length === 0) return null;
 
   return (
-    <div className="md:col-span-12 mt-4 rounded-lg bg-[oklch(70%_0.14_25_/_0.07)] border border-[oklch(70%_0.14_25_/_0.30)] p-6">
+    <div className="md:col-span-12 mt-4 rounded-lg bg-[oklch(70%_0.14_25_/_0.07)] border border-[oklch(70%_0.14_25_/_0.30)] p-6 no-highlights">
       <div className="font-mono-cap text-[11px] text-[var(--color-trend-down)] mb-5 tracking-[0.16em] flex items-center gap-2">
         <AlertOctagon size={12} />
         Suspended Campaigns · {candidates.length}

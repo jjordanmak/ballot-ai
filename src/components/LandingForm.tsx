@@ -78,7 +78,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
       </h1>
 
       <p className="mt-6 max-w-xl text-center text-[16px] sm:text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">
-        <mark>Every race. Every candidate.</mark> Compared side by side, profiled in depth, and continuously updated from verified public sources.
+        <mark>Every race, every candidate</mark> on your ballot. Compared side by side, profiled in depth, and continuously updated from verified public sources.
       </p>
 
       {/* The form */}
@@ -156,7 +156,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
           disabled={!validZip || pending}
           className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
         >
-          {pending ? "Loading your ballot…" : "Get started"}
+          {pending ? "Loading your ballot…" : "Get Started"}
           {!pending && <ArrowRight size={14} />}
         </button>
 

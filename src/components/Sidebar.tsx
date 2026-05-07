@@ -88,7 +88,16 @@ export function Sidebar({
         <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mt-1.5 leading-relaxed tracking-[0.14em]">
           {electionName}
           <br />
-          <span className="text-[var(--color-paper-4)]">{electionDate}</span>
+          {/* Date sits between paper-3 (election name) and paper-4 — lighter
+              than before, still recessed from the election name above. */}
+          <span
+            style={{
+              color:
+                "color-mix(in oklch, var(--color-paper-3) 60%, var(--color-paper-4))",
+            }}
+          >
+            {electionDate}
+          </span>
         </div>
 
         {/* Quick actions: Top + Change location. Top is ALWAYS visible —

@@ -117,17 +117,13 @@ export function ComparisonTable({ race }: Props) {
       <div className="sticky top-0 z-40 glass-tier border border-[var(--color-ink-3)] rounded-t-lg">
         {/* Toolbar */}
         <div className="px-5 pt-5 pb-4">
-          <div className="flex items-center justify-between gap-4 mb-3.5">
-            <div>
-              <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mb-0.5">
-                Side-by-side
-              </div>
-              <h3 className="font-display text-[24px] leading-tight">Compare candidates</h3>
-            </div>
-            <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hidden md:block whitespace-nowrap">
-              Drag to reorder · Click to toggle
-            </div>
+          {/* Eyebrow now matches the candidate-profile section style:
+              [horizontal-line accent] [LABEL] */}
+          <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mb-1 flex items-center gap-2 tracking-[0.16em]">
+            <span className="w-3 h-px bg-[var(--color-accent)]" />
+            Side-by-side
           </div>
+          <h3 className="font-display text-[24px] leading-tight mb-3.5">Compare candidates</h3>
 
           <DndContext
             id={`compare-${race.id}`}
@@ -152,6 +148,12 @@ export function ComparisonTable({ race }: Props) {
               </div>
             </SortableContext>
           </DndContext>
+
+          {/* Microcopy moved BELOW the chips so it reads as instructions
+              for the row above, not as a header element. */}
+          <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-3)] hidden md:block tracking-[0.16em]">
+            Drag to reorder · Click to toggle
+          </div>
         </div>
 
         {/* Column-header strip — overflow:hidden so the header doesn't extend

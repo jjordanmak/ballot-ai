@@ -130,7 +130,7 @@ function Cover({
       </h2>
 
       <p className="mt-8 max-w-2xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
-        <mark>Every race. Every candidate.</mark> Compared side by side, profiled in depth, and continuously updated from verified public sources.
+        <mark>Every race, every candidate</mark> on your ballot. Compared side by side, profiled in depth, and continuously updated from verified public sources.
       </p>
 
       <div className="mt-12 flex flex-wrap items-end gap-x-10 gap-y-6">
