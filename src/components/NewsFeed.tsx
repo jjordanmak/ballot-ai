@@ -87,6 +87,17 @@ function formatNewsDate(input: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Build a CSS mask-image for the carousel based on which edges are
+ * scrollable. Fades the content (cards) at the edge instead of overlaying
+ * a colored gradient — works against any background and never produces
+ * a hard seam. */
+function buildMask(canLeft: boolean, canRight: boolean): string {
+  if (!canLeft && !canRight) return "none";
+  const left = canLeft ? "transparent 0, black 4%" : "black 0";
+  const right = canRight ? "black 96%, transparent 100%" : "black 100%";
+  return `linear-gradient(to right, ${left}, ${right})`;
+}
+
 function formatCount(n?: number): string | null {
   if (n == null) return null;
   if (n < 1000) return String(n);
@@ -197,30 +208,19 @@ export function NewsFeed({
         </div>
       ) : (
         <div className="relative">
-          {/* Edge fades — match the timeline's softer treatment. Bands
-              are narrower (w-12) and the gradient stops earlier (80%) so
-              the transition reads as a hint rather than a hard wash. */}
+          {/* CSS mask-image fades the carousel content itself at the edges.
+              No overlay div / no color-matching → no harsh seam where the
+              fade stops. Mask sides toggle with scroll affordance: only
+              fade where there's actually scrollable content beyond. */}
           <div
-            aria-hidden
-            className={`pointer-events-none absolute left-0 top-0 bottom-1 w-12 z-10 transition-opacity duration-300 ${
-              canLeft ? "opacity-100" : "opacity-0"
-            }`}
+            ref={scrollRef}
+            className="overflow-x-auto scrollbar-hide"
             style={{
-              background:
-                "linear-gradient(to right, var(--color-ink-0) 0%, transparent 80%)",
+              WebkitMaskImage: buildMask(canLeft, canRight),
+              maskImage: buildMask(canLeft, canRight),
+              transition: "mask-image 200ms, -webkit-mask-image 200ms",
             }}
-          />
-          <div
-            aria-hidden
-            className={`pointer-events-none absolute right-0 top-0 bottom-1 w-12 z-10 transition-opacity duration-300 ${
-              canRight ? "opacity-100" : "opacity-0"
-            }`}
-            style={{
-              background:
-                "linear-gradient(to left, var(--color-ink-0) 0%, transparent 80%)",
-            }}
-          />
-          <div ref={scrollRef} className="overflow-x-auto scrollbar-hide">
+          >
             <div className="flex items-stretch gap-4 min-w-min py-1">
               {sorted.map((item) => (
                 <NewsCard key={item.id} item={item} fallbackAvatar={fallbackAvatar} />

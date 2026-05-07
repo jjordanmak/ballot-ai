@@ -18,7 +18,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDownToLine, GripHorizontal } from "lucide-react";
+import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff } from "lucide-react";
 import type { Race, Candidate } from "@/data/types";
 import { partyClass, partyDot, partyBorder, partyLabel, StatusPill } from "./PartyTag";
 import { RichText } from "./Highlight";
@@ -100,31 +100,48 @@ export function ComparisonTable({ race }: Props) {
     });
   };
 
+  const showAllToggles = () => setVisible(new Set(allCandidates.map((c) => c.id)));
+  const hideAllToggles = () => setVisible(new Set());
+
   if (allCandidates.length < 2) return null;
 
   const tableMinWidth = visibleOrdered.length * 300 + 180;
 
   return (
     <section className="mt-16">
-      {/* STICKY GROUP: toolbar + column-header strip move together as one block.
-          Architecture: we render the column headers as a SEPARATE table from
-          the body. The header table lives inside an overflow-hidden div whose
-          scrollLeft is JS-synced from the body's horizontal scroll. The body
-          gets its OWN overflow-x-auto, contained within its parent. This is
-          the only way to combine "sticky thead during page scroll" with
-          "horizontal scroll inside the table container" — CSS alone doesn't
-          permit both via a single overflow ancestor. */}
-      <div className="sticky top-0 z-40 glass-tier border border-[var(--color-ink-3)] rounded-t-lg">
-        {/* Toolbar */}
-        <div className="px-5 pt-5 pb-4">
-          {/* Eyebrow now matches the candidate-profile section style:
-              [horizontal-line accent] [LABEL] */}
-          <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mb-1 flex items-center gap-2 tracking-[0.16em]">
-            <span className="w-3 h-px bg-[var(--color-accent)]" />
-            Side-by-side
-          </div>
-          <h3 className="font-display text-[24px] leading-tight mb-3.5">Compare candidates</h3>
+      {/* Eyebrow + heading live OUTSIDE the sticky toolbar so they read as
+          a normal section header (matching Candidate Profiles + In the News).
+          Show all / Hide all sit on the right of the heading row. */}
+      <div className="font-mono-cap text-[11px] text-[var(--color-paper)] mb-4 flex items-center gap-2 tracking-[0.16em]">
+        <Columns3 size={12} className="text-[var(--color-accent)]" />
+        Side-by-side
+      </div>
 
+      <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+        <h3 className="font-display text-[28px] leading-tight">Compare candidates</h3>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={showAllToggles}
+            className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors"
+          >
+            <Eye size={11} />
+            Show all
+          </button>
+          <button
+            onClick={hideAllToggles}
+            className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors"
+          >
+            <EyeOff size={11} />
+            Hide all
+          </button>
+        </div>
+      </div>
+
+      {/* STICKY GROUP: toolbar (chips only) + column-header strip move together
+          as one block. The eyebrow is OUTSIDE this group so it doesn't pin. */}
+      <div className="sticky top-0 z-40 glass-tier border border-[var(--color-ink-3)] rounded-t-lg">
+        {/* Toolbar — chips only */}
+        <div className="px-5 pt-5 pb-4">
           <DndContext
             id={`compare-${race.id}`}
             sensors={sensors}

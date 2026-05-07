@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, Users } from "lucide-react";
 import type { Candidate } from "@/data/types";
 import { CandidateProfile } from "./CandidateProfile";
 
@@ -35,8 +35,9 @@ export function CandidatesHeader({
 
   return (
     <section className="mt-20">
+      {/* Section eyebrow — same shape as 'In the news' / 'Side-by-side' */}
       <div className="font-mono-cap text-[11px] text-[var(--color-paper)] mb-4 flex items-center gap-2 tracking-[0.16em]">
-        <span className="w-3 h-px bg-[var(--color-accent)]" />
+        <Users size={12} className="text-[var(--color-accent)]" />
         Candidate profiles
       </div>
 
