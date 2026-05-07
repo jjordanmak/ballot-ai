@@ -87,12 +87,15 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
           : "border-[var(--color-ink-3)] bg-[var(--color-ink-1)]"
       }`}
     >
-      {/* HEADER (always visible, click to toggle).
+      {/* HEADER — sticky at top-4 with opaque bg so the body content
+          visually disappears behind it on scroll. The header stays sticky
+          only within its parent <article>, so once the article scrolls past
+          the viewport the header naturally detaches.
           Layout: [Headshot] [Name + pills + role] [Chevron] */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group"
+        className="sticky top-4 z-30 w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
       >
         {/* Headshot, left of identity */}
         <Headshot

@@ -68,8 +68,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
       {/* Brand */}
-      <div className="font-mono-cap text-[11px] text-[var(--color-paper-3)] mb-4 tracking-[0.18em] flex items-center gap-2">
-        <span className="w-3 h-px bg-[var(--color-accent)]" />
+      <div className="font-mono-cap text-[11px] text-[var(--color-paper-3)] mb-4 tracking-[0.18em]">
         A guide to your ballot
       </div>
 

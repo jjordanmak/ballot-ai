@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronRight, ArrowUp, MapPin } from "lucide-react";
 import { partyDot } from "./PartyTag";
@@ -24,6 +25,10 @@ export function Sidebar({
   electionDate = "Jun 2, 2026",
 }: SidebarProps) {
   const [activeRaceId, setActiveRaceId] = useState<string>(races[0]?.id ?? "");
+  // Hover-driven expansion: which race the cursor is over. Distinct from
+  // active (scroll-spy) so the active highlight stays put as the user
+  // scrolls but the dropdown only opens when the cursor is on the row.
+  const [hoveredRaceId, setHoveredRaceId] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Scroll-spy: track which race section is currently in view
@@ -116,17 +121,16 @@ export function Sidebar({
             <ArrowUp size={10} />
             Top
           </button>
-          <button
-            onClick={() => {
-              // Wired to the future ZIP picker — for now, a no-op placeholder.
-              window.alert("Change location coming soon — landing page in progress.");
-            }}
+          {/* Change → back to the landing page so the user can re-pick
+              ZIP + election. The landing page lives at /. */}
+          <Link
+            href="/"
             className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)] px-2.5 py-1 transition-all font-mono-cap text-[9px] tracking-[0.18em]"
-            aria-label="Change location"
+            aria-label="Change location or election"
           >
             <MapPin size={10} />
             Change
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -138,8 +142,12 @@ export function Sidebar({
               key={race.id}
               race={race}
               index={i + 1}
-              expanded={activeRaceId === race.id}
+              expanded={hoveredRaceId === race.id}
               active={activeRaceId === race.id}
+              onMouseEnter={() => setHoveredRaceId(race.id)}
+              onMouseLeave={() =>
+                setHoveredRaceId((prev) => (prev === race.id ? null : prev))
+              }
             />
           ))}
         </ol>
@@ -158,18 +166,22 @@ function RaceNavItem({
   index,
   expanded,
   active,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   race: Race;
   index: number;
   expanded: boolean;
   active: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   const activeCount = race.candidates.filter(
     (c) => !c.withdrawn && !c.campaignSuspended
   ).length;
 
   return (
-    <li>
+    <li onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <a
         href={`#race-${race.id}`}
         className={`group flex items-start gap-2.5 rounded-md px-3 py-2.5 transition-colors ${

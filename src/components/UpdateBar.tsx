@@ -2,24 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { RefreshCw, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 /**
- * Live-updated timestamp + refresh control. The pair lives together in one
- * client component so they can share `lastUpdate` state.
+ * Live-updated timestamp + refresh control.
  *
- * v1: timestamp = page mount time, refresh button simulates a 1.5s fetch
- *     and bumps the timestamp to "now" on success. The eventual real-time
- *     impl will hit /api/refresh-ballot, which queries our race-data CDN
- *     for new entries (news, polls, endorsements, debate moments) since
- *     last-fetch and revalidates the page.
+ * Behavior:
+ *  - Timestamp ticks every second, always shows "ago" suffix from 0s.
+ *  - The button is DISABLED ("Up to date") until a Realtime subscription
+ *    detects a change in the underlying content tables (candidates,
+ *    races, endorsements, polls). News updates push to the carousel
+ *    independently and don't enable the button — they're already live.
+ *  - When a change arrives the button switches to "Update available";
+ *    clicking it calls router.refresh() which busts the page's RSC cache
+ *    and re-fetches from the DB.
+ *  - 60s rate-limit cooldown after a click (prevents button-mashing
+ *    even though clicks are cheap — 1 cache miss + 1 DB read each).
  */
 export function UpdateBar() {
+  const router = useRouter();
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [now, setNow] = useState<Date | null>(null);
+  const [hasUpdates, setHasUpdates] = useState(false);
   const [state, setState] = useState<"idle" | "fetching" | "done">("idle");
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
 
-  // Mount time initializes both timestamps. `now` ticks every second so the
-  // "Last updated" line shows down-to-the-second precision.
+  // Mount time initializes both timestamps. `now` ticks every second so
+  // the "Last updated" line shows down-to-the-second precision.
   useEffect(() => {
     const t = new Date();
     setLastUpdate(t);
@@ -28,18 +38,58 @@ export function UpdateBar() {
     return () => clearInterval(interval);
   }, []);
 
+  // Subscribe to Realtime changes on the content tables. Any insert /
+  // update / delete on candidates / races / endorsements / polls flips
+  // hasUpdates to true. We deliberately skip news_items — that table
+  // updates the news carousel directly via its own subscription.
+  useEffect(() => {
+    const sb = getSupabaseBrowser();
+    const channel = sb
+      .channel("ballot-content-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "candidates" }, () => setHasUpdates(true))
+      .on("postgres_changes", { event: "*", schema: "public", table: "races" }, () => setHasUpdates(true))
+      .on("postgres_changes", { event: "*", schema: "public", table: "endorsements" }, () => setHasUpdates(true))
+      .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => setHasUpdates(true))
+      .subscribe();
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, []);
+
+  const inCooldown = now != null && now.getTime() < cooldownUntil;
+
   const onRefresh = async () => {
-    if (state !== "idle") return;
+    if (state !== "idle" || !hasUpdates || inCooldown) return;
     setState("fetching");
-    // TODO(v2): replace with real fetch to /api/refresh-ballot
-    await new Promise((r) => setTimeout(r, 1500));
+    // router.refresh() busts the React Server Component cache for the
+    // current page; the next request hits the DB for fresh data.
+    router.refresh();
+    // Brief delay so the spinner has time to be visible.
+    await new Promise((r) => setTimeout(r, 800));
     setLastUpdate(new Date());
+    setHasUpdates(false);
     setState("done");
-    // Stay in the "Up to date" state for 5 seconds after a successful update.
+    setCooldownUntil(Date.now() + 60_000); // 60s rate limit
     setTimeout(() => setState("idle"), 5000);
   };
 
   const formatted = formatLastUpdate(lastUpdate, now);
+
+  // ── UI states ──
+  // idle + !hasUpdates  → disabled "Up to date" (default)
+  // idle +  hasUpdates  → enabled "Update available"
+  // fetching             → spinner "Updating"
+  // done                 → "Up to date" for 5s
+  const disabled =
+    state === "fetching" || state === "done" || (!hasUpdates && state === "idle") || inCooldown;
+  const label =
+    state === "fetching"
+      ? "Updating"
+      : state === "done"
+      ? "Up to date"
+      : hasUpdates
+      ? "Update available"
+      : "Up to date";
 
   return (
     <div className="flex items-end gap-3">
@@ -53,32 +103,31 @@ export function UpdateBar() {
       </div>
       <button
         onClick={onRefresh}
-        disabled={state !== "idle"}
+        disabled={disabled}
         className={`group inline-flex items-center gap-1.5 rounded-full border transition-all px-2 py-0.5 mb-[1px] ${
-          state === "done"
-            ? "border-[var(--color-tint-green)] text-[var(--color-tint-green)] bg-[var(--color-tint-green-soft)]"
-            : state === "fetching"
+          state === "fetching"
             ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-ink-2)] cursor-wait"
-            : "border-[var(--color-ink-3)] text-[var(--color-paper-2)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] hover:bg-[var(--color-ink-2)]"
+            : hasUpdates && state === "idle" && !inCooldown
+            ? "border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-mute)]"
+            : // Disabled states share an appearance — muted gray, not interactive
+              "border-[var(--color-ink-3)] text-[var(--color-paper-4)] cursor-default"
         }`}
-        aria-label="Update voter guide data"
-        title="Pull the latest news, polls, and endorsements"
+        aria-label={label}
+        title={
+          hasUpdates && !inCooldown
+            ? "New content is available — click to refresh"
+            : "No updates since last refresh"
+        }
       >
-        {state === "done" ? (
+        {state === "done" || (!hasUpdates && state === "idle") ? (
           <Check size={10} />
         ) : (
           <RefreshCw
             size={10}
-            className={
-              state === "fetching"
-                ? "animate-spin"
-                : "group-hover:rotate-180 transition-transform duration-700"
-            }
+            className={state === "fetching" ? "animate-spin" : ""}
           />
         )}
-        <span className="font-mono-cap text-[9px] tracking-[0.18em]">
-          {state === "done" ? "Up to date" : state === "fetching" ? "Updating" : "Update"}
-        </span>
+        <span className="font-mono-cap text-[9px] tracking-[0.18em]">{label}</span>
       </button>
     </div>
   );
@@ -97,8 +146,6 @@ function formatLastUpdate(lastUpdate: Date | null, now: Date | null) {
     day: "numeric",
     year: "numeric",
   });
-  // Always render an "ago" suffix — starts at "0s ago" the moment data
-  // loads and ticks up from there.
   const diffSec = now
     ? Math.max(0, Math.floor((now.getTime() - lastUpdate.getTime()) / 1000))
     : 0;

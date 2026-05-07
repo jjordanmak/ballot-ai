@@ -127,9 +127,8 @@ function Cover({
 }) {
   return (
     <header className="pt-14 pb-10 border-b border-[var(--color-ink-3)]">
-      <div className="font-mono-cap text-[11px] text-[var(--color-accent)] mb-3 flex items-center gap-2 tracking-[0.16em]">
-        <span className="w-3 h-px bg-[var(--color-accent)]" />
-        A guide to your ballot · {locationLabel}
+      <div className="font-mono-cap text-[11px] text-[var(--color-accent)] mb-3 tracking-[0.16em]">
+        A guide to your ballot
       </div>
 
       <h1 className="font-display text-[64px] sm:text-[88px] xl:text-[108px] leading-[0.92] tracking-[-0.03em] text-balance">
@@ -139,6 +138,11 @@ function Cover({
         {electionName}
         <span className="text-[var(--color-paper-3)]"> · {electionDate}</span>
       </h2>
+
+      {/* Location moves under the election name — secondary identifier. */}
+      <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.16em]">
+        {locationLabel}
+      </div>
 
       <p className="mt-8 max-w-2xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
         <mark>Every race, every candidate</mark> on your ballot. Compared side by side, profiled in depth, and continuously updated from verified public sources.

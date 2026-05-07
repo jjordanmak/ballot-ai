@@ -119,15 +119,11 @@ export function ComparisonTable({ race }: Props) {
 
       <h3 className="font-display text-[28px] leading-tight mb-5">Compare candidates</h3>
 
-      {/* STICKY GROUP: toolbar (chips + show/hide all + microcopy) +
-          column-header strip move together as one block. `top-4` leaves a
-          16px gap above the pinned toolbar so it doesn't sit flush against
-          the viewport edge. */}
-      <div className="sticky top-4 z-40 glass-tier border border-[var(--color-ink-3)] rounded-t-lg">
+      {/* STICKY GROUP — fully opaque so body cells visually disappear behind
+          it as the user scrolls past. `top-4` leaves a 16px gap above. */}
+      <div className="sticky top-4 z-40 bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] rounded-t-lg">
         <div className="px-5 pt-5 pb-4">
-          {/* Chips + show/hide all on the same row. Show/Hide collapse
-              alongside the chips so they read as part of the same control
-              cluster. */}
+          {/* Chips only — show/hide moves to the microcopy line below. */}
           <DndContext
             id={`compare-${race.id}`}
             sensors={sensors}
@@ -135,47 +131,49 @@ export function ComparisonTable({ race }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-                <div className="flex flex-wrap gap-2.5 items-center">
-                  {order.map((id) => {
-                    const c = candidatesById[id];
-                    if (!c) return null;
-                    return (
-                      <SortableChip
-                        key={id}
-                        candidate={c}
-                        visible={visible.has(id)}
-                        onToggle={() => toggle(id)}
-                      />
-                    );
-                  })}
-                </div>
-                {/* Show / Hide all sit immediately after the chips */}
-                <div className="flex items-center gap-3 ml-auto">
-                  <button
-                    type="button"
-                    onClick={showAllToggles}
-                    className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
-                  >
-                    <Eye size={11} />
-                    Show all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={hideAllToggles}
-                    className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
-                  >
-                    <EyeOff size={11} />
-                    Hide all
-                  </button>
-                </div>
+              <div className="flex flex-wrap gap-2.5 items-center">
+                {order.map((id) => {
+                  const c = candidatesById[id];
+                  if (!c) return null;
+                  return (
+                    <SortableChip
+                      key={id}
+                      candidate={c}
+                      visible={visible.has(id)}
+                      onToggle={() => toggle(id)}
+                    />
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>
 
-          {/* Microcopy under the chips — visible at every breakpoint */}
-          <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.16em]">
-            Drag to reorder · Click to toggle
+          {/* Microcopy + show/hide on the same line.
+              Microcopy uses paper-4 (deeper gray) so it reads as info, not
+              as an action. Show/hide stay paper-3 with hover:accent — they
+              ARE actions. */}
+          <div className="mt-3 flex items-center justify-between gap-4 flex-wrap">
+            <div className="font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
+              Drag to reorder · Click to toggle
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={showAllToggles}
+                className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
+              >
+                <Eye size={11} />
+                Show all
+              </button>
+              <button
+                type="button"
+                onClick={hideAllToggles}
+                className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
+              >
+                <EyeOff size={11} />
+                Hide all
+              </button>
+            </div>
           </div>
         </div>
 
