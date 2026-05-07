@@ -29,7 +29,9 @@
       "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__list_tables",
       "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__generate_typescript_types",
       "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__execute_sql",
-      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 1: Supabase data layer *)"
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 1: Supabase data layer *)",
+      "Bash(mkdir -p /Users/jordanmak/Claude_Projects/voter-guide/src/app/ballot/\\\\[zip\\\\]/\\\\[electionId\\\\] && \\\\ *)",
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 2: Landing page + ZIP-driven ballot routing *)"
     ]
   }
 }

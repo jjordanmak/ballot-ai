@@ -7,9 +7,22 @@ import type { Race } from "@/data/types";
 
 interface SidebarProps {
   races: Race[];
+  /** Branding + ballot context — passed through from the page so the
+   * sidebar header can show the right ZIP / election. Optional so older
+   * uses (the static page) keep working with sensible defaults. */
+  productName?: string;
+  location?: string;
+  electionName?: string;
+  electionDate?: string;
 }
 
-export function Sidebar({ races }: SidebarProps) {
+export function Sidebar({
+  races,
+  productName = "Ballot.ai",
+  location = "Daly City, CA · 94015",
+  electionName = "Statewide Direct Primary",
+  electionDate = "Jun 2, 2026",
+}: SidebarProps) {
   const [activeRaceId, setActiveRaceId] = useState<string>(races[0]?.id ?? "");
   const [showBackToTop, setShowBackToTop] = useState(false);
 
@@ -57,15 +70,25 @@ export function Sidebar({ races }: SidebarProps) {
       {/* SITE HEADER — product brand + jurisdiction + election */}
       <div className="p-6 pb-5 border-b border-[var(--color-ink-3)]">
         <h1 className="font-display text-[28px] leading-none tracking-[-0.02em]">
-          Ballot<span className="text-[var(--color-paper-3)]">.ai</span>
+          {productName.includes(".")
+            ? (() => {
+                const i = productName.indexOf(".");
+                return (
+                  <>
+                    {productName.slice(0, i)}
+                    <span className="text-[var(--color-paper-3)]">{productName.slice(i)}</span>
+                  </>
+                );
+              })()
+            : productName}
         </h1>
         <div className="font-mono-cap text-[10px] text-[var(--color-accent)] mt-3 tracking-[0.16em]">
-          Daly City, CA · 94015
+          {location}
         </div>
         <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mt-1.5 leading-relaxed tracking-[0.14em]">
-          Statewide Direct Primary
+          {electionName}
           <br />
-          <span className="text-[var(--color-paper-4)]">Jun 2, 2026</span>
+          <span className="text-[var(--color-paper-4)]">{electionDate}</span>
         </div>
 
         {/* Quick actions: Top + Change location. Top is ALWAYS visible —
