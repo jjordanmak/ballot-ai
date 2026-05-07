@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { Election } from "@/lib/db/getElection";
 
@@ -24,15 +24,53 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
   const [zip, setZip] = useState("");
   const [electionId, setElectionId] = useState(defaultElectionId);
   const [pending, setPending] = useState(false);
+  // Resolved state for the current ZIP (drives the election dropdown).
+  const [zipState, setZipState] = useState<string | null>(null);
 
   const validZip = /^\d{5}$/.test(zip);
+
+  // When a valid 5-digit ZIP is typed, resolve to a state so we can
+  // filter the election dropdown. Light debounce so we don't hammer the
+  // endpoint on every keystroke.
+  useEffect(() => {
+    if (!validZip) {
+      setZipState(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/zip/${zip}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { state?: string };
+        if (data.state) setZipState(data.state);
+      } catch {
+        /* swallow */
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [zip, validZip]);
+
+  // Filter elections by the resolved state. Until a ZIP resolves, show
+  // every election in the catalog.
+  const visibleElections = useMemo(() => {
+    if (!zipState) return elections;
+    return elections.filter((e) => e.state === zipState);
+  }, [elections, zipState]);
+
+  // If the current selection drops out of the filtered list, reset.
+  useEffect(() => {
+    if (visibleElections.length === 0) return;
+    if (!visibleElections.some((e) => e.id === electionId)) {
+      setElectionId(visibleElections[0].id);
+    }
+  }, [visibleElections, electionId]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
       {/* Brand */}
       <div className="font-mono-cap text-[11px] text-[var(--color-paper-3)] mb-4 tracking-[0.18em] flex items-center gap-2">
         <span className="w-3 h-px bg-[var(--color-accent)]" />
-        Your live sample ballot
+        A guide to your ballot
       </div>
 
       <h1 className="font-display text-[64px] sm:text-[96px] xl:text-[120px] leading-[0.92] tracking-[-0.03em] text-balance text-center">
@@ -40,8 +78,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
       </h1>
 
       <p className="mt-6 max-w-xl text-center text-[16px] sm:text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">
-        Every race, every candidate on your ballot. <mark>Compared side by side</mark>,
-        profiled in depth, and continuously updated from verified public sources.
+        <mark>Every race. Every candidate.</mark> Compared side by side, profiled in depth, and continuously updated from verified public sources.
       </p>
 
       {/* The form */}
@@ -85,7 +122,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
             htmlFor="electionId"
             className="font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.18em]"
           >
-            Which election
+            Pick an election
           </label>
           <select
             id="electionId"
@@ -93,14 +130,19 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
             required
             value={electionId}
             onChange={(e) => setElectionId(e.target.value)}
-            className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg px-4 py-3 text-[15px] text-[var(--color-paper)] focus:outline-none focus:border-[var(--color-accent)] transition-colors appearance-none bg-no-repeat bg-[length:14px] bg-[position:right_1rem_center]"
+            disabled={visibleElections.length === 0}
+            className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg px-4 py-3 text-[15px] text-[var(--color-paper)] focus:outline-none focus:border-[var(--color-accent)] transition-colors appearance-none bg-no-repeat bg-[length:14px] bg-[position:right_1rem_center] disabled:opacity-50"
             style={{
               backgroundImage:
                 "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2378736d' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>\")",
             }}
           >
-            {elections.length === 0 && <option value="">No elections available</option>}
-            {elections.map((e) => (
+            {visibleElections.length === 0 && (
+              <option value="">
+                {zipState ? `No elections found for ${zipState}` : "No elections available"}
+              </option>
+            )}
+            {visibleElections.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name} — {formatBallotDate(e.date)}
               </option>
@@ -114,7 +156,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
           disabled={!validZip || pending}
           className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
         >
-          {pending ? "Loading your ballot…" : "View my ballot"}
+          {pending ? "Loading your ballot…" : "Get started"}
           {!pending && <ArrowRight size={14} />}
         </button>
 

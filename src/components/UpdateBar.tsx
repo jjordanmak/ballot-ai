@@ -35,7 +35,8 @@ export function UpdateBar() {
     await new Promise((r) => setTimeout(r, 1500));
     setLastUpdate(new Date());
     setState("done");
-    setTimeout(() => setState("idle"), 2200);
+    // Stay in the "Up to date" state for 5 seconds after a successful update.
+    setTimeout(() => setState("idle"), 5000);
   };
 
   const formatted = formatLastUpdate(lastUpdate, now);
@@ -96,19 +97,18 @@ function formatLastUpdate(lastUpdate: Date | null, now: Date | null) {
     day: "numeric",
     year: "numeric",
   });
-  // Append a "n sec ago" suffix when current time has drifted from update time —
-  // makes the "live" sense visible without the timestamp itself ticking.
-  if (now) {
-    const diffSec = Math.floor((now.getTime() - lastUpdate.getTime()) / 1000);
-    if (diffSec >= 5) {
-      const ago =
-        diffSec < 60
-          ? `${diffSec}s ago`
-          : diffSec < 3600
-          ? `${Math.floor(diffSec / 60)}m ago`
-          : `${Math.floor(diffSec / 3600)}h ago`;
-      return `${date} · ${time} · ${ago}`;
-    }
-  }
-  return `${date} · ${time}`;
+  // Always render an "ago" suffix so the live sense is visible immediately.
+  // <5s = "just now"; otherwise tick up by seconds → minutes → hours.
+  const diffSec = now
+    ? Math.max(0, Math.floor((now.getTime() - lastUpdate.getTime()) / 1000))
+    : 0;
+  const ago =
+    diffSec < 5
+      ? "just now"
+      : diffSec < 60
+      ? `${diffSec}s ago`
+      : diffSec < 3600
+      ? `${Math.floor(diffSec / 60)}m ago`
+      : `${Math.floor(diffSec / 3600)}h ago`;
+  return `${date} · ${time} · ${ago}`;
 }

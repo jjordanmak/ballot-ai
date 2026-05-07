@@ -6,17 +6,20 @@
   --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
 
-  /* Warm-tinted dark — slight ochre hue, not cold blue. */
-  --color-ink-0: oklch(11.5% 0.008 70);   /* page */
-  --color-ink-1: oklch(15% 0.009 70);     /* card */
-  --color-ink-2: oklch(18.5% 0.011 70);   /* raised */
-  --color-ink-3: oklch(24% 0.013 70);     /* border */
-  --color-ink-4: oklch(34% 0.015 70);     /* divider hover */
+  /* Neutral dark — chroma pulled close to 0 so cards/tables/profiles
+     read as honest gray, not yellow-tinted. Keeps a whisper of warmth
+     (chroma ~0.003) for that "not flat-cold-blue" feel without ever
+     reading as a tint. */
+  --color-ink-0: oklch(11.5% 0.003 70);   /* page */
+  --color-ink-1: oklch(15% 0.003 70);     /* card */
+  --color-ink-2: oklch(18.5% 0.003 70);   /* raised */
+  --color-ink-3: oklch(24% 0.004 70);     /* border */
+  --color-ink-4: oklch(34% 0.005 70);     /* divider hover */
 
-  --color-paper: oklch(94% 0.012 80);     /* primary text — warm ivory */
-  --color-paper-2: oklch(78% 0.015 75);   /* secondary */
-  --color-paper-3: oklch(58% 0.013 70);   /* tertiary */
-  --color-paper-4: oklch(42% 0.011 70);   /* quaternary */
+  --color-paper: oklch(94% 0.008 80);     /* primary text — soft ivory */
+  --color-paper-2: oklch(78% 0.008 75);   /* secondary */
+  --color-paper-3: oklch(58% 0.006 70);   /* tertiary */
+  --color-paper-4: oklch(42% 0.005 70);   /* quaternary */
 
   /* Civic accent — golden yellow. Slightly warmer hue + lower lightness so it
      reads as honey/amber rather than highlighter — easier on the eyes against
@@ -110,15 +113,9 @@
   .hl-section-note { --mark-h: 74% 0.13 295; --mark-fg: oklch(94% 0.04 295); }
 
   mark {
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      transparent 18%,
-      oklch(var(--mark-h) / 0.40) 18%,
-      oklch(var(--mark-h) / 0.52) 50%,
-      oklch(var(--mark-h) / 0.40) 82%,
-      transparent 100%
-    );
+    /* Solid highlight — no top/bottom fade. Cleaner read at body sizes
+       and doesn't draw the eye to phantom edges. */
+    background: oklch(var(--mark-h) / 0.40);
     color: var(--mark-fg);
     padding: 0.05em 0.18em;
     margin: 0 -0.04em;
@@ -136,17 +133,9 @@
   mark.hl-teal   { --mark-h: 76% 0.10 200; --mark-fg: oklch(94% 0.03 200); }
   mark.hl-purple { --mark-h: 74% 0.13 295; --mark-fg: oklch(94% 0.04 295); }
 
-  /* Slight tint for marks inside large display headings */
+  /* Slightly softer tint for marks inside large display headings */
   h1 mark, h2 mark, .font-display mark {
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      transparent 12%,
-      oklch(var(--mark-h) / 0.30) 12%,
-      oklch(var(--mark-h) / 0.40) 50%,
-      oklch(var(--mark-h) / 0.30) 88%,
-      transparent 100%
-    );
+    background: oklch(var(--mark-h) / 0.30);
   }
 
   /* Strip all highlighting inside this wrapper (used in vote-for-if). */

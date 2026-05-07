@@ -118,7 +118,7 @@ function Cover({
     <header className="pt-14 pb-10 border-b border-[var(--color-ink-3)]">
       <div className="font-mono-cap text-[11px] text-[var(--color-accent)] mb-3 flex items-center gap-2 tracking-[0.16em]">
         <span className="w-3 h-px bg-[var(--color-accent)]" />
-        {locationLabel}
+        A guide to your ballot · {locationLabel}
       </div>
 
       <h1 className="font-display text-[64px] sm:text-[88px] xl:text-[108px] leading-[0.92] tracking-[-0.03em] text-balance">
