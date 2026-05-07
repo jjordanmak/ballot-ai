@@ -51,6 +51,19 @@ export default async function BallotPage({
     ? `${jurisdiction.city}, ${jurisdiction.state} · ${zip}`
     : `${jurisdiction.state} · ${zip}`;
 
+  // Second line under the city/ZIP — shows county + the specific district
+  // codes that determined which races appear on this ballot.
+  const districtsLabel = (() => {
+    const parts: string[] = [];
+    if (jurisdiction.county) parts.push(`${jurisdiction.county} County`);
+    const d = jurisdiction.districts;
+    if (d.us_house != null) parts.push(`CA-${d.us_house}`);
+    if (d.state_assembly != null) parts.push(`AD-${d.state_assembly}`);
+    if (d.state_senate != null) parts.push(`SD-${d.state_senate}`);
+    if (d.boe != null) parts.push(`BOE-${d.boe}`);
+    return parts.join(" · ");
+  })();
+
   // Date-only Postgres values: parse manually to avoid the UTC→local
   // shift that knocks 2026-06-02 back to Jun 1 in PT.
   const [y, m, d] = election.date.slice(0, 10).split("-").map(Number);
@@ -75,6 +88,7 @@ export default async function BallotPage({
           races={races}
           totalCandidates={totalCandidates}
           locationLabel={locationLabel}
+          districtsLabel={districtsLabel}
           electionName={election.name}
           electionDate={electionDate}
         />
@@ -116,12 +130,14 @@ function Cover({
   races,
   totalCandidates,
   locationLabel,
+  districtsLabel,
   electionName,
   electionDate,
 }: {
   races: Awaited<ReturnType<typeof getBallot>>;
   totalCandidates: number;
   locationLabel: string;
+  districtsLabel: string;
   electionName: string;
   electionDate: string;
 }) {
@@ -131,28 +147,34 @@ function Cover({
         A guide to your ballot
       </div>
 
-      <h1 className="font-display text-[64px] sm:text-[88px] xl:text-[108px] leading-[0.92] tracking-[-0.03em] text-balance">
+      <h1 className="font-display text-[44px] sm:text-[60px] xl:text-[76px] leading-[0.95] tracking-[-0.03em] text-balance">
         Voter{"’"}s Guide
       </h1>
-      <h2 className="font-display italic font-light text-[22px] sm:text-[26px] mt-4 text-[var(--color-paper-2)] text-balance">
+
+      <p className="mt-6 max-w-2xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
+        <mark>Every race, every candidate</mark> on your ballot. Compared side by side, profiled in depth, and continuously updated from verified public sources.
+      </p>
+
+      <h2 className="font-display italic font-light text-[22px] sm:text-[26px] mt-8 text-[var(--color-paper-2)] text-balance">
         {electionName}
         <span className="text-[var(--color-paper-3)]"> · {electionDate}</span>
       </h2>
 
-      {/* Location moves under the election name — secondary identifier
-          but more prominent than a typical eyebrow. */}
-      <div className="mt-3 font-mono-cap text-[13px] text-[var(--color-paper-2)] tracking-[0.18em]">
+      {/* Location below the election name — primary city/ZIP line +
+          secondary line with county and district codes that determined
+          which races are on this ballot. */}
+      <div className="mt-1.5 font-mono-cap text-[15px] text-[var(--color-paper-2)] tracking-[0.18em]">
         {locationLabel}
       </div>
-
-      <p className="mt-8 max-w-2xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
-        <mark>Every race, every candidate</mark> on your ballot. Compared side by side, profiled in depth, and continuously updated from verified public sources.
-      </p>
+      {districtsLabel && (
+        <div className="mt-1 font-mono-cap text-[11px] text-[var(--color-paper-4)] tracking-[0.18em]">
+          {districtsLabel}
+        </div>
+      )}
 
       <div className="mt-12 flex flex-wrap items-end gap-x-10 gap-y-6">
         <Stat label="Races on your ballot" value={String(races.length)} />
         <Stat label="Active candidates" value={String(totalCandidates)} />
-        <Stat label="Election day" value={electionDate} />
         <UpdateBar />
       </div>
     </header>

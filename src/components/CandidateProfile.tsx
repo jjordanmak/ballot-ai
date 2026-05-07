@@ -81,21 +81,18 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
   return (
     <article
       id={`candidate-${raceId}-${candidate.id}`}
-      className={`scroll-mt-8 rounded-xl border ${
+      className={`scroll-mt-32 rounded-xl border ${
         suspended
           ? "border-[var(--color-ink-3)] bg-[var(--color-ink-1)]/40 opacity-90"
           : "border-[var(--color-ink-3)] bg-[var(--color-ink-1)]"
       }`}
     >
-      {/* HEADER — sticky at top-4 with opaque bg so the body content
-          visually disappears behind it on scroll. The header stays sticky
-          only within its parent <article>, so once the article scrolls past
-          the viewport the header naturally detaches.
+      {/* HEADER — non-sticky, scrolls with its article.
           Layout: [Headshot] [Name + pills + role] [Chevron] */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="sticky top-4 z-30 w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl before:content-[''] before:absolute before:inset-x-[-1px] before:top-[-16px] before:h-4 before:bg-[var(--color-ink-0)] before:z-[-1]"
+        className="w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
       >
         {/* Headshot, left of identity */}
         <Headshot
@@ -105,7 +102,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
 
         {/* Identity — vertically centered next to the photo */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-display text-[32px] sm:text-[38px] leading-[1] tracking-[-0.02em] text-balance">
+          <h3 className="font-display text-[20px] leading-[1.1] tracking-[-0.02em] text-balance">
             {candidate.name}
           </h3>
 
@@ -158,7 +155,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="px-6 pb-6 border-t border-[var(--color-ink-3)]">
+          <div className="px-7 pb-7 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
             {suspended ? (
               <SuspendedBlock candidate={candidate} />
             ) : (
@@ -460,6 +457,21 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
         <div className="font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 flex-1 tracking-[0.16em]">
           <HistoryIcon size={12} className="text-[var(--color-accent)]" />
           Timeline
+          <span
+            tabIndex={0}
+            className="relative inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[var(--color-paper-3)] hover:text-[var(--color-paper)] focus:text-[var(--color-paper)] cursor-help group/tip ml-0.5"
+            aria-label="About the timeline"
+          >
+            <Info size={11} />
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute left-0 top-full mt-2 w-[260px] z-50 opacity-0 group-hover/tip:opacity-100 group-focus/tip:opacity-100 transition-opacity duration-150 rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left"
+            >
+              <span className="block text-[11px] text-[var(--color-paper-2)] leading-snug normal-case tracking-normal">
+                Faded events predate the current election cycle.
+              </span>
+            </span>
+          </span>
         </div>
         <div className="flex gap-2">
           <button
@@ -538,8 +550,9 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
         />
       </div>
 
-      {/* "See more" hint — bottom right. Subtly bounces to draw the eye, then
-          fades out once the user has reached the end of the timeline. */}
+      {/* "See more" hint — bottom right. Bounces to draw the eye, fades
+          out once the user has reached the end of the timeline. (The
+          out-of-cycle legend lives in the Info tooltip on the eyebrow.) */}
       <div
         aria-hidden
         className={`mt-2 flex justify-end transition-opacity duration-300 ${

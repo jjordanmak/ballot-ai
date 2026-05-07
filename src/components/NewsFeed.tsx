@@ -87,18 +87,6 @@ function formatNewsDate(input: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** Pair adjacent news items into vertical columns. Result is a list of
- * arrays where each inner array contains 1 or 2 items. The carousel
- * renders each inner array as a column, so consecutive short items
- * share a column instead of leaving blank space below them. */
-function pairItems<T>(items: T[]): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    out.push(items.slice(i, i + 2));
-  }
-  return out;
-}
-
 /** Build a CSS mask-image for the carousel based on which edges are
  * scrollable. Fades the content (cards) at the edge instead of overlaying
  * a colored gradient — works against any background and never produces
@@ -151,6 +139,7 @@ export function NewsFeed({
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
 
+
   const updateAffordance = () => {
     const el = scrollRef.current;
     if (!el) return;
@@ -185,7 +174,7 @@ export function NewsFeed({
 
   return (
     <section>
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <div className="font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2.5 flex-1 tracking-[0.16em]">
           <RadioTower size={12} className="text-[var(--color-accent)]" />
           In the news
@@ -233,22 +222,15 @@ export function NewsFeed({
               transition: "mask-image 200ms, -webkit-mask-image 200ms",
             }}
           >
-            {/* Bento layout: pair adjacent items into vertical columns.
-                Items 0+1 stack in column 0, 2+3 in column 1, etc. Cards
-                inside a column auto-size to their content (no min-h),
-                so two short items can share a column without leaving
-                empty space below shorter ones. */}
+            {/* Single-row carousel: each card stands alone in its own
+                column, scrolling horizontally. */}
             <div className="flex items-stretch gap-4 min-w-min py-1">
-              {pairItems(sorted).map((col, i) => (
-                <div key={i} className="flex flex-col gap-4">
-                  {col.map((item) => (
-                    <NewsCard
-                      key={item.id}
-                      item={item}
-                      fallbackAvatar={fallbackAvatar}
-                    />
-                  ))}
-                </div>
+              {sorted.map((item) => (
+                <NewsCard
+                  key={item.id}
+                  item={item}
+                  fallbackAvatar={fallbackAvatar}
+                />
               ))}
             </div>
           </div>

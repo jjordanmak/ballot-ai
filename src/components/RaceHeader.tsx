@@ -1,3 +1,4 @@
+import { ArrowUpRight } from "lucide-react";
 import type { Race } from "@/data/types";
 import { RichBlock, RichText } from "./Highlight";
 import { partyDot } from "./PartyTag";
@@ -24,7 +25,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
       </div>
 
       {/* Office */}
-      <h2 className="font-display text-[44px] sm:text-[56px] xl:text-[72px] leading-[0.95] tracking-[-0.025em] text-balance">
+      <h2 className="font-display text-[40px] sm:text-[50px] xl:text-[64px] leading-[0.95] tracking-[-0.025em] text-balance">
         {race.office}
       </h2>
 
@@ -115,7 +116,7 @@ function IntroBlock({
         text={body}
         className={
           isLead
-            ? "font-display text-[22px] leading-[1.4] text-[var(--color-paper)] text-pretty drop-cap"
+            ? "font-display text-[22px] leading-[1.4] text-[var(--color-paper)] text-pretty"
             : "text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty"
         }
       />
@@ -171,8 +172,14 @@ function PollingPanel({ race, className }: { race: Race; className?: string }) {
               const cls =
                 "font-mono-cap text-[9px] text-[var(--color-paper-4)] hover:text-[var(--color-accent)] transition-colors";
               return url ? (
-                <a href={url} target="_blank" rel="noopener noreferrer" className={cls}>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${cls} inline-flex items-center gap-1`}
+                >
                   {label}
+                  <ArrowUpRight size={10} className="opacity-80" />
                 </a>
               ) : (
                 <span className={cls}>{label}</span>

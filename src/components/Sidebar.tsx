@@ -29,6 +29,11 @@ export function Sidebar({
   // active (scroll-spy) so the active highlight stays put as the user
   // scrolls but the dropdown only opens when the cursor is on the row.
   const [hoveredRaceId, setHoveredRaceId] = useState<string | null>(null);
+  // Active candidate (scroll-spy across all candidate profile articles).
+  // Highlighted in the sidebar candidate list so the user can see which
+  // profile they're currently reading without needing the profile header
+  // pinned to the viewport.
+  const [activeCandidateId, setActiveCandidateId] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Scroll-spy: track which race section is currently in view
@@ -60,6 +65,42 @@ export function Sidebar({
     });
 
     return () => observers.forEach((o) => o.disconnect());
+  }, [races]);
+
+  // Candidate scroll-spy — one observer for all `<article id="candidate-*">`.
+  // Whichever article has the largest visible ratio is the "current" one.
+  // We scope detection to the middle of the viewport (rootMargin) so we
+  // don't flicker as a cards' edge crosses in/out near the section header.
+  useEffect(() => {
+    const visible = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const id = entry.target.id;
+          if (entry.isIntersecting) {
+            visible.set(id, entry.intersectionRatio);
+          } else {
+            visible.delete(id);
+          }
+        });
+        if (visible.size > 0) {
+          const top = [...visible.entries()].sort((a, b) => b[1] - a[1])[0][0];
+          setActiveCandidateId(top);
+        } else {
+          setActiveCandidateId(null);
+        }
+      },
+      { rootMargin: "-25% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+
+    races.forEach((race) => {
+      race.candidates.forEach((cand) => {
+        const el = document.getElementById(`candidate-${race.id}-${cand.id}`);
+        if (el) observer.observe(el);
+      });
+    });
+
+    return () => observer.disconnect();
   }, [races]);
 
   // Show "Back to top" once user scrolls past one viewport.
@@ -147,6 +188,7 @@ export function Sidebar({
               // when neither is true.
               expanded={hoveredRaceId === race.id || activeRaceId === race.id}
               active={activeRaceId === race.id}
+              activeCandidateId={activeCandidateId}
               onMouseEnter={() => setHoveredRaceId(race.id)}
               onMouseLeave={() =>
                 setHoveredRaceId((prev) => (prev === race.id ? null : prev))
@@ -169,6 +211,7 @@ function RaceNavItem({
   index,
   expanded,
   active,
+  activeCandidateId,
   onMouseEnter,
   onMouseLeave,
 }: {
@@ -176,6 +219,7 @@ function RaceNavItem({
   index: number;
   expanded: boolean;
   active: boolean;
+  activeCandidateId: string | null;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }) {
@@ -183,12 +227,19 @@ function RaceNavItem({
     (c) => !c.withdrawn && !c.campaignSuspended
   ).length;
 
+  // When a candidate inside this race is the active scroll-spy target,
+  // we suppress the race row's own active highlight — the candidate
+  // highlight is the more specific signal, and showing both at once
+  // looks doubled-up.
+  const candidateInThisRace = activeCandidateId?.startsWith(`candidate-${race.id}-`) ?? false;
+  const showRaceActive = active && !candidateInThisRace;
+
   return (
     <li onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <a
         href={`#race-${race.id}`}
         className={`group flex items-start gap-2.5 rounded-md px-3 py-2.5 transition-colors ${
-          active
+          showRaceActive
             ? "bg-[var(--color-ink-2)] text-[var(--color-paper)]"
             : "text-[var(--color-paper-2)] hover:bg-[var(--color-ink-1)] hover:text-[var(--color-paper)]"
         }`}
@@ -221,18 +272,27 @@ function RaceNavItem({
           <ul className="ml-7 mt-0.5 mb-1 border-l border-[var(--color-ink-3)] pl-2">
             {race.candidates
               .filter((c) => !c.withdrawn)
-              .map((cand) => (
-                <li key={cand.id}>
-                  <a
-                    href={`#candidate-${race.id}-${cand.id}`}
-                    className="flex items-center gap-2 px-2 py-1 rounded text-[12px] text-[var(--color-paper-3)] hover:text-[var(--color-paper)] hover:bg-[var(--color-ink-1)] transition-colors"
-                  >
-                    <span className={`w-1 h-1 rounded-full ${partyDot(cand.party)}`} />
-                    <span className="truncate flex-1">{cand.name}</span>
-                    <CandidateNavStat candidate={cand} />
-                  </a>
-                </li>
-              ))}
+              .map((cand) => {
+                const candId = `candidate-${race.id}-${cand.id}`;
+                const isActive = activeCandidateId === candId;
+                return (
+                  <li key={cand.id}>
+                    <a
+                      href={`#${candId}`}
+                      aria-current={isActive ? "true" : undefined}
+                      className={`flex items-center gap-2 px-2 py-1 rounded text-[12px] transition-colors ${
+                        isActive
+                          ? "bg-[var(--color-ink-2)] text-[var(--color-paper)]"
+                          : "text-[var(--color-paper-3)] hover:text-[var(--color-paper)] hover:bg-[var(--color-ink-1)]"
+                      }`}
+                    >
+                      <span className={`w-1 h-1 rounded-full ${partyDot(cand.party)}`} />
+                      <span className="truncate flex-1">{cand.name}</span>
+                      <CandidateNavStat candidate={cand} />
+                    </a>
+                  </li>
+                );
+              })}
           </ul>
         </div>
       </div>

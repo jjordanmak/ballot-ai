@@ -18,7 +18,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff } from "lucide-react";
+import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff, RotateCcw, Info } from "lucide-react";
 import type { Race, Candidate } from "@/data/types";
 import { partyClass, partyDot, partyBorder, partyLabel, StatusPill } from "./PartyTag";
 import { RichText } from "./Highlight";
@@ -102,6 +102,10 @@ export function ComparisonTable({ race }: Props) {
 
   const showAllToggles = () => setVisible(new Set(allCandidates.map((c) => c.id)));
   const hideAllToggles = () => setVisible(new Set());
+  const resetToggles = () => {
+    setOrder(allCandidates.map((c) => c.id));
+    setVisible(new Set(initialVisible(race)));
+  };
 
   if (allCandidates.length < 2) return null;
 
@@ -109,23 +113,85 @@ export function ComparisonTable({ race }: Props) {
 
   return (
     <section className="mt-16">
-      {/* Eyebrow + heading live OUTSIDE the sticky toolbar so they read as
-          a normal section header (matching Candidate Profiles + In the News).
-          Show all / Hide all sit on the right of the heading row. */}
-      <div className="font-mono-cap text-[11px] text-[var(--color-paper)] mb-4 flex items-center gap-2 tracking-[0.16em]">
-        <Columns3 size={12} className="text-[var(--color-accent)]" />
-        Side-by-side
-      </div>
+      {/* STICKY GROUP — eyebrow, heading, explainer, AND the toolbar (chips
+          + thead) pin together at the top of the viewport as a single
+          unit. Combining them into one sticky element means the gap
+          between header content and toolbar is internal padding (pb-5 on
+          the inner header block) — it scrolls with them, never separates
+          on scroll, never needs CSS-variable coordination. */}
+      <div className="sticky top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
+        {/* Eyebrow row — eyebrow on the left, Show/Hide/Reset controls on
+            the right (mirrors the candidate-profiles section's eyebrow +
+            Expand/Collapse pattern). mb-8 below this row matches the
+            news heading-to-content spacing. */}
+        <div className="mb-8 flex items-center justify-between gap-4 flex-wrap">
+          <div className="font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
+            <Columns3 size={12} className="text-[var(--color-accent)]" />
+            Side-by-side
+            <span
+              tabIndex={0}
+              className="relative inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[var(--color-paper-3)] hover:text-[var(--color-paper)] focus:text-[var(--color-paper)] cursor-help group/tip ml-0.5"
+              aria-label="About the comparison"
+            >
+              <Info size={11} />
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute left-0 top-full mt-2 w-[320px] z-50 opacity-0 group-hover/tip:opacity-100 group-focus/tip:opacity-100 transition-opacity duration-150 rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left"
+              >
+                <span className="block text-[11px] text-[var(--color-paper-2)] leading-snug normal-case tracking-normal">
+                  We compare the major candidates in this race
+                  side-by-side on the policy issues that matter most for
+                  this office. Positions are drawn from candidate
+                  statements, debates, voting records, and public
+                  interviews — never inferred. Suspended and withdrawn
+                  candidates are excluded even when they remain on
+                  printed ballots. This race compares{" "}
+                  {allCandidates.length} candidate
+                  {allCandidates.length === 1 ? "" : "s"} across{" "}
+                  {race.issues.length} issue
+                  {race.issues.length === 1 ? "" : "s"}.
+                </span>
+              </span>
+            </span>
+          </div>
 
-      <h3 className="font-display text-[28px] leading-tight mb-5">Compare candidates</h3>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={showAllToggles}
+              className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
+            >
+              <Eye size={11} />
+              Show all
+            </button>
+            <button
+              type="button"
+              onClick={hideAllToggles}
+              className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
+            >
+              <EyeOff size={11} />
+              Hide all
+            </button>
+            <button
+              type="button"
+              onClick={resetToggles}
+              className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
+            >
+              <RotateCcw size={11} />
+              Reset
+            </button>
+          </div>
+        </div>
 
-      {/* STICKY GROUP — fully opaque so body cells visually disappear behind
-          it as the user scrolls past. `top-4` leaves a 16px gap above; the
-          `::before` shield extends the same opaque bg up into that gap so
-          content can't peek through above the toolbar when pinned. */}
-      <div className="sticky top-4 z-40 bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] rounded-t-lg before:content-[''] before:absolute before:inset-x-[-1px] before:top-[-16px] before:h-4 before:bg-[var(--color-ink-0)] before:z-[-1]">
-        <div className="px-5 pt-5 pb-4">
-          {/* Chips only — show/hide moves to the microcopy line below. */}
+        {/* Toolbar chrome (chips area + thead) lives inside the same
+            sticky group — fully opaque so body cells disappear behind
+            it on scroll. */}
+        <div className="bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] rounded-t-lg">
+        {/* Chips on the LEFT (free to wrap to multiple rows), microcopy
+            on the RIGHT, vertically centered with the chips. The
+            Show/Hide/Reset action group lives in the eyebrow row above
+            so the toolbar interior is just chips + their behavior label. */}
+        <div className="px-5 pt-5 pb-4 flex items-center gap-5">
           <DndContext
             id={`compare-${race.id}`}
             sensors={sensors}
@@ -133,7 +199,7 @@ export function ComparisonTable({ race }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-              <div className="flex flex-wrap gap-2.5 items-center">
+              <div className="flex-1 min-w-0 flex flex-wrap gap-2.5 items-center">
                 {order.map((id) => {
                   const c = candidatesById[id];
                   if (!c) return null;
@@ -150,32 +216,8 @@ export function ComparisonTable({ race }: Props) {
             </SortableContext>
           </DndContext>
 
-          {/* Microcopy stacks ABOVE Show/Hide all, both right-aligned.
-              Microcopy uses paper-4 (deeper gray) so it reads as info, not
-              as an action. Show/hide stay paper-3 with hover:accent — they
-              ARE actions. */}
-          <div className="mt-3 flex flex-col items-end gap-1.5">
-            <div className="font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
-              Drag to reorder · Click to toggle
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={showAllToggles}
-                className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
-              >
-                <Eye size={11} />
-                Show all
-              </button>
-              <button
-                type="button"
-                onClick={hideAllToggles}
-                className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors whitespace-nowrap"
-              >
-                <EyeOff size={11} />
-                Hide all
-              </button>
-            </div>
+          <div className="shrink-0 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
+            Drag to reorder · Click to toggle
           </div>
         </div>
 
@@ -189,7 +231,7 @@ export function ComparisonTable({ race }: Props) {
             >
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 w-[180px] min-w-[180px] border-r border-[var(--color-ink-3)] p-4 text-left align-top glass-tier">
+                  <th className="sticky left-0 z-20 w-[180px] min-w-[180px] p-4 text-left align-top glass-tier after:content-[''] after:absolute after:top-0 after:bottom-0 after:right-[-1px] after:w-px after:bg-[var(--color-ink-3)]">
                     <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)]">Issue</div>
                   </th>
                   {visibleOrdered.map((c) => (
@@ -205,6 +247,7 @@ export function ComparisonTable({ race }: Props) {
             </table>
           </div>
         )}
+        </div>
       </div>
 
       {/* BODY — its own horizontal scroll container, sized to parent. */}
@@ -229,7 +272,7 @@ export function ComparisonTable({ race }: Props) {
                 >
                   <th
                     scope="row"
-                    className="sticky left-0 z-10 align-top w-[180px] min-w-[180px] border-b border-r border-[var(--color-ink-3)] p-4 text-left bg-inherit"
+                    className="sticky left-0 z-10 align-top w-[180px] min-w-[180px] border-b border-[var(--color-ink-3)] p-4 text-left bg-inherit after:content-[''] after:absolute after:top-0 after:bottom-0 after:right-[-1px] after:w-px after:bg-[var(--color-ink-3)]"
                   >
                     <div className="font-mono-cap text-[11px] text-[var(--color-paper-2)] leading-tight">
                       {issue.label}
