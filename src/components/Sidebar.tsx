@@ -142,7 +142,10 @@ export function Sidebar({
               key={race.id}
               race={race}
               index={i + 1}
-              expanded={hoveredRaceId === race.id}
+              // Expand when EITHER the cursor is over the row OR the
+              // user has scrolled to this race's section. Collapse only
+              // when neither is true.
+              expanded={hoveredRaceId === race.id || activeRaceId === race.id}
               active={activeRaceId === race.id}
               onMouseEnter={() => setHoveredRaceId(race.id)}
               onMouseLeave={() =>

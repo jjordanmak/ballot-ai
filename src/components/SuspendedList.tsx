@@ -20,7 +20,7 @@ export function SuspendedList({ candidates }: { candidates: Candidate[] }) {
         {candidates.map((c) => (
           <li
             key={c.id}
-            className="py-4 first:pt-0 last:pb-0 grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 sm:gap-6 items-start"
+            className="py-4 first:pt-0 last:pb-0 grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 sm:gap-6 items-center"
           >
             <div>
               <div className="text-[14px] font-medium text-[var(--color-paper)]">

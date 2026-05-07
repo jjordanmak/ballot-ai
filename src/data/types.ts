@@ -164,6 +164,11 @@ export interface Race {
     bigPicture: string;
     whatsAtStake: string;
     polling: string;
+    /** Optional source URL for the polling card — when present, the
+     * source label below the bar chart becomes a hyperlink. */
+    pollingSourceUrl?: string;
+    /** Display label for the polling source (e.g. "Emerson · Inside CA Politics · Apr 14–15") */
+    pollingSourceLabel?: string;
     suspendedNote?: string;
   };
   issues: Issue[];

@@ -66,6 +66,8 @@ export const governor: Race = {
       "Climate goals (Hilton and Bianco want to suspend environmental regulations entirely; Steyer wants to accelerate). Sanctuary state law (Bianco wants it repealed). Tax structure (proposals range from eliminating the income tax to imposing a one-time billionaire wealth tax). The state's posture toward Trump (resistance vs. accommodation). Housing density vs. suburban single-family. Whether California remains the country's progressive policy laboratory — or becomes its most consequential reversal.",
     polling:
       "The most recent Emerson / Inside California Politics survey (April 14–15) had <mark>Hilton 17%, Bianco 14%, Steyer 14%, Becerra 10%, Porter 10%, Mahan 5%</mark>, with 23% undecided. A subsequent post-Swalwell-withdrawal poll showed Becerra surging to tie Hilton at 18%. Berkeley IGS (March) had Bianco overtaking Porter as polling leader with 44% undecided. The headline: there is no clear frontrunner, and any of seven candidates can credibly finish in the top two.",
+    pollingSourceUrl: "https://emersoncollegepolling.com/california-2026-poll/",
+    pollingSourceLabel: "Emerson · Inside CA Politics · Apr 14–15",
     suspendedNote:
       "Eric Swalwell (D) suspended his campaign April 12, 2026 after CNN and the San Francisco Chronicle published allegations from four women describing sexual misconduct, including one allegation of rape. Senators Adam Schiff and Ruben Gallego withdrew their endorsements within 48 hours. Swalwell denies the allegations but ended his campaign, saying \"this is my fight, not a campaign's.\" Betty Yee, the former state controller, also suspended her campaign earlier in the cycle. Both names will still appear on printed ballots.",
   },

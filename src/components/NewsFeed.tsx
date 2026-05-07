@@ -87,6 +87,18 @@ function formatNewsDate(input: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Pair adjacent news items into vertical columns. Result is a list of
+ * arrays where each inner array contains 1 or 2 items. The carousel
+ * renders each inner array as a column, so consecutive short items
+ * share a column instead of leaving blank space below them. */
+function pairItems<T>(items: T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) {
+    out.push(items.slice(i, i + 2));
+  }
+  return out;
+}
+
 /** Build a CSS mask-image for the carousel based on which edges are
  * scrollable. Fades the content (cards) at the edge instead of overlaying
  * a colored gradient — works against any background and never produces
@@ -221,9 +233,22 @@ export function NewsFeed({
               transition: "mask-image 200ms, -webkit-mask-image 200ms",
             }}
           >
+            {/* Bento layout: pair adjacent items into vertical columns.
+                Items 0+1 stack in column 0, 2+3 in column 1, etc. Cards
+                inside a column auto-size to their content (no min-h),
+                so two short items can share a column without leaving
+                empty space below shorter ones. */}
             <div className="flex items-stretch gap-4 min-w-min py-1">
-              {sorted.map((item) => (
-                <NewsCard key={item.id} item={item} fallbackAvatar={fallbackAvatar} />
+              {pairItems(sorted).map((col, i) => (
+                <div key={i} className="flex flex-col gap-4">
+                  {col.map((item) => (
+                    <NewsCard
+                      key={item.id}
+                      item={item}
+                      fallbackAvatar={fallbackAvatar}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           </div>
@@ -320,7 +345,7 @@ function NewsCard({
             )}
           </div>
           {item.excerpt && (
-            <div className="text-[12px] leading-[1.5] text-[var(--color-paper-3)] line-clamp-2">
+            <div className="text-[12px] leading-[1.5] text-[var(--color-paper-3)] line-clamp-4">
               {item.excerpt}
             </div>
           )}

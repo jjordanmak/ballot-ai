@@ -120,8 +120,10 @@ export function ComparisonTable({ race }: Props) {
       <h3 className="font-display text-[28px] leading-tight mb-5">Compare candidates</h3>
 
       {/* STICKY GROUP — fully opaque so body cells visually disappear behind
-          it as the user scrolls past. `top-4` leaves a 16px gap above. */}
-      <div className="sticky top-4 z-40 bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] rounded-t-lg">
+          it as the user scrolls past. `top-4` leaves a 16px gap above; the
+          `::before` shield extends the same opaque bg up into that gap so
+          content can't peek through above the toolbar when pinned. */}
+      <div className="sticky top-4 z-40 bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] rounded-t-lg before:content-[''] before:absolute before:inset-x-[-1px] before:top-[-16px] before:h-4 before:bg-[var(--color-ink-0)] before:z-[-1]">
         <div className="px-5 pt-5 pb-4">
           {/* Chips only — show/hide moves to the microcopy line below. */}
           <DndContext
@@ -148,11 +150,11 @@ export function ComparisonTable({ race }: Props) {
             </SortableContext>
           </DndContext>
 
-          {/* Microcopy + show/hide on the same line.
+          {/* Microcopy stacks ABOVE Show/Hide all, both right-aligned.
               Microcopy uses paper-4 (deeper gray) so it reads as info, not
               as an action. Show/hide stay paper-3 with hover:accent — they
               ARE actions. */}
-          <div className="mt-3 flex items-center justify-between gap-4 flex-wrap">
+          <div className="mt-3 flex flex-col items-end gap-1.5">
             <div className="font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
               Drag to reorder · Click to toggle
             </div>

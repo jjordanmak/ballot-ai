@@ -139,8 +139,9 @@ function Cover({
         <span className="text-[var(--color-paper-3)]"> · {electionDate}</span>
       </h2>
 
-      {/* Location moves under the election name — secondary identifier. */}
-      <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.16em]">
+      {/* Location moves under the election name — secondary identifier
+          but more prominent than a typical eyebrow. */}
+      <div className="mt-3 font-mono-cap text-[13px] text-[var(--color-paper-2)] tracking-[0.18em]">
         {locationLabel}
       </div>
 

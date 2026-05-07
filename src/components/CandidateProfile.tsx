@@ -95,7 +95,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="sticky top-4 z-30 w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
+        className="sticky top-4 z-30 w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl before:content-[''] before:absolute before:inset-x-[-1px] before:top-[-16px] before:h-4 before:bg-[var(--color-ink-0)] before:z-[-1]"
       >
         {/* Headshot, left of identity */}
         <Headshot

@@ -36,7 +36,9 @@
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: subhead rewrite, microcopy placement, gradient softening *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: unified section headings, mask-based news fades, show/hide all *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: lowercase brand, dynamic tab titles, toolbar consolidation, timeline reversal *)",
-      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: header restructure, hover-driven sidebar, sticky profile headers, Realtime Update button *)"
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: header restructure, hover-driven sidebar, sticky profile headers, Realtime Update button *)",
+      "Bash(::before)",
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: bigger location, candidate count placement, sticky gap shield, news bento *)"
     ]
   }
 }

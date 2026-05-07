@@ -12,16 +12,14 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
 
   return (
     <header className="pt-16 pb-10 border-b border-[var(--color-ink-3)]">
-      {/* Index strip */}
-      <div className="flex items-center justify-between gap-4 mb-6">
+      {/* Index strip — race index + jurisdiction. Candidate count moves
+          under the format explainer where it sits with related context. */}
+      <div className="mb-6">
         <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2">
           <span className="race-number text-[var(--color-accent)] tabular-nums">
             {String(index).padStart(2, "0")}
           </span>
           {race.jurisdiction}
-        </span>
-        <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)]">
-          {race.unopposed ? "Unopposed" : `${totalCount} candidates`}
         </span>
       </div>
 
@@ -30,7 +28,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
         {race.office}
       </h2>
 
-      {/* Format tag + explainer — both sit above the divider, paired */}
+      {/* Format tag + explainer + candidate count, all paired above the divider */}
       <div className="mt-5 max-w-3xl">
         <span className="font-mono-cap text-[10px] text-[var(--color-accent)] inline-flex items-center gap-2">
           <span className="w-1 h-1 rounded-full bg-[var(--color-accent)]" />
@@ -39,6 +37,9 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
         <p className="text-[14px] text-[var(--color-paper-2)] mt-2.5 leading-relaxed">
           {race.formatExplainer}
         </p>
+        <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mt-3 tracking-[0.16em]">
+          {race.unopposed ? "Unopposed" : `${totalCount} candidates`}
+        </div>
       </div>
 
       {/* Meta strip — labels above values for clearer hierarchy + breathing room */}
@@ -163,9 +164,20 @@ function PollingPanel({ race, className }: { race: Race; className?: string }) {
             </div>
           ))}
           <div className="pt-2 mt-2 border-t border-[var(--color-ink-3)] flex items-center justify-between">
-            <span className="font-mono-cap text-[9px] text-[var(--color-paper-4)]">
-              Emerson · Inside CA Politics · Apr 14–15
-            </span>
+            {(() => {
+              const label =
+                race.intro.pollingSourceLabel ?? "Emerson · Inside CA Politics · Apr 14–15";
+              const url = race.intro.pollingSourceUrl;
+              const cls =
+                "font-mono-cap text-[9px] text-[var(--color-paper-4)] hover:text-[var(--color-accent)] transition-colors";
+              return url ? (
+                <a href={url} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {label}
+                </a>
+              ) : (
+                <span className={cls}>{label}</span>
+              );
+            })()}
             <span className="font-mono-cap text-[9px] text-[var(--color-paper-4)]">
               Undecided 23%
             </span>
