@@ -21,7 +21,15 @@
       "Bash(grep -n 'Section title=\"Background\"\\\\|Section title=\"In the news\"\\\\|Section title=\"The bottom line\"\\\\|Section title=\"Endorsements\"\\\\|Section title=`You should vote\\\\|TimelineSection items' /Users/jordanmak/Claude_Projects/voter-guide/src/components/CandidateProfile.tsx)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Initial commit: Ballot.ai voter guide *)"
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Initial commit: Ballot.ai voter guide *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__list_projects",
+      "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__apply_migration",
+      "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__list_tables",
+      "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__generate_typescript_types",
+      "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__execute_sql",
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 1: Supabase data layer *)"
     ]
   }
 }

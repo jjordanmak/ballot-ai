@@ -1,14 +1,19 @@
 import { Sidebar } from "@/components/Sidebar";
 import { RaceHeader } from "@/components/RaceHeader";
 import { ComparisonTable } from "@/components/ComparisonTable";
-import { CandidateProfile } from "@/components/CandidateProfile";
 import { CandidatesHeader } from "@/components/CandidatesHeader";
 import { AboutGuide } from "@/components/AboutGuide";
 import { UpdateBar } from "@/components/UpdateBar";
-import { races } from "@/data/races";
+import { getBallot } from "@/lib/db/getBallot";
 
-/** TODO(v2): replace with a per-user lookup driven by ZIP. The Cover and
- * filtering of races will then key off this object. */
+/**
+ * For now, the home page hard-codes ZIP=94015 + ca-2026-primary so we can
+ * verify the DB-powered render. Phase 2 introduces a landing page that
+ * collects a ZIP from the user and routes to /ballot/[zip]/[electionId].
+ */
+const DEFAULT_ZIP = "94015";
+const DEFAULT_ELECTION_ID = "ca-2026-primary";
+
 const BALLOT_CONTEXT = {
   product: "Ballot.ai",
   jurisdiction: "Daly City, CA · 94015",
@@ -17,26 +22,31 @@ const BALLOT_CONTEXT = {
   electionDate: "June 2, 2026",
 };
 
-export default function Home() {
+// Disable static optimization — this page reads from Supabase on each
+// request so the data is fresh after seed updates / cron writes.
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  // Fetches all races for the voter's ballot from Supabase, including
+  // candidates / endorsements / news.
+  const races = await getBallot(DEFAULT_ZIP, DEFAULT_ELECTION_ID);
+
+  const totalCandidates = races.reduce(
+    (n, r) => n + r.candidates.filter((c) => !c.withdrawn && !c.campaignSuspended).length,
+    0
+  );
+
   return (
     <div className="flex">
       <Sidebar races={races} />
 
       <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
-        {/* Cover */}
-        <Cover />
+        <Cover races={races} totalCandidates={totalCandidates} />
 
-        {/* Each race */}
         {races.map((race, i) => {
-          // Profiles still RENDER suspended candidates (with the suspended
-          // banner) but aren't counted in the headline candidate number.
           const profileCandidates = race.candidates.filter((c) => !c.withdrawn);
           const activeCandidates = profileCandidates.filter((c) => !c.campaignSuspended);
-          // Leader polling % drives the relative scaling of every candidate's bar.
-          const leaderPct = Math.max(
-            0,
-            ...activeCandidates.map((c) => c.pollingPct ?? 0)
-          );
+          const leaderPct = Math.max(0, ...activeCandidates.map((c) => c.pollingPct ?? 0));
           return (
             <section
               key={race.id}
@@ -48,8 +58,6 @@ export default function Home() {
 
               {!race.unopposed && <ComparisonTable race={race} />}
 
-              {/* Profiles — wrapped in a client component that owns
-                  expand-all / collapse-all state for the whole list. */}
               <CandidatesHeader
                 profileCandidates={profileCandidates}
                 activeCount={activeCandidates.length}
@@ -68,15 +76,15 @@ export default function Home() {
   );
 }
 
-function Cover() {
-  const totalCandidates = races.reduce(
-    (n, r) => n + r.candidates.filter((c) => !c.withdrawn && !c.campaignSuspended).length,
-    0
-  );
-
+function Cover({
+  races,
+  totalCandidates,
+}: {
+  races: Awaited<ReturnType<typeof getBallot>>;
+  totalCandidates: number;
+}) {
   return (
     <header className="pt-14 pb-10 border-b border-[var(--color-ink-3)]">
-      {/* Eyebrow = location (mirrors site header in sidebar) */}
       <div className="font-mono-cap text-[11px] text-[var(--color-accent)] mb-3 flex items-center gap-2 tracking-[0.16em]">
         <span className="w-3 h-px bg-[var(--color-accent)]" />
         {BALLOT_CONTEXT.jurisdiction}
