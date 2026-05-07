@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { resolveZip } from "@/lib/db/resolveZip";
 import { listElections } from "@/lib/db/getElection";
 import { LandingForm } from "@/components/LandingForm";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "ballot.ai • your voting guide",
+};
 
 /**
  * Landing page. Asks the user for a ZIP and an election, then routes

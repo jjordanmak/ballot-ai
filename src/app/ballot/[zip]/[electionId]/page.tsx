@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { RaceHeader } from "@/components/RaceHeader";
@@ -11,6 +12,16 @@ import { getJurisdiction } from "@/lib/db/getJurisdiction";
 
 // Dynamic — page reads from Supabase per request, with realtime news.
 export const dynamic = "force-dynamic";
+
+/** Per-ZIP page title: "ballot.ai • your voting guide for 94015". */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ zip: string; electionId: string }>;
+}): Promise<Metadata> {
+  const { zip } = await params;
+  return { title: `ballot.ai • your voting guide for ${zip}` };
+}
 
 export default async function BallotPage({
   params,
@@ -53,7 +64,7 @@ export default async function BallotPage({
     <div className="flex">
       <Sidebar
         races={races}
-        productName="Ballot.ai"
+        productName="ballot.ai"
         location={locationLabel}
         electionName={election.name}
         electionDate={electionDate}

@@ -34,7 +34,8 @@
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 2: Landing page + ZIP-driven ballot routing *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: slogan refresh, neutral grays, solid highlights, smarter UpdateBar *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: subhead rewrite, microcopy placement, gradient softening *)",
-      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: unified section headings, mask-based news fades, show/hide all *)"
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: unified section headings, mask-based news fades, show/hide all *)",
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: lowercase brand, dynamic tab titles, toolbar consolidation, timeline reversal *)"
     ]
   }
 }

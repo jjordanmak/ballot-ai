@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   AlertOctagon,
@@ -391,7 +391,34 @@ function Pillar({
  * vertically with the heading. Hides the scrollbar; scrolls imperatively
  * via the arrows or by drag/swipe gesture.
  */
+/** Extract a 4-digit year from a year-or-date string. Returns NaN when
+ *  the value isn't parseable (e.g. "TBD", "Apr 2026"). */
+function parseYear(s: string): number {
+  const m = s.match(/(19|20)\d{2}/);
+  return m ? parseInt(m[0], 10) : NaN;
+}
+
 function TimelineSection({ items }: { items: { year: string; event: string }[] }) {
+  // Reverse order so the most recent event renders on the LEFT. Anything
+  // older than the last 2 years (relative to the newest event) is faded
+  // since it predates the current election cycle.
+  const ordered = useMemo(() => {
+    const withYear = items.map((it) => ({ ...it, _y: parseYear(it.year) }));
+    const newest = Math.max(
+      ...withYear.map((it) => (Number.isFinite(it._y) ? it._y : 0)),
+      new Date().getFullYear()
+    );
+    const cycleStart = newest - 1; // current cycle = newest year + previous year
+    // Sort descending so most recent is first (= leftmost in the row layout)
+    return withYear
+      .slice()
+      .sort((a, b) => (Number.isFinite(b._y) ? b._y : 0) - (Number.isFinite(a._y) ? a._y : 0))
+      .map((it) => ({
+        year: it.year,
+        event: it.event,
+        inCycle: !Number.isFinite(it._y) || it._y >= cycleStart,
+      }));
+  }, [items]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
@@ -449,7 +476,11 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
         </div>
       </div>
 
-      {/* Timeline scroll container with bilateral edge fades */}
+      {/* Timeline scroll container with bilateral edge fades.
+          Ordering: most-recent event is leftmost. Events that fall outside
+          the current election cycle (older than the newest event year - 1)
+          render at reduced opacity so the cycle-relevant context is visually
+          dominant. */}
       <div className="relative">
         <div ref={scrollRef} className="overflow-x-auto scrollbar-hide">
           <div className="relative flex items-stretch min-w-min pt-2 pb-1">
@@ -457,10 +488,12 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
               aria-hidden
               className="absolute left-0 right-0 top-[18px] h-px bg-[var(--color-ink-3)]"
             />
-            {items.map((item, i) => (
+            {ordered.map((item, i) => (
               <div
                 key={i}
-                className="relative flex flex-col items-start min-w-[220px] max-w-[260px] pr-6"
+                className={`relative flex flex-col items-start min-w-[220px] max-w-[260px] pr-6 transition-opacity ${
+                  item.inCycle ? "" : "opacity-40"
+                }`}
               >
                 <div className="relative z-10 w-[14px] h-[14px] rounded-full bg-[var(--color-ink-1)] border-2 border-[var(--color-accent)] flex items-center justify-center">
                   <span className="w-1 h-1 rounded-full bg-[var(--color-accent)]" />

@@ -18,7 +18,7 @@ interface SidebarProps {
 
 export function Sidebar({
   races,
-  productName = "Ballot.ai",
+  productName = "ballot.ai",
   location = "Daly City, CA · 94015",
   electionName = "Statewide Direct Primary",
   electionDate = "Jun 2, 2026",

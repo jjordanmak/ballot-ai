@@ -26,11 +26,16 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ballot.ai — a guide to your ballot",
+  // `default` is used when a child page doesn't set its own title.
+  // `template: "%s"` means child titles render as-is (no automatic suffix).
+  title: {
+    default: "ballot.ai • your voting guide",
+    template: "%s",
+  },
   description:
     "Every race and every candidate on your ballot, compared side by side, profiled in depth, and continuously updated from verified public sources.",
   openGraph: {
-    title: "Ballot.ai — a guide to your ballot",
+    title: "ballot.ai — a guide to your ballot",
     description:
       "Every race and every candidate on your ballot, compared side by side, profiled in depth, and continuously updated from verified public sources.",
     type: "website",

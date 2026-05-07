@@ -74,7 +74,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
       </div>
 
       <h1 className="font-display text-[64px] sm:text-[96px] xl:text-[120px] leading-[0.92] tracking-[-0.03em] text-balance text-center">
-        Ballot<span className="text-[var(--color-paper-3)]">.ai</span>
+        ballot<span className="text-[var(--color-paper-3)]">.ai</span>
       </h1>
 
       <p className="mt-6 max-w-xl text-center text-[16px] sm:text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">
