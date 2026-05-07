@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:calmatters.org)",
+      "WebFetch(domain:www.cnn.com)",
+      "WebFetch(domain:ballotpedia.org)",
+      "WebFetch(domain:www.washingtonpost.com)",
+      "WebFetch(domain:emersoncollegepolling.com)",
+      "WebFetch(domain:ktla.com)",
+      "WebFetch(domain:www.racetothewh.com)",
+      "WebFetch(domain:www.kpbs.org)",
+      "WebFetch(domain:abc7.com)",
+      "WebFetch(domain:www.hollywoodreporter.com)",
+      "Bash(npm install *)",
+      "Bash(npx next *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} · %{size_download} bytes · %{time_total}s\\\\n\" http://localhost:3000/)",
+      "Bash(xargs -r kill)",
+      "Bash(grep -n 'Section title=\"Background\"\\\\|Section title=\"In the news\"\\\\|Section title=\"The bottom line\"\\\\|Section title=\"Endorsements\"\\\\|Section title=`You should vote\\\\|TimelineSection items' /Users/jordanmak/Claude_Projects/voter-guide/src/components/CandidateProfile.tsx)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Initial commit: Ballot.ai voter guide *)"
+    ]
+  }
+}

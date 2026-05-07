@@ -1,0 +1,119 @@
+# Ballot.ai
+
+A live, source-grounded sample ballot. Every race and candidate on a voter's ballot, compared side by side, profiled in depth, and continuously updated from verified public sources.
+
+Built with Next.js 16, React 19, Tailwind v4, and Supabase.
+
+---
+
+## What it does
+
+Given a user's ZIP code and election, Ballot.ai shows:
+
+- Every race the voter will see on their ballot — statewide, federal, state legislative, county
+- Every candidate, profiled in depth: background, priorities, stances, strengths, criticisms, history, endorsements, bottom line
+- A side-by-side comparison table per race with toggle/drag/sort controls
+- A live news feed per race and per candidate, drawn from RSS + free news APIs
+- Polling history with trend indicators
+- Suspended-campaign tracking
+- Algorithmic key-phrase highlighting that surfaces percentages, ballot measures, named policies, and superlatives without authors having to mark them by hand
+
+The product is currently scoped to **California, June 2, 2026** for the demo. The architecture is location-driven from day one so additional states / elections drop in cleanly.
+
+---
+
+## Local development
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy .env.example to .env.local and fill in keys
+cp .env.example .env.local
+
+# 3. Run the dev server
+npm run dev
+```
+
+Visit [localhost:3000](http://localhost:3000).
+
+---
+
+## Tech stack
+
+| Layer | Choice | Why |
+| --- | --- | --- |
+| Framework | Next.js 16 App Router | SSR + Server Components for fast first paint |
+| UI | React 19 | Server / client component split |
+| Styling | Tailwind CSS v4 | Custom utilities + design-token CSS vars |
+| Type system | TypeScript strict | Catches schema drift between DB and UI |
+| Database | Supabase (Postgres) | Realtime + Row-Level Security + free tier |
+| Realtime | Supabase Realtime | Pushes news-feed updates without polling |
+| Hosting | Vercel | Auto-deploys from `main`, preview URLs per PR |
+| Cron | Vercel Cron | News ingestion every 15 min |
+| News sources | RSS + GNews + NewsData.io (free tiers) | Hybrid for breadth without $$ |
+| Civic data | US Census Bureau geocoder | Free ZIP → district resolution |
+| Photos | Wikimedia (`Special:FilePath`) | Free, comprehensive, no key |
+| Drag & drop | `@dnd-kit` | Accessible, lightweight |
+| Icons | `lucide-react` | Tree-shakeable |
+| Fonts | IBM Plex Serif / Sans / Mono | Editorial display + technical accents |
+
+---
+
+## Project structure
+
+```
+src/
+├── app/                  Next.js App Router
+│   ├── page.tsx          Cover + races (will become /ballot/[zip]/[electionId])
+│   ├── layout.tsx        Root layout, fonts, metadata
+│   └── globals.css       Design tokens + auto-highlight CSS + Tailwind setup
+├── components/           UI components (one per concern)
+│   ├── Sidebar.tsx       Site header + scroll-spy nav
+│   ├── RaceHeader.tsx    Per-race intro / format / meta / suspended list
+│   ├── ComparisonTable.tsx   Toggleable, drag-reorderable, sticky thead
+│   ├── CandidateProfile.tsx  Collapsible card with all sections
+│   ├── NewsFeed.tsx      Carousel with platform-faithful social embeds
+│   ├── Highlight.tsx     RichText/RichBlock + autoHighlight algorithm
+│   └── …
+└── data/                 Currently TS imports — being migrated to Supabase
+    ├── governor.ts       Full governor race (becomes seed file)
+    ├── scaffolds.ts      Stub races (becomes seed file)
+    ├── countyRaces.ts    SMC county races (becomes seed file)
+    └── types.ts          Shared types (mirror DB schema)
+```
+
+---
+
+## Environment variables
+
+See `.env.example` for the full list. Required for local dev:
+
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` — public, browser-safe
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only, bypasses Row-Level Security; never expose to the browser
+
+For news ingestion (Phase 3):
+- `GNEWS_API_KEY`, `NEWSDATA_API_KEY`
+
+Optional (added later):
+- `NEWSAPI_KEY`, `X_API_KEY`, `ANTHROPIC_API_KEY`
+
+---
+
+## Deployment
+
+Pushes to `main` deploy to production via Vercel. Pull requests get preview URLs automatically.
+
+Set the same env vars in **Vercel → Settings → Environment Variables** before the first deploy.
+
+---
+
+## Roadmap
+
+- [x] **Phase 0** — frontend prototype with seeded TS data
+- [ ] **Phase 1** — Supabase schema + governor migration + DB-powered page
+- [ ] **Phase 2** — Landing page (ZIP + election picker) → `/ballot/[zip]/[electionId]`
+- [ ] **Phase 3** — News ingestion cron (RSS + GNews + NewsData) + Realtime updates
+- [ ] **Phase 4** — Mobile responsive (sidebar → top nav + hamburger drawer)
+- [ ] **Phase 5** — Photo + content auto-pull pipeline (Wikimedia → fallbacks)
+- [ ] **Phase 6** — AI synthesis with Anthropic API for content generation

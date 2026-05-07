@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+@theme {
+  /* Type — IBM Plex stack as requested */
+  --font-serif: var(--font-plex-serif), "IBM Plex Serif", Georgia, serif;
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Warm-tinted dark — slight ochre hue, not cold blue. */
+  --color-ink-0: oklch(11.5% 0.008 70);   /* page */
+  --color-ink-1: oklch(15% 0.009 70);     /* card */
+  --color-ink-2: oklch(18.5% 0.011 70);   /* raised */
+  --color-ink-3: oklch(24% 0.013 70);     /* border */
+  --color-ink-4: oklch(34% 0.015 70);     /* divider hover */
+
+  --color-paper: oklch(94% 0.012 80);     /* primary text — warm ivory */
+  --color-paper-2: oklch(78% 0.015 75);   /* secondary */
+  --color-paper-3: oklch(58% 0.013 70);   /* tertiary */
+  --color-paper-4: oklch(42% 0.011 70);   /* quaternary */
+
+  /* Civic accent — golden yellow. Slightly warmer hue + lower lightness so it
+     reads as honey/amber rather than highlighter — easier on the eyes against
+     warm dark backgrounds. Reserved for highlights & UI accents only.
+     Red and blue are reserved for Republican / Democratic party encoding. */
+  --color-accent: oklch(80% 0.155 82);
+  --color-accent-soft: oklch(80% 0.155 82 / 0.22);
+  --color-accent-mute: oklch(80% 0.155 82 / 0.10);
+  --color-accent-deep: oklch(68% 0.14 78);
+
+  /* Supplementary tints — used sparingly to break yellow fatigue.
+     Each is calibrated to be readable on warm-dark backgrounds. */
+  --color-tint-orange: oklch(75% 0.13 50);
+  --color-tint-orange-soft: oklch(75% 0.13 50 / 0.18);
+  --color-tint-green: oklch(74% 0.13 155);
+  --color-tint-green-soft: oklch(74% 0.13 155 / 0.18);
+  --color-tint-teal: oklch(76% 0.10 200);
+  --color-tint-teal-soft: oklch(76% 0.10 200 / 0.18);
+  --color-tint-purple: oklch(74% 0.13 295);
+  --color-tint-purple-soft: oklch(74% 0.13 295 / 0.18);
+  --color-tint-pink: oklch(76% 0.13 350);
+  --color-tint-pink-soft: oklch(76% 0.13 350 / 0.18);
+
+  /* Trend signals — muted, distinct from party colors. */
+  --color-trend-up: oklch(72% 0.13 152);
+  --color-trend-down: oklch(70% 0.14 25);
+
+  /* Party hues — restrained chroma so they don't feel like cable-news graphics. */
+  --color-dem: oklch(70% 0.16 250);
+  --color-dem-soft: oklch(70% 0.16 250 / 0.20);
+  --color-rep: oklch(67% 0.20 25);
+  --color-rep-soft: oklch(67% 0.20 25 / 0.20);
+  --color-grn: oklch(70% 0.14 150);
+  --color-grn-soft: oklch(70% 0.14 150 / 0.20);
+  --color-lib: oklch(74% 0.14 60);
+  --color-lib-soft: oklch(74% 0.14 60 / 0.20);
+  --color-pf: oklch(72% 0.17 320);
+  --color-pf-soft: oklch(72% 0.17 320 / 0.20);
+  --color-aip: oklch(70% 0.16 290);
+  --color-aip-soft: oklch(70% 0.16 290 / 0.20);
+  --color-np: oklch(72% 0.02 70);
+  --color-np-soft: oklch(72% 0.02 70 / 0.20);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html, body {
+    background: var(--color-ink-0);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11", "kern";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Slimmer, civic-coded scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-ink-3); border-radius: 999px; border: 2px solid var(--color-ink-0); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-ink-4); }
+
+  /* HIGHLIGHTER SYSTEM
+     ------------------------------------------------------------
+     The mark color is driven by two CSS custom properties that cascade
+     from ancestor wrappers. <mark> reads them via var() and renders
+     the gradient + text color; this means a `.hl-section-good` parent
+     can recolor every <mark> inside it just by changing the variables.
+
+       .hl-section-good   → green   (Strengths)
+       .hl-section-warn   → orange  (Priorities)
+       .hl-section-info   → teal    (Stances)
+       .hl-section-danger → pink    (Criticisms)
+       .hl-section-note   → purple  (Notable / Vote-for-if)
+       (default :root)    → yellow  (general emphasis)
+
+     Authors can also opt in inline with <mark class="hl-green">. The
+     `.no-highlights` wrapper strips highlighting entirely (used for
+     vote-for-if where the surrounding tile is already the focal point). */
+
+  :root {
+    --mark-h: 80% 0.155 82;
+    --mark-fg: oklch(96% 0.025 82);
+  }
+  .hl-section-good { --mark-h: 74% 0.13 155; --mark-fg: oklch(94% 0.04 155); }
+  .hl-section-warn { --mark-h: 75% 0.13 50;  --mark-fg: oklch(94% 0.04 50);  }
+  .hl-section-info { --mark-h: 76% 0.10 200; --mark-fg: oklch(94% 0.03 200); }
+  .hl-section-danger { --mark-h: 76% 0.13 350; --mark-fg: oklch(94% 0.04 350); }
+  .hl-section-note { --mark-h: 74% 0.13 295; --mark-fg: oklch(94% 0.04 295); }
+
+  mark {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 18%,
+      oklch(var(--mark-h) / 0.40) 18%,
+      oklch(var(--mark-h) / 0.52) 50%,
+      oklch(var(--mark-h) / 0.40) 82%,
+      transparent 100%
+    );
+    color: var(--mark-fg);
+    padding: 0.05em 0.18em;
+    margin: 0 -0.04em;
+    border-radius: 2px;
+    font-weight: 500;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  /* Inline opt-ins. Setting the CSS vars on the <mark> itself overrides
+     the cascading section value for that single highlight. */
+  mark.hl-yellow { --mark-h: 80% 0.155 82; --mark-fg: oklch(96% 0.025 82); }
+  mark.hl-green  { --mark-h: 74% 0.13 155; --mark-fg: oklch(94% 0.04 155); }
+  mark.hl-orange { --mark-h: 75% 0.13 50;  --mark-fg: oklch(94% 0.04 50);  }
+  mark.hl-pink   { --mark-h: 76% 0.13 350; --mark-fg: oklch(94% 0.04 350); }
+  mark.hl-teal   { --mark-h: 76% 0.10 200; --mark-fg: oklch(94% 0.03 200); }
+  mark.hl-purple { --mark-h: 74% 0.13 295; --mark-fg: oklch(94% 0.04 295); }
+
+  /* Slight tint for marks inside large display headings */
+  h1 mark, h2 mark, .font-display mark {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 12%,
+      oklch(var(--mark-h) / 0.30) 12%,
+      oklch(var(--mark-h) / 0.40) 50%,
+      oklch(var(--mark-h) / 0.30) 88%,
+      transparent 100%
+    );
+  }
+
+  /* Strip all highlighting inside this wrapper (used in vote-for-if). */
+  .no-highlights mark, .no-auto-highlight ~ * mark {
+    background: none;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    font-weight: inherit;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-paper);
+  }
+
+  /* Headings — IBM Plex Serif, tight optical leading */
+  .font-display {
+    font-family: var(--font-serif);
+    font-feature-settings: "kern", "liga", "calt", "ss01";
+    letter-spacing: -0.018em;
+  }
+  .font-mono-cap {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-feature-settings: "ss01", "zero", "cv01";
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  /* Newsprint rule — used as a typographic divider */
+  .rule-double {
+    border-top: 1px solid var(--color-ink-3);
+    box-shadow: 0 3px 0 -2px var(--color-ink-3);
+  }
+
+  /* Sticky header backdrop - subtle */
+  .glass-tier {
+    background: color-mix(in oklch, var(--color-ink-1) 88%, transparent);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  /* Drop cap for issue intros */
+  .drop-cap::first-letter {
+    font-family: var(--font-serif);
+    float: left;
+    font-size: 3.4em;
+    line-height: 0.86;
+    padding: 0.08em 0.08em 0 0;
+    font-weight: 500;
+    color: var(--color-accent);
+  }
+}
+
+/* Smooth scroll for sidebar nav */
+html { scroll-behavior: smooth; }
+
+/* Scrollbar hiding — defined OUTSIDE @layer so it wins specificity contests
+   regardless of Tailwind v4 layer ordering. !important guards against the
+   global ::-webkit-scrollbar rule defined for the rest of the page. */
+.scrollbar-hide { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+.scrollbar-hide::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+/* Subtle "see more" nudge — eye-catching without being noisy.
+   `!important` defeats Tailwind's animate-* reset which can null custom anims. */
+@keyframes nudge-x {
+  0%, 100% { transform: translateX(0); }
+  35% { transform: translateX(6px); }
+  70% { transform: translateX(2px); }
+}
+.animate-nudge-x { animation: nudge-x 1.6s ease-in-out infinite !important; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-nudge-x { animation: none !important; }
+}
+
+/* Marquee number for race index */
+.race-number {
+  font-feature-settings: "tnum", "zero";
+  font-variant-numeric: tabular-nums slashed-zero;
+}
