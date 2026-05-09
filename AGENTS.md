@@ -1,8 +1,8 @@
 # ballot.ai — instructions for AI assistants
 
-This file auto-loads in every Claude Code session in this repo. **Read it fully before doing any work.**
+This file auto-loads in every Codex session in this repo. **Read it fully before doing any work.**
 
-For deeper context (decisions, history, open questions): `~/.claude/projects/<this-folder>/memory/project_ballot_ai.md` and the last 10–15 git commits (`git log --oneline -15`) — both have rich notes.
+For deeper context (decisions, history, open questions): `~/.Codex/projects/<this-folder>/memory/project_ballot_ai.md` and the last 10–15 git commits (`git log --oneline -15`) — both have rich notes.
 
 ---
 
@@ -91,7 +91,7 @@ scripts/
 
 ## Local dev
 - `npm run dev` (port 3000)
-- Or use `preview_start` via the Claude_Preview MCP — config in `.claude/launch.json`
+- Or use `preview_start` via the Claude_Preview MCP — config in `.Codex/launch.json`
 - `npm run seed` to (re)populate Supabase from the TS data files
 - `npm run build` to typecheck + production build
 - Env vars in `.env.local` (gitignored). `.env.example` lists all required vars.

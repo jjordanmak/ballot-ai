@@ -187,14 +187,3 @@ export const PARTY_TO_KEY: Record<Party, PartyKey> = {
   "No Party Preference": "np",
   Independent: "np",
 };
-
-export const PARTY_ABBR: Record<Party, string> = {
-  Democratic: "DEM",
-  Republican: "REP",
-  Green: "GRN",
-  Libertarian: "LIB",
-  "Peace and Freedom": "P&F",
-  "American Independent": "AIP",
-  "No Party Preference": "NPP",
-  Independent: "IND",
-};

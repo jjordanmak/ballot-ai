@@ -11,7 +11,6 @@ interface Props {
   suspendedCount: number;
   raceId: string;
   unopposed: boolean;
-  leaderPct: number;
 }
 
 /**
@@ -25,7 +24,6 @@ export function CandidatesHeader({
   suspendedCount,
   raceId,
   unopposed,
-  leaderPct,
 }: Props) {
   // `forceOpen` is undefined until the user uses one of the all controls.
   // After that, it stays sticky until the user uses the other one. The
@@ -124,7 +122,6 @@ export function CandidatesHeader({
             candidate={c}
             raceId={raceId}
             unopposed={unopposed}
-            leaderPct={leaderPct}
             forceOpen={forceOpen}
           />
         ))}

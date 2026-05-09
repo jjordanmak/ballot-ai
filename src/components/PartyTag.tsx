@@ -128,16 +128,3 @@ export function StatusPill({
     </span>
   );
 }
-
-/** Map a polling-status string to a pill tone for color-coded display. */
-export function pollingTone(status: string): PillTone {
-  const s = status.toLowerCase();
-  if (s.includes("suspend") || s.includes("withdraw")) return "pink";
-  if (s.includes("unopposed")) return "green";
-  if (s.includes("first") || s.includes("frontrunner")) return "green";
-  if (s.includes("top tier")) return "teal";
-  if (s.includes("competitive")) return "teal";
-  if (s.includes("trailing")) return "orange";
-  if (s.includes("long shot")) return "purple";
-  return "default";
-}
