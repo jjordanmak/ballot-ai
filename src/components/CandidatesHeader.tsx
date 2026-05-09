@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Info, Maximize2, Minimize2, Users } from "lucide-react";
 import type { Candidate } from "@/data/types";
 import { CandidateProfile } from "./CandidateProfile";
@@ -30,9 +30,17 @@ export function CandidatesHeader({
   // default behavior (active expanded, suspended collapsed) only applies on
   // initial mount.
   const [forceOpen, setForceOpen] = useState<boolean | undefined>(undefined);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const collapseAll = () => {
+    setForceOpen(false);
+    requestAnimationFrame(() => {
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   return (
-    <section className="mt-20">
+    <section ref={sectionRef} className="mt-20">
       {/* SECTION HEADER (sticky) — eyebrow + heading row + coverage
           explainer all pin at the top of the viewport while scrolling
           through the profile list. The pb is INSIDE this div so the
@@ -105,7 +113,7 @@ export function CandidatesHeader({
               Expand all
             </button>
             <button
-              onClick={() => setForceOpen(false)}
+              onClick={collapseAll}
               className="font-mono-cap text-[10px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] flex items-center gap-1.5 tracking-[0.18em] transition-colors"
             >
               <Minimize2 size={11} />

@@ -214,6 +214,7 @@ export function NewsFeed({
       left: dir === "right" ? el.clientWidth * 0.7 : -el.clientWidth * 0.7,
       behavior: "smooth",
     });
+    window.setTimeout(updateAffordance, 350);
   };
 
   const sorted = liveItems
@@ -231,14 +232,24 @@ export function NewsFeed({
         <div className="flex gap-2">
           <button
             onClick={() => scrollBy("left")}
-            className="w-8 h-8 rounded-full border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)] flex items-center justify-center transition-colors"
+            disabled={!canLeft}
+            className={`w-8 h-8 rounded-full border border-[var(--color-ink-3)] flex items-center justify-center transition-colors ${
+              canLeft
+                ? "hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)]"
+                : "text-[var(--color-paper-4)] opacity-45 cursor-default"
+            }`}
             aria-label="Scroll feed left"
           >
             <ChevronLeft size={14} />
           </button>
           <button
             onClick={() => scrollBy("right")}
-            className="w-8 h-8 rounded-full border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)] flex items-center justify-center transition-colors"
+            disabled={!canRight}
+            className={`w-8 h-8 rounded-full border border-[var(--color-ink-3)] flex items-center justify-center transition-colors ${
+              canRight
+                ? "hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)]"
+                : "text-[var(--color-paper-4)] opacity-45 cursor-default"
+            }`}
             aria-label="Scroll feed right"
           >
             <ChevronRight size={14} />

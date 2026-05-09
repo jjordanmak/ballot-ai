@@ -453,12 +453,12 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
     if (!el) return;
     const delta = direction === "right" ? el.clientWidth * 0.7 : -el.clientWidth * 0.7;
     el.scrollBy({ left: delta, behavior: "smooth" });
+    window.setTimeout(updateAffordance, 350);
   };
 
   return (
     <section>
-      {/* Heading row — earlier iteration: simple yellow hover arrows, no
-          disabled state. The "See more" hint below carries the affordance. */}
+      {/* Heading row — arrows disable at either end of the horizontal rail. */}
       <div className="mb-5 flex items-center gap-3">
         <div className="font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 flex-1 tracking-[0.16em]">
           <HistoryIcon size={12} className="text-[var(--color-accent)]" />
@@ -482,14 +482,24 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
         <div className="flex gap-2">
           <button
             onClick={() => scrollBy("left")}
-            className="w-8 h-8 rounded-full border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)] flex items-center justify-center transition-colors"
+            disabled={!canLeft}
+            className={`w-8 h-8 rounded-full border border-[var(--color-ink-3)] flex items-center justify-center transition-colors ${
+              canLeft
+                ? "hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)]"
+                : "text-[var(--color-paper-4)] opacity-45 cursor-default"
+            }`}
             aria-label="Scroll timeline left"
           >
             <ChevronLeft size={14} />
           </button>
           <button
             onClick={() => scrollBy("right")}
-            className="w-8 h-8 rounded-full border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)] flex items-center justify-center transition-colors"
+            disabled={!canRight}
+            className={`w-8 h-8 rounded-full border border-[var(--color-ink-3)] flex items-center justify-center transition-colors ${
+              canRight
+                ? "hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] text-[var(--color-paper-3)]"
+                : "text-[var(--color-paper-4)] opacity-45 cursor-default"
+            }`}
             aria-label="Scroll timeline right"
           >
             <ChevronRight size={14} />
