@@ -10,8 +10,6 @@
  * Writes: elections, jurisdictions, races, candidates, endorsements, news_items
  */
 
-/* eslint-disable no-console */
-
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { resolve } from "node:path";

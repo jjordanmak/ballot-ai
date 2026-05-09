@@ -1,12 +1,12 @@
 {
-  "name": "voter-guide",
+  "name": "ballot-ai",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "seed": "tsx scripts/seed.ts",
     "seed:reset": "tsx scripts/seed.ts --reset"
   },
@@ -26,6 +26,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.6",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5"
