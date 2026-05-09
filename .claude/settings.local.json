@@ -18,7 +18,6 @@
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} · %{size_download} bytes · %{time_total}s\\\\n\" http://localhost:3000/)",
       "Bash(xargs -r kill)",
-      "Bash(grep -n 'Section title=\"Background\"\\\\|Section title=\"In the news\"\\\\|Section title=\"The bottom line\"\\\\|Section title=\"Endorsements\"\\\\|Section title=`You should vote\\\\|TimelineSection items' /Users/jordanmak/Claude_Projects/voter-guide/src/components/CandidateProfile.tsx)",
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Initial commit: Ballot.ai voter guide *)",
@@ -30,7 +29,6 @@
       "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__generate_typescript_types",
       "mcp__5f1c899f-2fa3-469e-b57f-271ce157709f__execute_sql",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 1: Supabase data layer *)",
-      "Bash(mkdir -p /Users/jordanmak/Claude_Projects/voter-guide/src/app/ballot/\\\\[zip\\\\]/\\\\[electionId\\\\] && \\\\ *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Phase 2: Landing page + ZIP-driven ballot routing *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: slogan refresh, neutral grays, solid highlights, smarter UpdateBar *)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: subhead rewrite, microcopy placement, gradient softening *)",
@@ -39,10 +37,14 @@
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: header restructure, hover-driven sidebar, sticky profile headers, Realtime Update button *)",
       "Bash(::before)",
       "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Polish: bigger location, candidate count placement, sticky gap shield, news bento *)",
-      "Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Add CLAUDE.md with hard rules for AI assistants *)",
+"Bash(git -c user.email=dev@ballot.ai -c 'user.name=Ballot.ai Dev' commit -m 'Add CLAUDE.md with hard rules for AI assistants *)",
       "Bash(npx tsc *)",
       "Bash(git checkout *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__2cabb3cd-6253-4714-a10b-19bbbf065a6a__list_teams",
+      "mcp__2cabb3cd-6253-4714-a10b-19bbbf065a6a__list_projects",
+      "mcp__2cabb3cd-6253-4714-a10b-19bbbf065a6a__list_deployments",
+      "Bash(git fetch *)"
     ]
   }
 }

@@ -2,6 +2,8 @@
 
 This file auto-loads in every Claude Code session in this repo. **Read it fully before doing any work.**
 
+> **Keep in sync with `AGENTS.md`** (the Codex counterpart). Any time you update one, update the other. The files share all project rules; only the tool/environment-specific lines differ.
+
 For deeper context (decisions, history, open questions): `~/.claude/projects/<this-folder>/memory/project_ballot_ai.md` and the last 10–15 git commits (`git log --oneline -15`) — both have rich notes.
 
 ---
@@ -58,11 +60,12 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 
 ## Behavioral expectations
 
-1. **Verify in browser before claiming done.** A preview server is running. Use the Claude_Preview MCP (`preview_eval`, `preview_screenshot`, `preview_inspect`) for any visible change.
-2. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
-3. **Check the memory file + recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
-4. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
-5. **Ask before changing the design system.** If a request implies "use a different color" or "change the spacing rhythm", confirm before doing it.
+1. **Pause before every task and recommend tooling.** Before any planning or coding, tell the user: (a) whether to use Claude Code or Codex and why, (b) which model (Sonnet 4.6 / Opus 4.6 Fast / Opus 4.7 / Opus 4.7 1M), (c) effort level (Low / Medium / High), (d) any relevant skills, (e) whether to use Plan mode or Auto mode. Wait for confirmation before proceeding.
+2. **Verify in browser before claiming done.** A preview server is running. Use the Claude_Preview MCP (`preview_eval`, `preview_screenshot`, `preview_inspect`) for any visible change.
+3. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
+4. **Check the memory file + recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
+5. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
+6. **Ask before changing the design system.** If a request implies "use a different color" or "change the spacing rhythm", confirm before doing it.
 
 ---
 
@@ -85,7 +88,17 @@ supabase/
 └── migrations/                        SQL migrations
 scripts/
 └── seed.ts                            Seeds Supabase from TS data files (`npm run seed`)
+specs/                                 Feature specs, design system, data model, phase plans
+├── product.md                         Vision, target user, brand, non-goals
+├── design-system.md                   Full palette, typography, highlight system, sticky patterns
+├── data-model.md                      All DB tables, JSONB shapes, TS conventions, Realtime setup
+├── ballot-view.md                     Sidebar, comparison table, candidate profiles, news feed
+├── phase-3-mobile.md                  Mobile responsive spec + definition of done
+├── phase-4-ingestion.md               News cron, photo resolver, source ingestion
+└── phase-5-synthesis.md               Perplexity/Claude pipeline, output schema, triggers
 ```
+
+**Before implementing any feature or phase, read the relevant spec in `specs/`.** Specs are the authoritative source for requirements and design decisions — they take precedence over assumptions. If a spec is missing or incomplete for the task at hand, ask before proceeding.
 
 ---
 

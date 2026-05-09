@@ -2,7 +2,9 @@
 
 This file auto-loads in every Codex session in this repo. **Read it fully before doing any work.**
 
-For deeper context (decisions, history, open questions): `~/.Codex/projects/<this-folder>/memory/project_ballot_ai.md` and the last 10–15 git commits (`git log --oneline -15`) — both have rich notes.
+> **Keep in sync with `CLAUDE.md`** (the Claude Code counterpart). Any time you update one, update the other. The files share all project rules; only the tool/environment-specific lines differ.
+
+For deeper context (decisions, history, open questions): check the last 10–15 git commits (`git log --oneline -15`) — they have rich notes.
 
 ---
 
@@ -58,7 +60,8 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 
 ## Behavioral expectations
 
-1. **Verify in browser before claiming done.** A preview server is running. Use the Claude_Preview MCP (`preview_eval`, `preview_screenshot`, `preview_inspect`) for any visible change.
+1. **Pause before every task and state your plan.** Before any implementation, describe what you're going to do, which files you'll touch, and flag any ambiguity in the spec. Stop and report if the spec is missing or contradictory — don't guess.
+2. **Verify in browser before claiming done.** Start the dev server (`npm run dev`) and load the page to confirm any visible change works correctly before reporting it done.
 2. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
 3. **Check the memory file + recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
 4. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
@@ -85,13 +88,23 @@ supabase/
 └── migrations/                        SQL migrations
 scripts/
 └── seed.ts                            Seeds Supabase from TS data files (`npm run seed`)
+specs/                                 Feature specs, design system, data model, phase plans
+├── product.md                         Vision, target user, brand, non-goals
+├── design-system.md                   Full palette, typography, highlight system, sticky patterns
+├── data-model.md                      All DB tables, JSONB shapes, TS conventions, Realtime setup
+├── ballot-view.md                     Sidebar, comparison table, candidate profiles, news feed
+├── phase-3-mobile.md                  Mobile responsive spec + definition of done
+├── phase-4-ingestion.md               News cron, photo resolver, source ingestion
+└── phase-5-synthesis.md               Perplexity/Claude pipeline, output schema, triggers
 ```
+
+**Before implementing any feature or phase, read the relevant spec in `specs/`.** Specs are the authoritative source for requirements and design decisions — they take precedence over assumptions. If a spec is missing or incomplete for the task at hand, stop and flag it rather than guessing.
 
 ---
 
 ## Local dev
 - `npm run dev` (port 3000)
-- Or use `preview_start` via the Claude_Preview MCP — config in `.Codex/launch.json`
+- Preview config (Claude Code only): `.claude/launch.json`
 - `npm run seed` to (re)populate Supabase from the TS data files
 - `npm run build` to typecheck + production build
 - Env vars in `.env.local` (gitignored). `.env.example` lists all required vars.
