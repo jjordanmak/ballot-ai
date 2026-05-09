@@ -30,17 +30,19 @@ export default async function BallotPage({
 }) {
   const { zip, electionId } = await params;
 
-  // Resolve in parallel: jurisdiction (city/county for the header), election
-  // (name + date), and the actual ballot races.
-  const [jurisdiction, election, races] = await Promise.all([
+  // Resolve the stable route context first. Missing context is a true 404;
+  // Supabase/network errors are allowed to throw so they surface as failures.
+  const [jurisdiction, election] = await Promise.all([
     getJurisdiction(zip),
     getElection(electionId),
-    getBallot(zip, electionId).catch(() => null),
   ]);
 
-  if (!jurisdiction || !election || !races) {
+  if (!jurisdiction || !election) {
     notFound();
   }
+
+  const races = await getBallot(zip, electionId);
+  if (races.length === 0) notFound();
 
   const totalCandidates = races.reduce(
     (n, r) => n + r.candidates.filter((c) => !c.withdrawn && !c.campaignSuspended).length,
@@ -96,7 +98,6 @@ export default async function BallotPage({
         {races.map((race, i) => {
           const profileCandidates = race.candidates.filter((c) => !c.withdrawn);
           const activeCandidates = profileCandidates.filter((c) => !c.campaignSuspended);
-          const leaderPct = Math.max(0, ...activeCandidates.map((c) => c.pollingPct ?? 0));
           return (
             <section
               key={race.id}
@@ -114,7 +115,6 @@ export default async function BallotPage({
                 suspendedCount={profileCandidates.filter((c) => c.campaignSuspended).length}
                 raceId={race.id}
                 unopposed={race.unopposed}
-                leaderPct={leaderPct}
               />
             </section>
           );

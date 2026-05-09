@@ -14,8 +14,9 @@ export async function getElection(id: string): Promise<Election | null> {
     .from("elections")
     .select("id, state, date, name, type")
     .eq("id", id)
-    .single();
-  if (error || !data) return null;
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
   return data as Election;
 }
 
@@ -26,6 +27,7 @@ export async function listElections(): Promise<Election[]> {
     .from("elections")
     .select("id, state, date, name, type")
     .order("date", { ascending: false });
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
   return data as Election[];
 }

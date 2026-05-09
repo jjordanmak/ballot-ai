@@ -60,14 +60,12 @@ interface Props {
   candidate: Candidate;
   raceId: string;
   unopposed?: boolean;
-  /** Race-wide leader polling % — used to scale this candidate's bar. */
-  leaderPct?: number;
   /** When set by the page-level expand/collapse all controls, the profile
    * follows this state regardless of its own initial value. */
   forceOpen?: boolean;
 }
 
-export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forceOpen }: Props) {
+export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Props) {
   const suspended = !!candidate.campaignSuspended;
   // Suspended candidates start COLLAPSED (their content is reduced anyway).
   // Active candidates start expanded. `forceOpen` is set by the page-level
@@ -157,9 +155,9 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
         <div className="overflow-hidden">
           <div className="px-7 pb-7 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
             {suspended ? (
-              <SuspendedBlock candidate={candidate} />
+              <SuspendedBlock candidate={candidate} raceId={raceId} />
             ) : (
-              <FullBody candidate={candidate} />
+              <FullBody candidate={candidate} raceId={raceId} />
             )}
           </div>
         </div>
@@ -168,7 +166,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, leaderPct, forc
   );
 }
 
-function SuspendedBlock({ candidate }: { candidate: Candidate }) {
+function SuspendedBlock({ candidate, raceId }: { candidate: Candidate; raceId: string }) {
   return (
     <div className="pt-6 space-y-10">
       <div className="rounded-lg bg-[oklch(70%_0.14_25_/_0.10)] p-5 border border-[oklch(70%_0.14_25_/_0.30)]">
@@ -188,7 +186,11 @@ function SuspendedBlock({ candidate }: { candidate: Candidate }) {
       </Section>
       {candidate.history.length > 0 && <TimelineSection items={candidate.history} />}
       {candidate.news && candidate.news.length > 0 && (
-        <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} />
+        <NewsFeed
+          items={candidate.news}
+          fallbackAvatar={candidate.headshot}
+          candidateDbId={`${raceId}__${candidate.id}`}
+        />
       )}
     </div>
   );
@@ -205,7 +207,7 @@ const PILLAR_TOOLTIPS: Record<string, string> = {
     "Substantive concerns or attack lines raised about this candidate by opponents, journalists, or the public record.",
 };
 
-function FullBody({ candidate }: { candidate: Candidate }) {
+function FullBody({ candidate, raceId }: { candidate: Candidate; raceId: string }) {
   return (
     // Vertical rhythm: 48px (space-y-12) between major sections in the
     // expanded profile body. Matches mt-12 used for the body's outer wrapper.
@@ -263,7 +265,11 @@ function FullBody({ candidate }: { candidate: Candidate }) {
       </Section>
 
       {/* In the news — candidate-level feed (carousel) */}
-      <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} />
+      <NewsFeed
+        items={candidate.news}
+        fallbackAvatar={candidate.headshot}
+        candidateDbId={`${raceId}__${candidate.id}`}
+      />
 
       {/* You should vote for X if — sits between News and Bottom Line as a
           natural decision-moment after the user has read the context. Numbers
@@ -355,7 +361,7 @@ function Pillar({
         {tooltip && (
           <span
             tabIndex={0}
-            className={`relative inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[var(--color-paper-3)] hover:${tint.fg} focus:${tint.fg} cursor-help group/tip`}
+            className="relative inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[var(--color-paper-3)] hover:text-[var(--color-paper)] focus:text-[var(--color-paper)] cursor-help group/tip"
             aria-label={tooltip}
           >
             <Info size={11} />

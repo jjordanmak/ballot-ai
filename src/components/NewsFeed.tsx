@@ -18,6 +18,7 @@ import {
   Facebook,
 } from "lucide-react";
 import type { NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
+import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 const TYPE_META: Record<
   NewsItemType,
@@ -131,14 +132,61 @@ function fallbackSocialUrl(platform: SocialPlatform, handle: string): string {
 export function NewsFeed({
   items,
   fallbackAvatar,
+  raceId,
+  candidateDbId,
 }: {
   items: NewsItem[] | undefined;
   fallbackAvatar?: string;
+  raceId?: string;
+  candidateDbId?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [liveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
 
+  useEffect(() => {
+    setLiveItems(items ?? []);
+  }, [items]);
+
+  useEffect(() => {
+    const filter = candidateDbId
+      ? `candidate_id=eq.${candidateDbId}`
+      : raceId
+      ? `race_id=eq.${raceId}`
+      : null;
+    if (!filter) return;
+
+    const sb = getSupabaseBrowser();
+    const channel = sb
+      .channel(`news-feed-${candidateDbId ?? raceId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "news_items", filter },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const oldRow = payload.old as Partial<RealtimeNewsRow>;
+            if (!oldRow.id) return;
+            setLiveItems((prev) => prev.filter((item) => item.id !== oldRow.id));
+            return;
+          }
+
+          const next = mapRealtimeNewsItem(payload.new as RealtimeNewsRow);
+          setLiveItems((prev) => {
+            const existing = prev.findIndex((item) => item.id === next.id);
+            if (existing === -1) return [next, ...prev];
+            const copy = prev.slice();
+            copy[existing] = next;
+            return copy;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, [candidateDbId, raceId]);
 
   const updateAffordance = () => {
     const el = scrollRef.current;
@@ -157,7 +205,7 @@ export function NewsFeed({
       el.removeEventListener("scroll", updateAffordance);
       window.removeEventListener("resize", updateAffordance);
     };
-  }, [items]);
+  }, [liveItems]);
 
   const scrollBy = (dir: "left" | "right") => {
     const el = scrollRef.current;
@@ -168,7 +216,7 @@ export function NewsFeed({
     });
   };
 
-  const sorted = (items ?? [])
+  const sorted = liveItems
     .slice()
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -238,6 +286,30 @@ export function NewsFeed({
       )}
     </section>
   );
+}
+
+interface RealtimeNewsRow {
+  id: string;
+  type: string;
+  source: string;
+  title: string;
+  excerpt: string | null;
+  url: string | null;
+  published_at: string;
+  social: unknown;
+}
+
+function mapRealtimeNewsItem(row: RealtimeNewsRow): NewsItem {
+  return {
+    id: row.id,
+    type: row.type as NewsItem["type"],
+    source: row.source,
+    title: row.title,
+    excerpt: row.excerpt ?? undefined,
+    url: row.url ?? undefined,
+    date: row.published_at,
+    social: (row.social ?? undefined) as NewsItem["social"],
+  };
 }
 
 function LivePill() {

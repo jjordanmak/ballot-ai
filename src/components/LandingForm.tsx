@@ -37,17 +37,24 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
       setZipState(null);
       return;
     }
+    let cancelled = false;
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/zip/${zip}`, { cache: "no-store" });
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (!cancelled) setZipState(null);
+          return;
+        }
         const data = (await res.json()) as { state?: string };
-        if (data.state) setZipState(data.state);
+        if (!cancelled) setZipState(data.state ?? null);
       } catch {
-        /* swallow */
+        if (!cancelled) setZipState(null);
       }
     }, 250);
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [zip, validZip]);
 
   // Filter elections by the resolved state. Until a ZIP resolves, show
@@ -152,7 +159,7 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
         {/* Submit */}
         <button
           type="submit"
-          disabled={!validZip || pending}
+          disabled={!validZip || visibleElections.length === 0 || pending}
           className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
         >
           {pending ? "Loading your ballot…" : "Get Started"}

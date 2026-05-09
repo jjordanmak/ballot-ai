@@ -110,39 +110,55 @@ export async function getBallot(zip: string, electionId: string): Promise<Race[]
 
   const districts = (jurisdiction.districts ?? {}) as Record<string, string | number | undefined>;
 
-  // Fetch races + candidates + endorsements + news in parallel.
-  const [racesRes, candidatesRes, endorsementsRes, newsRes] = await Promise.all([
-    supabaseServer
-      .from("races")
-      .select("*")
-      .eq("election_id", electionId)
-      .order("sort_order", { ascending: true }),
-    supabaseServer
-      .from("candidates")
-      .select("*")
-      .order("sort_order", { ascending: true }),
-    supabaseServer
-      .from("endorsements")
-      .select("*")
-      .order("sort_order", { ascending: true }),
+  // Fetch races first so all child queries can be scoped to this ballot
+  // instead of reading every candidate/news row in the database.
+  const racesRes = await supabaseServer
+    .from("races")
+    .select("*")
+    .eq("election_id", electionId)
+    .order("sort_order", { ascending: true });
+  if (racesRes.error) throw racesRes.error;
+
+  const allRaces = (racesRes.data ?? []) as DbRace[];
+  const onBallot = allRaces.filter((r) => raceIsOnBallot(r, districts));
+  const raceIds = onBallot.map((r) => r.id);
+
+  if (raceIds.length === 0) return [];
+
+  const candidatesRes = await supabaseServer
+    .from("candidates")
+    .select("*")
+    .in("race_id", raceIds)
+    .order("sort_order", { ascending: true });
+  if (candidatesRes.error) throw candidatesRes.error;
+
+  const allCandidates = (candidatesRes.data ?? []) as DbCandidate[];
+  const candidateIds = allCandidates.map((c) => c.id);
+
+  const [endorsementsRes, newsRes] = await Promise.all([
+    candidateIds.length > 0
+      ? supabaseServer
+          .from("endorsements")
+          .select("*")
+          .in("candidate_id", candidateIds)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
     supabaseServer
       .from("news_items")
       .select("*")
+      .or(
+        candidateIds.length > 0
+          ? `race_id.in.(${postgrestIn(raceIds)}),candidate_id.in.(${postgrestIn(candidateIds)})`
+          : `race_id.in.(${postgrestIn(raceIds)})`
+      )
       .order("published_at", { ascending: false }),
   ]);
 
-  if (racesRes.error) throw racesRes.error;
-  if (candidatesRes.error) throw candidatesRes.error;
   if (endorsementsRes.error) throw endorsementsRes.error;
   if (newsRes.error) throw newsRes.error;
 
-  const allRaces = (racesRes.data ?? []) as DbRace[];
-  const allCandidates = (candidatesRes.data ?? []) as DbCandidate[];
   const allEndorsements = (endorsementsRes.data ?? []) as DbEndorsement[];
   const allNews = (newsRes.data ?? []) as DbNewsItem[];
-
-  // Filter races to those on this voter's ballot.
-  const onBallot = allRaces.filter((r) => raceIsOnBallot(r, districts));
 
   // Index candidates / endorsements / news by race_id and candidate_id
   // for O(N) assembly instead of O(N²).
@@ -188,6 +204,10 @@ export async function getBallot(zip: string, electionId: string): Promise<Race[]
       news: (newsByRace.get(race.id) ?? []).map(mapNewsItem),
     };
   });
+}
+
+function postgrestIn(values: string[]): string {
+  return values.map((value) => `"${value.replaceAll('"', '\\"')}"`).join(",");
 }
 
 /* ─── Mappers (DB row → UI type) ─────────────────────────────────── */

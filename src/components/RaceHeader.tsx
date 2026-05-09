@@ -89,7 +89,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
 
       {/* Race-level "In the news" carousel */}
       <div className="mt-12">
-        <NewsFeed items={race.news} />
+        <NewsFeed items={race.news} raceId={race.id} />
       </div>
     </header>
   );
@@ -193,8 +193,4 @@ function PollingPanel({ race, className }: { race: Race; className?: string }) {
       )}
     </div>
   );
-}
-
-export function HighlightedSpan({ text }: { text: string }) {
-  return <RichText text={text} />;
 }

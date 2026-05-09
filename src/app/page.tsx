@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { resolveZip } from "@/lib/db/resolveZip";
-import { listElections } from "@/lib/db/getElection";
+import { getElection, listElections } from "@/lib/db/getElection";
 import { LandingForm } from "@/components/LandingForm";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +40,10 @@ export default async function HomePage() {
     const jurisdiction = await resolveZip(zip);
     if (!jurisdiction) {
       redirect(`/?error=unknown_zip&zip=${zip}`);
+    }
+    const election = await getElection(electionId);
+    if (!election || election.state !== jurisdiction.state) {
+      redirect(`/?error=invalid_election&zip=${zip}`);
     }
     redirect(`/ballot/${zip}/${electionId}`);
   }

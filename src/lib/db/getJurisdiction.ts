@@ -15,7 +15,8 @@ export async function getJurisdiction(zip: string): Promise<Jurisdiction | null>
     .select("zip, city, county, state, districts")
     .eq("zip", zip)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) throw error;
+  if (!data) return null;
   return {
     zip: data.zip,
     city: data.city,
