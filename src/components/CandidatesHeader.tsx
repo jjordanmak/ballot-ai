@@ -47,7 +47,7 @@ export function CandidatesHeader({
           visual gap between the explainer and the first profile stays
           part of the header's opaque bg while pinned (rather than being
           external margin where body content could leak through). */}
-      <div className="relative sticky top-0 z-[100] pt-8 pb-8">
+      <div className="relative sticky top-14 lg:top-0 z-[100] pt-8 pb-8">
         {/* Background layer — behind the content (z:-10) so the masked
             fade applies ONLY to the bg paint, not to descendants like
             the Info tooltip popup. Putting bg + mask + backdrop-blur

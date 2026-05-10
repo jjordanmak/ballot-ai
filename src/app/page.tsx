@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { resolveZip } from "@/lib/db/resolveZip";
-import { getElection, listElections } from "@/lib/db/getElection";
+import { getElection } from "@/lib/db/getElection";
 import { LandingForm } from "@/components/LandingForm";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +19,6 @@ export const metadata: Metadata = {
  * round-trip beyond the form post.
  */
 export default async function HomePage() {
-  const elections = await listElections();
-  // Default to the upcoming election (most recent future date), else the
-  // most recent one regardless of date.
-  const today = new Date().toISOString().slice(0, 10);
-  const upcoming = elections.find((e) => e.date >= today);
-  const defaultElectionId = upcoming?.id ?? elections[0]?.id ?? "";
-
   /** Server action: resolves ZIP + redirects to the ballot page. */
   async function submit(formData: FormData) {
     "use server";
@@ -48,5 +41,5 @@ export default async function HomePage() {
     redirect(`/ballot/${zip}/${electionId}`);
   }
 
-  return <LandingForm elections={elections} defaultElectionId={defaultElectionId} action={submit} />;
+  return <LandingForm action={submit} />;
 }

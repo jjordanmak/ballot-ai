@@ -119,7 +119,7 @@ export function ComparisonTable({ race }: Props) {
           between header content and toolbar is internal padding (pb-5 on
           the inner header block) — it scrolls with them, never separates
           on scroll, never needs CSS-variable coordination. */}
-      <div className="sticky top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
+      <div className="sticky top-14 lg:top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
         {/* Eyebrow row — eyebrow on the left, Show/Hide/Reset controls on
             the right (mirrors the candidate-profiles section's eyebrow +
             Expand/Collapse pattern). mb-8 below this row matches the
@@ -191,7 +191,7 @@ export function ComparisonTable({ race }: Props) {
             on the RIGHT, vertically centered with the chips. The
             Show/Hide/Reset action group lives in the eyebrow row above
             so the toolbar interior is just chips + their behavior label. */}
-        <div className="px-5 pt-5 pb-4 flex items-center gap-5">
+        <div className="px-5 pt-5 pb-4">
           <DndContext
             id={`compare-${race.id}`}
             sensors={sensors}
@@ -199,7 +199,7 @@ export function ComparisonTable({ race }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-              <div className="flex-1 min-w-0 flex flex-wrap gap-2.5 items-center">
+              <div className="flex flex-wrap gap-2.5 items-center">
                 {order.map((id) => {
                   const c = candidatesById[id];
                   if (!c) return null;
@@ -216,7 +216,7 @@ export function ComparisonTable({ race }: Props) {
             </SortableContext>
           </DndContext>
 
-          <div className="shrink-0 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
+          <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
             Drag to reorder · Click to toggle
           </div>
         </div>
@@ -398,18 +398,14 @@ function CandidateColHeader({ candidate, raceId }: { candidate: Candidate; raceI
         </a>
       </div>
 
-      {/* Party pill (full name) */}
-      <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+      {/* Party + polling status — single row */}
+      <div className="mt-2.5 flex items-center gap-1.5 flex-nowrap overflow-hidden">
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2 py-0.5 ${partyClass(candidate.party)}`}
+          className={`shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2 py-0.5 ${partyClass(candidate.party)}`}
         >
           <span className={`w-1 h-1 rounded-full ${partyDot(candidate.party)}`} />
           {partyLabel(candidate.party)}
         </span>
-      </div>
-
-      {/* Polling status pill — with trend arrow */}
-      <div className="mt-1.5">
         <StatusPill tone={isSuspended ? "warn" : "default"} size="xs">
           <span>
             {candidate.pollingStatus}

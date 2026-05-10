@@ -90,23 +90,24 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
+        className="w-full text-left px-5 py-5 sm:px-8 sm:py-8 flex items-center gap-5 sm:gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
       >
         {/* Headshot, left of identity */}
         <Headshot
           candidate={candidate}
-          className="shrink-0 w-[96px] h-[96px] sm:w-[112px] sm:h-[112px] rounded-xl"
+          className="hidden sm:block shrink-0 w-[112px] h-[112px] rounded-xl"
+          loading="eager"
         />
 
         {/* Identity — vertically centered next to the photo */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-display text-[20px] leading-[1.1] tracking-[-0.02em] text-balance">
+          <h3 className="font-display text-[20px] sm:text-[28px] leading-[1.1] tracking-[-0.02em] text-balance">
             {candidate.name}
           </h3>
 
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <div className="mt-2 flex items-center gap-2 flex-nowrap overflow-hidden">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2.5 py-0.5 ${partyClass(candidate.party)}`}
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2.5 py-0.5 ${partyClass(candidate.party)}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${partyDot(candidate.party)}`} />
               {partyLabel(candidate.party)}
@@ -141,7 +142,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
 
         <ChevronDown
           size={20}
-          className={`shrink-0 mt-2 text-[var(--color-paper-3)] transition-transform duration-300 ${
+          className={`shrink-0 text-[var(--color-paper-3)] transition-transform duration-300 ${
             open ? "rotate-180 text-[var(--color-accent)]" : ""
           }`}
         />
@@ -153,7 +154,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="px-7 pb-7 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
+          <div className="px-5 pb-5 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
             {suspended ? (
               <SuspendedBlock candidate={candidate} raceId={raceId} />
             ) : (
@@ -282,10 +283,10 @@ function FullBody({ candidate, raceId }: { candidate: Candidate; raceId: string 
           {candidate.voteForIf.map((line, i) => (
             <li
               key={i}
-              className="flex flex-col items-center text-center rounded-xl bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] px-6 pt-7 pb-4 min-h-[200px]"
+              className="flex items-center gap-4 sm:flex-col sm:items-center sm:text-center rounded-xl bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] px-5 py-4 sm:px-6 sm:pt-7 sm:pb-4 sm:min-h-[200px]"
             >
               <span
-                className="font-display italic text-[60px] leading-none text-[var(--color-accent)]"
+                className="shrink-0 font-display italic text-[56px] sm:text-[60px] leading-none text-[var(--color-accent)]"
                 style={{ fontVariantNumeric: "oldstyle-nums proportional-nums" }}
               >
                 {String(i + 1).padStart(2, "0")}
@@ -590,7 +591,7 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
  * initials badge tinted by party color (and gracefully swaps to initials
  * if the image URL fails at runtime).
  */
-function Headshot({ candidate, className = "" }: { candidate: Candidate; className?: string }) {
+function Headshot({ candidate, className = "", loading = "lazy" }: { candidate: Candidate; className?: string; loading?: "lazy" | "eager" }) {
   const [errored, setErrored] = useState(false);
   const initials = candidate.name
     .split(" ")
@@ -637,7 +638,7 @@ function Headshot({ candidate, className = "" }: { candidate: Candidate; classNa
           src={candidate.headshot}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
+          loading={loading}
           onError={() => setErrored(true)}
         />
       ) : (

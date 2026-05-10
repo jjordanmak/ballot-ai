@@ -207,7 +207,7 @@
 }
 
 /* Smooth scroll for sidebar nav */
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 /* Scrollbar hiding — defined OUTSIDE @layer so it wins specificity contests
    regardless of Tailwind v4 layer ordering. !important guards against the

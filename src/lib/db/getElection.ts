@@ -20,12 +20,23 @@ export async function getElection(id: string): Promise<Election | null> {
   return data as Election;
 }
 
-/** All elections (used by the landing-page election dropdown). Future-dated
- * first, then past, all sorted by date descending within each group. */
+/** All elections sorted by date descending. */
 export async function listElections(): Promise<Election[]> {
   const { data, error } = await supabaseServer
     .from("elections")
     .select("id, state, date, name, type")
+    .order("date", { ascending: false });
+  if (error) throw error;
+  if (!data) return [];
+  return data as Election[];
+}
+
+/** Elections for a specific state, future-first then past. */
+export async function listElectionsByState(state: string): Promise<Election[]> {
+  const { data, error } = await supabaseServer
+    .from("elections")
+    .select("id, state, date, name, type")
+    .eq("state", state)
     .order("date", { ascending: false });
   if (error) throw error;
   if (!data) return [];

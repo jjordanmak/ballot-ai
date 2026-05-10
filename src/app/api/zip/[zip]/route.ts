@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveZip } from "@/lib/db/resolveZip";
+import { listElectionsByState } from "@/lib/db/getElection";
 
 /**
  * Resolve a ZIP to its canonical jurisdiction. Used by the landing-page
@@ -21,10 +22,12 @@ export async function GET(
   if (!j) {
     return NextResponse.json({ error: "unknown_zip" }, { status: 404 });
   }
+  const elections = await listElectionsByState(j.state);
   return NextResponse.json({
     zip: j.zip,
     state: j.state,
     city: j.city,
     county: j.county,
+    elections,
   });
 }

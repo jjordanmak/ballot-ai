@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { MobileNav } from "@/components/MobileNav";
 import { RaceHeader } from "@/components/RaceHeader";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { CandidatesHeader } from "@/components/CandidatesHeader";
@@ -76,7 +77,13 @@ export default async function BallotPage({
   });
 
   return (
-    <div className="flex">
+    <div className="flex flex-col lg:flex-row">
+      <MobileNav
+        races={races}
+        electionName={election.name}
+        location={locationLabel}
+        electionDate={electionDate}
+      />
       <Sidebar
         races={races}
         productName="ballot.ai"
