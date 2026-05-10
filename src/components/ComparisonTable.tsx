@@ -119,7 +119,7 @@ export function ComparisonTable({ race }: Props) {
           between header content and toolbar is internal padding (pb-5 on
           the inner header block) — it scrolls with them, never separates
           on scroll, never needs CSS-variable coordination. */}
-      <div className="sticky top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
+      <div className="sticky top-14 lg:top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
         {/* Eyebrow row — eyebrow on the left, Show/Hide/Reset controls on
             the right (mirrors the candidate-profiles section's eyebrow +
             Expand/Collapse pattern). mb-8 below this row matches the

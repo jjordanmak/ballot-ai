@@ -371,7 +371,7 @@ function NewsCard({
         ? { href: resolvedUrl, target: "_blank", rel: "noopener noreferrer" }
         : {})}
       className={`flex flex-col shrink-0 ${
-        widerForMedia ? "w-[340px] sm:w-[380px]" : "w-[320px] sm:w-[360px]"
+        widerForMedia ? "w-[85vw] sm:w-[380px]" : "w-[85vw] sm:w-[360px]"
       } rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 transition-colors ${
         resolvedUrl ? "hover:border-[var(--color-paper-4)]" : ""
       }`}
