@@ -95,13 +95,13 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
         {/* Headshot, left of identity */}
         <Headshot
           candidate={candidate}
-          className="shrink-0 w-[112px] h-[112px] rounded-xl"
+          className="hidden sm:block shrink-0 w-[112px] h-[112px] rounded-xl"
           loading="eager"
         />
 
         {/* Identity — vertically centered next to the photo */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-display text-[20px] sm:text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-balance">
+          <h3 className="font-display text-[20px] sm:text-[28px] leading-[1.1] tracking-[-0.02em] text-balance">
             {candidate.name}
           </h3>
 
@@ -135,7 +135,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
           </div>
 
           {/* Tighter gap between pills and current role */}
-          <div className="mt-2 text-[14px] text-[var(--color-paper-2)] max-sm:truncate">
+          <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">
             {candidate.currentRole}
           </div>
         </div>
