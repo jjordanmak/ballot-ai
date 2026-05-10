@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronRight, ArrowUp, MapPin } from "lucide-react";
 import { partyDot } from "./PartyTag";
 import type { Race } from "@/data/types";
+import { useScrollSpy } from "@/hooks/useScrollSpy";
 
 interface SidebarProps {
   races: Race[];
@@ -24,92 +25,11 @@ export function Sidebar({
   electionName = "Statewide Direct Primary",
   electionDate = "Jun 2, 2026",
 }: SidebarProps) {
-  const [activeRaceId, setActiveRaceId] = useState<string>(races[0]?.id ?? "");
   // Hover-driven expansion: which race the cursor is over. Distinct from
   // active (scroll-spy) so the active highlight stays put as the user
   // scrolls but the dropdown only opens when the cursor is on the row.
   const [hoveredRaceId, setHoveredRaceId] = useState<string | null>(null);
-  // Active candidate (scroll-spy across all candidate profile articles).
-  // Highlighted in the sidebar candidate list so the user can see which
-  // profile they're currently reading without needing the profile header
-  // pinned to the viewport.
-  const [activeCandidateId, setActiveCandidateId] = useState<string | null>(null);
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // Scroll-spy: track which race section is currently in view
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    const visible = new Map<string, number>();
-
-    races.forEach((race) => {
-      const el = document.getElementById(`race-${race.id}`);
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              visible.set(race.id, entry.intersectionRatio);
-            } else {
-              visible.delete(race.id);
-            }
-          });
-          if (visible.size > 0) {
-            const top = [...visible.entries()].sort((a, b) => b[1] - a[1])[0][0];
-            setActiveRaceId(top);
-          }
-        },
-        { rootMargin: "-15% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
-
-    return () => observers.forEach((o) => o.disconnect());
-  }, [races]);
-
-  // Candidate scroll-spy — one observer for all `<article id="candidate-*">`.
-  // Whichever article has the largest visible ratio is the "current" one.
-  // We scope detection to the middle of the viewport (rootMargin) so we
-  // don't flicker as a cards' edge crosses in/out near the section header.
-  useEffect(() => {
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const id = entry.target.id;
-          if (entry.isIntersecting) {
-            visible.set(id, entry.intersectionRatio);
-          } else {
-            visible.delete(id);
-          }
-        });
-        if (visible.size > 0) {
-          const top = [...visible.entries()].sort((a, b) => b[1] - a[1])[0][0];
-          setActiveCandidateId(top);
-        } else {
-          setActiveCandidateId(null);
-        }
-      },
-      { rootMargin: "-25% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
-
-    races.forEach((race) => {
-      race.candidates.forEach((cand) => {
-        const el = document.getElementById(`candidate-${race.id}-${cand.id}`);
-        if (el) observer.observe(el);
-      });
-    });
-
-    return () => observer.disconnect();
-  }, [races]);
-
-  // Show "Back to top" once user scrolls past one viewport.
-  useEffect(() => {
-    const onScroll = () => setShowBackToTop(window.scrollY > window.innerHeight * 0.6);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const { activeRaceId, activeCandidateId, showBackToTop } = useScrollSpy(races);
 
   return (
     <aside className="hidden lg:flex sticky top-0 left-0 h-screen w-[300px] xl:w-[340px] flex-col border-r border-[var(--color-ink-3)] bg-[var(--color-ink-0)]">
