@@ -90,12 +90,12 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="w-full text-left px-7 py-7 sm:px-8 sm:py-8 flex items-center gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
+        className="w-full text-left px-5 py-5 sm:px-8 sm:py-8 flex items-center gap-5 sm:gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
       >
         {/* Headshot, left of identity */}
         <Headshot
           candidate={candidate}
-          className="shrink-0 w-[96px] h-[96px] sm:w-[112px] sm:h-[112px] rounded-xl"
+          className="shrink-0 w-[72px] h-[72px] sm:w-[112px] sm:h-[112px] rounded-xl"
         />
 
         {/* Identity — vertically centered next to the photo */}
@@ -104,9 +104,9 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
             {candidate.name}
           </h3>
 
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <div className="mt-2 flex items-center gap-2 flex-nowrap overflow-hidden">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2.5 py-0.5 ${partyClass(candidate.party)}`}
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2.5 py-0.5 ${partyClass(candidate.party)}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${partyDot(candidate.party)}`} />
               {partyLabel(candidate.party)}
@@ -153,7 +153,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="px-7 pb-7 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
+          <div className="px-5 pb-5 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
             {suspended ? (
               <SuspendedBlock candidate={candidate} raceId={raceId} />
             ) : (
@@ -282,10 +282,10 @@ function FullBody({ candidate, raceId }: { candidate: Candidate; raceId: string 
           {candidate.voteForIf.map((line, i) => (
             <li
               key={i}
-              className="flex flex-col items-center text-center rounded-xl bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] px-6 pt-7 pb-4 min-h-[200px]"
+              className="flex items-center gap-4 sm:flex-col sm:items-center sm:text-center rounded-xl bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] px-5 py-4 sm:px-6 sm:pt-7 sm:pb-4 sm:min-h-[200px]"
             >
               <span
-                className="font-display italic text-[60px] leading-none text-[var(--color-accent)]"
+                className="shrink-0 font-display italic text-[48px] sm:text-[60px] leading-none text-[var(--color-accent)]"
                 style={{ fontVariantNumeric: "oldstyle-nums proportional-nums" }}
               >
                 {String(i + 1).padStart(2, "0")}

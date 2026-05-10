@@ -191,7 +191,7 @@ export function ComparisonTable({ race }: Props) {
             on the RIGHT, vertically centered with the chips. The
             Show/Hide/Reset action group lives in the eyebrow row above
             so the toolbar interior is just chips + their behavior label. */}
-        <div className="px-5 pt-5 pb-4 flex items-center gap-5">
+        <div className="px-5 pt-5 pb-4">
           <DndContext
             id={`compare-${race.id}`}
             sensors={sensors}
@@ -199,7 +199,7 @@ export function ComparisonTable({ race }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-              <div className="flex-1 min-w-0 flex flex-wrap gap-2.5 items-center">
+              <div className="flex flex-wrap gap-2.5 items-center">
                 {order.map((id) => {
                   const c = candidatesById[id];
                   if (!c) return null;
@@ -216,7 +216,7 @@ export function ComparisonTable({ race }: Props) {
             </SortableContext>
           </DndContext>
 
-          <div className="shrink-0 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
+          <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
             Drag to reorder · Click to toggle
           </div>
         </div>
