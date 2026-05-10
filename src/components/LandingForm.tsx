@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { Election } from "@/lib/db/getElection";
 
@@ -14,63 +14,74 @@ function formatBallotDate(iso: string): string {
 }
 
 interface LandingFormProps {
-  elections: Election[];
-  defaultElectionId: string;
   /** Server Action that takes (zip, electionId) and redirects. */
   action: (formData: FormData) => Promise<void>;
 }
 
-export function LandingForm({ elections, defaultElectionId, action }: LandingFormProps) {
+export function LandingForm({ action }: LandingFormProps) {
   const [zip, setZip] = useState("");
-  const [electionId, setElectionId] = useState(defaultElectionId);
   const [pending, setPending] = useState(false);
-  // Resolved state for the current ZIP (drives the election dropdown).
-  const [zipState, setZipState] = useState<string | null>(null);
+
+  // Elections are loaded lazily after the zip resolves.
+  const [elections, setElections] = useState<Election[]>([]);
+  const [electionId, setElectionId] = useState("");
+  const [zipLoading, setZipLoading] = useState(false);
+  const [zipError, setZipError] = useState<string | null>(null);
 
   const validZip = /^\d{5}$/.test(zip);
 
-  // When a valid 5-digit ZIP is typed, resolve to a state so we can
-  // filter the election dropdown. Light debounce so we don't hammer the
-  // endpoint on every keystroke.
   useEffect(() => {
     if (!validZip) {
-      setZipState(null);
+      setElections([]);
+      setElectionId("");
+      setZipError(null);
+      setZipLoading(false);
       return;
     }
+
+    setZipLoading(true);
+    setZipError(null);
+
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/zip/${zip}`, { cache: "no-store" });
         if (!res.ok) {
-          if (!cancelled) setZipState(null);
+          if (!cancelled) {
+            setZipLoading(false);
+            setElections([]);
+            setElectionId("");
+            setZipError(res.status === 404 ? "ZIP code not found." : "Could not verify ZIP.");
+          }
           return;
         }
-        const data = (await res.json()) as { state?: string };
-        if (!cancelled) setZipState(data.state ?? null);
+        const data = (await res.json()) as {
+          state?: string;
+          elections?: Election[];
+        };
+        if (!cancelled) {
+          const loaded = data.elections ?? [];
+          setElections(loaded);
+          setElectionId(loaded[0]?.id ?? "");
+          setZipLoading(false);
+          setZipError(loaded.length === 0 ? "No upcoming elections found for your area." : null);
+        }
       } catch {
-        if (!cancelled) setZipState(null);
+        if (!cancelled) {
+          setZipLoading(false);
+          setElections([]);
+          setElectionId("");
+        }
       }
-    }, 250);
+    }, 300);
+
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
   }, [zip, validZip]);
 
-  // Filter elections by the resolved state. Until a ZIP resolves, show
-  // every election in the catalog.
-  const visibleElections = useMemo(() => {
-    if (!zipState) return elections;
-    return elections.filter((e) => e.state === zipState);
-  }, [elections, zipState]);
-
-  // If the current selection drops out of the filtered list, reset.
-  useEffect(() => {
-    if (visibleElections.length === 0) return;
-    if (!visibleElections.some((e) => e.id === electionId)) {
-      setElectionId(visibleElections[0].id);
-    }
-  }, [visibleElections, electionId]);
+  const canSubmit = validZip && !zipLoading && elections.length > 0 && !!electionId && !pending;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
@@ -120,50 +131,51 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
               className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg pl-10 pr-4 py-3 text-[18px] font-mono tabular-nums text-[var(--color-paper)] placeholder:text-[var(--color-paper-4)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
             />
           </div>
+          {zipError && (
+            <p className="text-[11px] font-mono-cap text-[var(--color-trend-down)] tracking-[0.12em]">
+              {zipError}
+            </p>
+          )}
         </div>
 
-        {/* Election */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="electionId"
-            className="font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.18em]"
-          >
-            Pick an election
-          </label>
-          <select
-            id="electionId"
-            name="electionId"
-            required
-            value={electionId}
-            onChange={(e) => setElectionId(e.target.value)}
-            disabled={visibleElections.length === 0}
-            className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg px-4 py-3 text-[15px] text-[var(--color-paper)] focus:outline-none focus:border-[var(--color-accent)] transition-colors appearance-none bg-no-repeat bg-[length:14px] bg-[position:right_1rem_center] disabled:opacity-50"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2378736d' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>\")",
-            }}
-          >
-            {visibleElections.length === 0 && (
-              <option value="">
-                {zipState ? `No elections found for ${zipState}` : "No elections available"}
-              </option>
-            )}
-            {visibleElections.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name} — {formatBallotDate(e.date)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Election — only shown once elections load */}
+        {elections.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="electionId"
+              className="font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.18em]"
+            >
+              Pick an election
+            </label>
+            <select
+              id="electionId"
+              name="electionId"
+              required
+              value={electionId}
+              onChange={(e) => setElectionId(e.target.value)}
+              className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg px-4 py-3 text-[15px] text-[var(--color-paper)] focus:outline-none focus:border-[var(--color-accent)] transition-colors appearance-none bg-no-repeat bg-[length:14px] bg-[position:right_1rem_center]"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2378736d' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>\")",
+              }}
+            >
+              {elections.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name} — {formatBallotDate(e.date)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Submit */}
         <button
           type="submit"
-          disabled={!validZip || visibleElections.length === 0 || pending}
+          disabled={!canSubmit}
           className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
         >
-          {pending ? "Loading your ballot…" : "Get Started"}
-          {!pending && <ArrowRight size={14} />}
+          {pending ? "Loading your ballot…" : zipLoading ? "Checking ZIP…" : "Get Started"}
+          {!pending && !zipLoading && <ArrowRight size={14} />}
         </button>
 
         <p className="mt-3 text-center text-[11px] text-[var(--color-paper-4)] font-mono-cap tracking-[0.16em]">
