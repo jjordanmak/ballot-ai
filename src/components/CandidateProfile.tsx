@@ -90,12 +90,13 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="w-full text-left px-5 py-5 sm:px-8 sm:py-8 flex items-center gap-5 sm:gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
+        className="w-full text-left px-5 py-5 sm:px-8 sm:py-8 flex items-start gap-5 sm:gap-6 group bg-[var(--color-ink-1)] rounded-t-xl"
       >
         {/* Headshot, left of identity */}
         <Headshot
           candidate={candidate}
           className="shrink-0 w-[72px] h-[72px] sm:w-[112px] sm:h-[112px] rounded-xl"
+          loading="eager"
         />
 
         {/* Identity — vertically centered next to the photo */}
@@ -141,7 +142,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
 
         <ChevronDown
           size={20}
-          className={`shrink-0 mt-2 text-[var(--color-paper-3)] transition-transform duration-300 ${
+          className={`shrink-0 text-[var(--color-paper-3)] transition-transform duration-300 ${
             open ? "rotate-180 text-[var(--color-accent)]" : ""
           }`}
         />
@@ -285,7 +286,7 @@ function FullBody({ candidate, raceId }: { candidate: Candidate; raceId: string 
               className="flex items-center gap-4 sm:flex-col sm:items-center sm:text-center rounded-xl bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] px-5 py-4 sm:px-6 sm:pt-7 sm:pb-4 sm:min-h-[200px]"
             >
               <span
-                className="shrink-0 font-display italic text-[48px] sm:text-[60px] leading-none text-[var(--color-accent)]"
+                className="shrink-0 font-display italic text-[56px] sm:text-[60px] leading-none text-[var(--color-accent)]"
                 style={{ fontVariantNumeric: "oldstyle-nums proportional-nums" }}
               >
                 {String(i + 1).padStart(2, "0")}
@@ -590,7 +591,7 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
  * initials badge tinted by party color (and gracefully swaps to initials
  * if the image URL fails at runtime).
  */
-function Headshot({ candidate, className = "" }: { candidate: Candidate; className?: string }) {
+function Headshot({ candidate, className = "", loading = "lazy" }: { candidate: Candidate; className?: string; loading?: "lazy" | "eager" }) {
   const [errored, setErrored] = useState(false);
   const initials = candidate.name
     .split(" ")
@@ -637,7 +638,7 @@ function Headshot({ candidate, className = "" }: { candidate: Candidate; classNa
           src={candidate.headshot}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
+          loading={loading}
           onError={() => setErrored(true)}
         />
       ) : (
