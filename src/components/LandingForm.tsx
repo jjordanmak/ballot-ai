@@ -109,10 +109,10 @@ export function LandingForm({ elections, defaultElectionId, action }: LandingFor
             <input
               id="zip"
               name="zip"
-              type="text"
-              inputMode="numeric"
+              type="tel"
               autoComplete="postal-code"
-              maxLength={5}
+              autoCorrect="off"
+              autoCapitalize="off"
               placeholder="94015"
               required
               value={zip}
