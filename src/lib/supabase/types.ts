@@ -1108,7 +1108,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_api_quota: {
+        Args: { p_limit: number; p_metric: string; p_period: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

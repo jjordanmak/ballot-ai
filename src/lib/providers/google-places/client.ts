@@ -7,10 +7,13 @@
  *   logged, not cached, not stored (docs/architecture/PRIVACY.md).
  * - Calls share a browser-generated session token, so a pick from the list
  *   followed by one place lookup bills as a single session.
+ * - Every call first takes one unit of the monthly budget (src/lib/usage/quota.ts),
+ *   which keeps usage inside Google's free tier unless the limits are raised.
  * - Any failure returns an empty result; typing the address still works.
  */
 import "server-only";
 import { logEvent } from "@/lib/observability/log";
+import { consumeQuota, type QuotaMetric } from "@/lib/usage/quota";
 
 const BASE = "https://places.googleapis.com/v1";
 const TIMEOUT_MS = 4000;
@@ -36,15 +39,19 @@ interface AutocompleteResponse {
 export interface PlacesClientOptions {
   apiKey?: string;
   fetchImpl?: typeof fetch;
+  /** Monthly budget check; defaults to the Supabase-backed counter. */
+  consume?: (metric: QuotaMetric) => Promise<boolean>;
 }
 
 export class GooglePlacesClient {
   private readonly apiKey: string | undefined;
   private readonly fetchImpl: typeof fetch;
+  private readonly consume: (metric: QuotaMetric) => Promise<boolean>;
 
   constructor(opts: PlacesClientOptions = {}) {
     this.apiKey = opts.apiKey ?? process.env.GOOGLE_PLACES_API_KEY;
     this.fetchImpl = opts.fetchImpl ?? fetch;
+    this.consume = opts.consume ?? consumeQuota;
   }
 
   get configured(): boolean {
@@ -53,7 +60,7 @@ export class GooglePlacesClient {
 
   /** US street-address suggestions for partial input. */
   async suggest(input: string, sessionToken: string): Promise<AddressSuggestion[]> {
-    const body = await this.call<AutocompleteResponse>("autocomplete", `${BASE}/places:autocomplete`, {
+    const body = await this.call<AutocompleteResponse>("places.autocomplete", `${BASE}/places:autocomplete`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -74,18 +81,19 @@ export class GooglePlacesClient {
   /** Full formatted address (with ZIP) for a picked suggestion; closes the session. */
   async address(placeId: string, sessionToken: string): Promise<string | undefined> {
     const url = `${BASE}/places/${encodeURIComponent(placeId)}?sessionToken=${encodeURIComponent(sessionToken)}`;
-    const body = await this.call<{ formattedAddress?: string }>("details", url, {
+    const body = await this.call<{ formattedAddress?: string }>("places.details", url, {
       method: "GET",
       headers: { "x-goog-fieldmask": "formattedAddress" },
     });
     return body?.formattedAddress;
   }
 
-  private async call<T>(op: string, url: string, init: RequestInit): Promise<T | undefined> {
+  private async call<T>(op: QuotaMetric, url: string, init: RequestInit): Promise<T | undefined> {
     if (!this.apiKey) {
       logEvent("places.not_configured", { op });
       return undefined;
     }
+    if (!(await this.consume(op))) return undefined;
     const started = Date.now();
     try {
       const res = await this.fetchImpl(url, {

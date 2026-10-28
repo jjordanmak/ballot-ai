@@ -46,6 +46,7 @@ CoarseLocation  { city?, state?, county? }      // never street or house number
 | `manual_overrides` | Audited corrections | `entity_type`, `entity_id`, `field`, `original_value`, `corrected_value`, `reason`, `source_id → sources`, `created_by`, `created_at`, `active` | public read of active rows (transparency); writes service only |
 | `ballot_resolutions` | **Provider cache**, geography-keyed | `ballot_key` PK, `election_id`, `provider`, `status`, `ballot jsonb` (normalized, address-free), `location jsonb` (coarse), `retrieved_at`, `expires_at` | service only (read via server) |
 | `resolution_events` | Privacy-safe metrics | `id`, `occurred_at`, `provider`, `status`, `latency_ms`, `contest_count`, `state`, `warning_codes text[]`, `cache_hit` | service only |
+| `api_usage` (0007) | Monthly cap on paid API calls (Google Places) | (`period` e.g. `2026-11` in Pacific time, `metric` e.g. `places.autocomplete`) PK, `count`, `updated_at`; incremented only through `consume_api_quota(period, metric, limit)`, which refuses at the limit | service only |
 | `sources` (altered) | Extend `source_type` with `provider`, `official_voter_guide`, `election_authority` | | public read |
 
 The legacy `races`/`candidates`/`endorsements`/`news_items`/`polls` tables are untouched. `contest_candidates.legacy_candidate_id` lets a durable ballot listing reuse rich archived profiles where a person appears again.
