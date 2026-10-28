@@ -1,24 +1,47 @@
 import { ExternalLink } from "lucide-react";
 import type { Contest } from "@/domain/ballot";
+import type { MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import { StatusPill } from "@/components/PartyTag";
+import { Cite, SourceList } from "./Citations";
 import { SourceLine } from "./SourceLine";
 
-/** A ballot measure, shown with its official identifier, title and summary. */
-export function MeasureCard({ contest, officialGuideUrl }: { contest: Contest; officialGuideUrl?: string }) {
+/**
+ * A ballot measure. Identifier, jurisdiction, threshold and ballot responses
+ * come from official ballot data; the official title, summary, YES/NO
+ * meanings and fiscal effect come from cited enrichment when researched.
+ */
+export function MeasureCard({
+  contest,
+  officialGuideUrl,
+  enrichment,
+  docs = {},
+  anchorId,
+}: {
+  contest: Contest;
+  officialGuideUrl?: string;
+  enrichment?: MeasureEnrichment;
+  docs?: Record<string, SourceDoc>;
+  anchorId?: string;
+}) {
   const m = contest.measure;
-  const heading = m?.title || m?.identifier || contest.title || "Untitled measure";
-  const showEyebrow = !!m?.identifier && !!m?.title;
+  const e = enrichment;
+  const title = e?.title || m?.title || "";
+  const heading = title || m?.identifier || contest.title || "Untitled measure";
+  const showEyebrow = !!m?.identifier && !!title;
+  const officialLink = e?.officialUrl || m?.url;
+  const hasSummary = !!(e?.summary || m?.brief);
+
   return (
     <article
-      id={`contest-${contest.id}`}
-      className="scroll-mt-20 rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 sm:p-6"
+      id={anchorId ?? `contest-${contest.id}`}
+      className="scroll-mt-32 rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 sm:p-8"
     >
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           {showEyebrow && (
             <div className="font-mono-cap text-[11px] tracking-[0.16em] text-[var(--color-accent)]">{m!.identifier}</div>
           )}
-          <h3 className="mt-1 font-display text-[22px] sm:text-[24px] leading-[1.15] tracking-[-0.01em] text-balance">
+          <h3 className="mt-1 font-display text-[22px] sm:text-[28px] leading-[1.15] tracking-[-0.02em] text-balance">
             {heading}
           </h3>
           {contest.division.name && <p className="mt-1 text-[13px] text-[var(--color-paper-3)]">{contest.division.name}</p>}
@@ -26,23 +49,46 @@ export function MeasureCard({ contest, officialGuideUrl }: { contest: Contest; o
         {m?.passageThreshold && <StatusPill>Passes with: {m.passageThreshold}</StatusPill>}
       </header>
 
-      {m?.brief && <p className="mt-4 text-[15px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">{m.brief}</p>}
+      {e?.summary ? (
+        <p className="mt-5 text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty max-w-3xl">
+          {e.summary.text}
+          <Cite ids={e.summary.sources} docs={docs} />
+        </p>
+      ) : m?.brief ? (
+        <p className="mt-5 text-[15px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">{m.brief}</p>
+      ) : null}
+
+      {(e?.yesMeans || e?.noMeans) && (
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+          {e?.yesMeans && <Meaning label="A YES vote means" item={e.yesMeans} docs={docs} />}
+          {e?.noMeans && <Meaning label="A NO vote means" item={e.noMeans} docs={docs} />}
+        </div>
+      )}
+
+      {e?.fiscalEffect && (
+        <div className="mt-6 max-w-3xl">
+          <div className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em] mb-1.5">Fiscal effect</div>
+          <p className="text-[14px] leading-[1.6] text-[var(--color-paper-2)]">
+            {e.fiscalEffect.text}
+            <Cite ids={e.fiscalEffect.sources} docs={docs} />
+          </p>
+        </div>
+      )}
 
       {m && m.responses.length > 0 && (
-        <p className="mt-4 text-[13px] text-[var(--color-paper-3)]">
+        <p className="mt-5 text-[13px] text-[var(--color-paper-3)]">
           On your ballot: <span className="text-[var(--color-paper-2)]">{m.responses.join(" · ")}</span>
         </p>
       )}
 
-      {!m?.brief && !m?.url && (
-        <p className="mt-4 text-[13px] leading-[1.55] text-[var(--color-paper-3)]">
-          Our data source lists this measure by number only. Its official title, summary, and full text are in your
-          official voter guide
+      {!hasSummary && !officialLink && (
+        <p className="mt-4 text-[13px] leading-[1.55] italic text-[var(--color-paper-4)]">
+          Official title and summary being researched. Your official voter guide has the full text
           {officialGuideUrl ? (
             <>
               {" "}
               (
-              <a href={officialGuideUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-accent)]">
+              <a href={officialGuideUrl} target="_blank" rel="noopener noreferrer" className="underline not-italic hover:text-[var(--color-accent)]">
                 official site
               </a>
               )
@@ -52,18 +98,31 @@ export function MeasureCard({ contest, officialGuideUrl }: { contest: Contest; o
         </p>
       )}
 
-      {m?.url && (
+      {officialLink && (
         <a
-          href={m.url}
+          href={officialLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]"
+          className="mt-5 inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]"
         >
           Official measure information <ExternalLink size={12} aria-hidden />
         </a>
       )}
 
       <SourceLine sources={contest.sources} />
+      <SourceList docs={docs} />
     </article>
+  );
+}
+
+function Meaning({ label, item, docs }: { label: string; item: { text: string; sources: string[] }; docs: Record<string, SourceDoc> }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-0)] p-4">
+      <div className="font-mono-cap text-[9px] text-[var(--color-paper-3)] tracking-[0.16em] mb-1.5">{label}</div>
+      <p className="text-[14px] leading-[1.6] text-[var(--color-paper)]">
+        {item.text}
+        <Cite ids={item.sources} docs={docs} />
+      </p>
+    </div>
   );
 }

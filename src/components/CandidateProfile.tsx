@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ExternalLink,
+  Landmark,
+  Target,
+  Wallet,
+  Star,
+  Megaphone,
   ChevronDown,
   AlertOctagon,
   Award,
@@ -26,6 +32,8 @@ import type { Candidate, EndorsementCategory } from "@/data/types";
 import { ENDORSEMENT_ORDER } from "@/data/types";
 import { partyClass, partyDot, partyLabel, StatusPill } from "./PartyTag";
 import { RichText, RichBlock } from "./Highlight";
+import { Cite, Researching, SourceList } from "./ballot/Citations";
+import type { Cited, SourceDoc } from "@/domain/enrichment";
 
 /**
  * SUPPLEMENTARY TINTS for variety / reducing yellow fatigue.
@@ -117,6 +125,14 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
               <StatusPill tone="red" size="sm">
                 <AlertOctagon size={10} /> Campaign suspended
               </StatusPill>
+            ) : candidate.general ? (
+              // General mode: no polling-status labels (PRD §14). Incumbency
+              // is a fact; show it only when sourced.
+              candidate.general.incumbent ? (
+                <StatusPill tone="default" size="sm">
+                  Incumbent
+                </StatusPill>
+              ) : null
             ) : unopposed ? (
               <StatusPill tone="default" size="sm">
                 Running unopposed
@@ -137,7 +153,15 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
           {/* Tighter gap between pills and current role */}
           <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">
             {candidate.currentRole}
+            {candidate.general && (
+              <Cite ids={candidate.general.currentRole?.sources} docs={candidate.general.sourceDocs} />
+            )}
           </div>
+          {candidate.ballotName && candidate.ballotName !== candidate.name && (
+            <div className="mt-1 font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)]">
+              On your ballot as {candidate.ballotName}
+            </div>
+          )}
         </div>
 
         <ChevronDown
@@ -157,6 +181,8 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
           <div className="px-5 pb-5 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
             {suspended ? (
               <SuspendedBlock candidate={candidate} raceId={raceId} />
+            ) : candidate.general ? (
+              <GeneralBody candidate={candidate} raceId={raceId} />
             ) : (
               <FullBody candidate={candidate} raceId={raceId} />
             )}
@@ -405,7 +431,7 @@ function parseYear(s: string): number {
   return m ? parseInt(m[0], 10) : NaN;
 }
 
-function TimelineSection({ items }: { items: { year: string; event: string }[] }) {
+function TimelineSection({ items }: { items: { year: string; event: string; suffix?: React.ReactNode }[] }) {
   // Reverse order so the most recent event renders on the LEFT. Anything
   // older than the last 2 years (relative to the newest event) is faded
   // since it predates the current election cycle.
@@ -423,6 +449,7 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
       .map((it) => ({
         year: it.year,
         event: it.event,
+        suffix: it.suffix,
         inCycle: !Number.isFinite(it._y) || it._y >= cycleStart,
       }));
   }, [items]);
@@ -533,10 +560,10 @@ function TimelineSection({ items }: { items: { year: string; event: string }[] }
                 <div className="mt-3 font-mono race-number text-[11px] text-[var(--color-accent-deep)] tabular-nums tracking-wide">
                   {item.year}
                 </div>
-                <RichText
-                  text={item.event}
-                  className="mt-1.5 text-[12px] leading-[1.5] text-[var(--color-paper-2)]"
-                />
+                <span className="mt-1.5 text-[12px] leading-[1.5] text-[var(--color-paper-2)]">
+                  <RichText text={item.event} />
+                  {item.suffix}
+                </span>
               </div>
             ))}
           </div>
@@ -768,4 +795,304 @@ function EndorsementColumns({
       })}
     </div>
   );
+}
+
+
+/* ─────────────────────────── General-election profile ───────────────────────────
+ * PRD §11.5 FR-K4: same sections for every candidate, every item cited,
+ * "being researched" instead of filler. No strengths/criticisms, no
+ * "vote for X if", no bottom line, no polling labels (PRD §14).
+ */
+
+const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: string }) {
+  const g = candidate.general!;
+  const docs = g.sourceDocs;
+  const hasAny =
+    !!g.platform?.length || !!g.background?.length || !!g.pastPositions?.length || !!g.experience?.length ||
+    !!g.trackRecord?.length || !!g.priorities?.length || !!g.stances?.length || !!g.timeline?.length ||
+    !!g.notableFacts?.length || !!g.endorsements?.length || !!g.funding;
+
+  if (!hasAny) {
+    return (
+      <div className="pt-8 space-y-4">
+        <Researching what="This candidate's profile is" />
+        <p className="text-[13px] text-[var(--color-paper-2)]">
+          On your ballot as <span className="text-[var(--color-paper)]">{candidate.ballotName ?? candidate.name}</span>
+          {candidate.party !== "Nonpartisan" && <> · {candidate.party}</>}.
+        </p>
+        {g.campaignUrl && <CampaignLink url={g.campaignUrl} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-8 space-y-12">
+      {/* Their platform — the candidate's own main claims, attributed. */}
+      <section>
+        <div className="rounded-xl bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] p-6 sm:p-8">
+          <SectionHeading title="Their platform" icon={<Megaphone size={13} />} />
+          <CitedList items={g.platform} docs={docs} empty="Platform" large />
+          {g.campaignUrl && (
+            <div className="mt-5">
+              <CampaignLink url={g.campaignUrl} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <SectionHeading title="Background" icon={<Compass size={13} />} />
+          {g.background?.length ? (
+            <div className="space-y-3">
+              {g.background.map((b, i) => (
+                <p key={i} className="text-[15px] leading-[1.7] text-[var(--color-paper-2)] text-pretty">
+                  <RichText text={b.text} />
+                  <Cite ids={b.sources} docs={docs} />
+                </p>
+              ))}
+            </div>
+          ) : (
+            <Researching what="Background" />
+          )}
+        </div>
+        <div className="rounded-xl bg-[var(--color-ink-2)]/60 border border-[var(--color-ink-3)] p-5">
+          <SectionHeading title="Past Positions" icon={<Briefcase size={13} />} />
+          {g.pastPositions?.length ? (
+            <ul className="space-y-2.5">
+              {g.pastPositions.map((r, i) => (
+                <li key={i} className="flex gap-2 text-[13px] leading-[1.5] text-[var(--color-paper-2)]">
+                  <span className="mt-1.5 w-1 h-1 shrink-0 rounded-full bg-[var(--color-paper-3)]" />
+                  <span>
+                    <span className="text-[var(--color-paper)]">{r.title}</span>
+                    {r.organization && <>, {r.organization}</>}
+                    {r.years && <span className="text-[var(--color-paper-3)]"> · {r.years}</span>}
+                    <Cite ids={r.sources} docs={docs} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Researching what="Past positions" />
+          )}
+        </div>
+      </div>
+
+      <section>
+        <SectionHeading title="Relevant experience" icon={<Landmark size={13} />} />
+        <CitedList items={g.experience} docs={docs} empty="Relevant experience" />
+      </section>
+
+      <section>
+        <SectionHeading title="Track record on their priorities" icon={<Target size={13} />} />
+        {g.trackRecord?.length ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {g.trackRecord.map((t, i) => (
+              <div key={i} className="rounded-xl border border-[var(--color-ink-3)] p-5">
+                <div className="text-[14px] text-[var(--color-paper)] mb-3">{t.priority}</div>
+                <CitedList items={t.items} docs={docs} empty="Track record" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Researching what="Track record" />
+        )}
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CitedPillar title="Key Priorities" icon={<Flag size={12} />} items={g.priorities} docs={docs} tint={TINT.priorities} />
+        <CitedPillar title="Key Stances" icon={<ListChecks size={12} />} items={g.stances} docs={docs} tint={TINT.stances} />
+      </div>
+
+      {g.timeline?.length ? (
+        <TimelineSection
+          items={g.timeline.map((t) => ({ year: t.year, event: t.event, suffix: <Cite ids={t.sources} docs={docs} /> }))}
+        />
+      ) : (
+        <Section title="Timeline" icon={<HistoryIcon size={12} />}>
+          <Researching what="Timeline" />
+        </Section>
+      )}
+
+      <Section title="Notable facts" icon={<Star size={13} />}>
+        <CitedList items={g.notableFacts} docs={docs} empty="Notable facts" />
+      </Section>
+
+      <Section title="Endorsements" icon={<Award size={13} />}>
+        {g.endorsements?.length ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {groupBy(g.endorsements, (e) => e.category).map(([cat, list]) => (
+              <div key={cat}>
+                <div className="font-mono-cap text-[9px] text-[var(--color-paper-3)] tracking-[0.16em] mb-2">{cat}</div>
+                <ul className="space-y-1.5">
+                  {list.map((en, i) => (
+                    <li key={i} className="text-[13px] text-[var(--color-paper-2)]">
+                      {en.name}
+                      <Cite ids={en.sources} docs={docs} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Researching what="Endorsements" />
+        )}
+      </Section>
+
+      <Section title="Campaign funding" icon={<Wallet size={13} />}>
+        {g.funding ? (
+          <div className="space-y-5">
+            <div className="text-[11px] text-[var(--color-paper-3)]">
+              As of {g.funding.asOf}
+              <Cite ids={g.funding.sources} docs={docs} />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {g.funding.totals.map((t) => (
+                <div key={t.label}>
+                  <div className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em]">{t.label}</div>
+                  <div className="mt-1 font-mono tabular-nums text-[15px] text-[var(--color-paper)]">{USD.format(t.amount)}</div>
+                </div>
+              ))}
+            </div>
+            {g.funding.bySource?.length ? (
+              <table className="w-full max-w-xl text-[13px]">
+                <tbody>
+                  {g.funding.bySource.map((b) => (
+                    <tr key={b.label} className="border-t border-[var(--color-ink-3)]">
+                      <td className="py-1.5 text-[var(--color-paper-2)]">{b.label}</td>
+                      <td className="py-1.5 text-right font-mono tabular-nums text-[var(--color-paper)]">{USD.format(b.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+            {g.funding.independentExpenditures?.length ? (
+              <div>
+                <div className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em] mb-2">
+                  Outside spending (independent expenditures)
+                </div>
+                <ul className="space-y-1">
+                  {g.funding.independentExpenditures.map((ie, i) => (
+                    <li key={i} className="text-[13px] text-[var(--color-paper-2)]">
+                      {ie.committee} · {ie.position === "support" ? "supporting" : "opposing"} ·{" "}
+                      <span className="font-mono tabular-nums">{USD.format(ie.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {g.funding.fullListUrl && (
+              <a
+                href={g.funding.fullListUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]"
+              >
+                Full itemized contributor list (official filing system) <ExternalLink size={11} aria-hidden />
+              </a>
+            )}
+          </div>
+        ) : (
+          <Researching what="Campaign funding" />
+        )}
+      </Section>
+
+      <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} candidateDbId={`${raceId}__${candidate.id}`} />
+
+      <SourceList docs={docs} />
+    </div>
+  );
+}
+
+function CitedList({
+  items,
+  docs,
+  empty,
+  large,
+}: {
+  items: Cited[] | undefined;
+  docs: Record<string, SourceDoc>;
+  empty: string;
+  large?: boolean;
+}) {
+  if (!items?.length) return <Researching what={empty} />;
+  return (
+    <ul className="space-y-2.5">
+      {items.map((it, i) => (
+        <li key={i} className="flex gap-2.5">
+          <span className="mt-2 w-1 h-1 shrink-0 rounded-full bg-[var(--color-accent)]" />
+          <span
+            className={
+              large
+                ? "font-display text-[17px] sm:text-[18px] leading-[1.55] text-[var(--color-paper)] text-pretty"
+                : "text-[14px] leading-[1.6] text-[var(--color-paper-2)] text-pretty"
+            }
+          >
+            <RichText text={it.text} />
+            <Cite ids={it.sources} docs={docs} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CitedPillar({
+  title,
+  icon,
+  items,
+  docs,
+  tint,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  items: Cited[] | undefined;
+  docs: Record<string, SourceDoc>;
+  tint: { fg: string; bg: string; hl: string };
+}) {
+  return (
+    <div className={tint.hl}>
+      <div className="font-mono-cap text-[10px] text-[var(--color-paper-2)] mb-3 flex items-center gap-2">
+        <span className={tint.fg}>{icon}</span>
+        <span>{title}</span>
+      </div>
+      {items?.length ? (
+        <ul className="space-y-2.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2.5">
+              <span className={`mt-1.5 w-1 h-1 shrink-0 rounded-full ${tint.bg}`} />
+              <span className="text-[13px] leading-[1.55] text-[var(--color-paper)] text-pretty">
+                <RichText text={item.text} />
+                <Cite ids={item.sources} docs={docs} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Researching what={title} />
+      )}
+    </div>
+  );
+}
+
+function CampaignLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]"
+    >
+      Campaign website <ExternalLink size={11} aria-hidden />
+    </a>
+  );
+}
+
+function groupBy<T>(list: T[], key: (t: T) => string): [string, T[]][] {
+  const m = new Map<string, T[]>();
+  for (const t of list) m.set(key(t), [...(m.get(key(t)) ?? []), t]);
+  return [...m.entries()];
 }

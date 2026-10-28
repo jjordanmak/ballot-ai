@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
-import { ExternalLink, Info, Landmark, ListChecks, Mail } from "lucide-react";
+import { ExternalLink, Info, ListChecks, Mail } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
-import { BallotNav, type NavGroup } from "@/components/ballot/BallotNav";
-import { ContestCard } from "@/components/ballot/ContestCard";
+import { Sidebar } from "@/components/Sidebar";
+import { MobileNav } from "@/components/MobileNav";
+import { RaceHeader } from "@/components/RaceHeader";
+import { ComparisonTable } from "@/components/ComparisonTable";
+import { CandidatesHeader } from "@/components/CandidatesHeader";
 import { MeasureCard } from "@/components/ballot/MeasureCard";
-import { CATEGORY_LABEL, CATEGORY_ORDER, type Contest, type ContestCategory, type ResolvedBallot } from "@/domain/ballot";
+import type { Race } from "@/data/types";
+import type { ResolvedBallot } from "@/domain/ballot";
 import { formatElectionDate, locationLabel, STATUS_COPY } from "@/lib/ballot/copy";
+import { getEnrichment } from "@/lib/ballot/enrichment";
 import { loadBallot } from "@/lib/ballot/loadBallot";
+import { toRaces, type MeasureView } from "@/lib/ballot/toRaces";
 
 // Reads a short-lived, address-free resolution per request.
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ electionSlug: string; ballotKey: string }>;
+
+/** Nav-only pseudo race so measures appear in the sidebar like races do. */
+const MEASURES_ID = "measures";
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { electionSlug, ballotKey } = await params;
@@ -30,84 +39,185 @@ export default async function BallotPage({ params }: { params: Params }) {
   if (result.state !== "ok") return <ExpiredBallot />;
 
   const ballot = result.ballot;
-  const groups = groupContests(ballot.contests);
+  const { races, measures } = toRaces(ballot, getEnrichment(electionSlug));
   const location = locationLabel(ballot.location);
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
-  const navGroups: NavGroup[] = groups.map((g) => ({ id: g.category, label: CATEGORY_LABEL[g.category], count: g.contests.length }));
-  const candidateContests = ballot.contests.filter((c) => c.kind === "candidate").length;
-  const measures = ballot.contests.length - candidateContests;
+  const navRaces = measures.length ? [...races, measuresNavRace(measures)] : races;
+  const officialUrl = ballot.administration?.electionInfoUrl ?? ballot.administration?.ballotInfoUrl;
+  const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
     <div className="flex flex-col lg:flex-row">
-      <BallotNav groups={navGroups} location={location} electionName={electionName} electionDate={electionDate} />
+      <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
+      <Sidebar races={navRaces} productName="ballot.ai" location={location} electionName={electionName} electionDate={electionDate} />
 
-      <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1100px] pb-32">
-        <header className="pt-14 pb-10 border-b border-[var(--color-ink-3)]">
-          <div className="font-mono-cap text-[11px] text-[var(--color-accent)] mb-3 tracking-[0.16em]">A guide to your ballot</div>
-          <h1 className="font-display text-[40px] sm:text-[56px] xl:text-[68px] leading-[0.98] tracking-[-0.03em] text-balance">
-            {electionName}
-          </h1>
-          <div className="mt-4 font-mono-cap text-[14px] text-[var(--color-paper-2)] tracking-[0.18em]">
-            {location}
-            {electionDate && <span className="text-[var(--color-paper-3)]"> · {electionDate}</span>}
-          </div>
-          <div className="mt-10 flex flex-wrap items-end gap-x-10 gap-y-6">
-            <Stat label="Contests" value={String(candidateContests)} />
-            <Stat label="Measures" value={String(measures)} />
-            <Stat label="Last retrieved" value={new Date(ballot.retrievedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles", timeZoneName: "short" })} />
-          </div>
-        </header>
+      <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
+        <Cover
+          location={location}
+          electionName={electionName}
+          electionDate={electionDate}
+          raceCount={races.length}
+          measureCount={measures.length}
+          candidateCount={totalCandidates}
+          retrievedAt={ballot.retrievedAt}
+        />
 
-        <Notices ballot={ballot} />
+        <Notices ballot={ballot} officialUrl={officialUrl} />
 
-        {groups.map((g) => (
-          <section key={g.category} id={`group-${g.category}`} className="scroll-mt-16 pt-12" aria-labelledby={`h-${g.category}`}>
-            <h2
-              id={`h-${g.category}`}
-              className="flex items-center gap-2 font-mono-cap text-[11px] text-[var(--color-paper)] tracking-[0.16em] mb-5"
-            >
-              {g.category === "measures" ? (
-                <ListChecks size={12} className="text-[var(--color-accent)]" aria-hidden />
-              ) : (
-                <Landmark size={12} className="text-[var(--color-accent)]" aria-hidden />
-              )}
-              {CATEGORY_LABEL[g.category]}
-              <span className="text-[var(--color-paper-4)]">· {g.contests.length}</span>
-            </h2>
-            <div className="flex flex-col gap-5">
-              {g.contests.map((c) =>
-                c.kind === "measure" ? (
-                  <MeasureCard key={c.id} contest={c} officialGuideUrl={ballot.administration?.electionInfoUrl ?? ballot.administration?.ballotInfoUrl} />
-                ) : (
-                  <ContestCard key={c.id} contest={c} />
-                ),
-              )}
-            </div>
+        {races.map((race, i) => (
+          <section key={race.id} id={`race-${race.id}`} className="scroll-mt-4" data-race-id={race.id}>
+            <RaceHeader race={race} index={i + 1} />
+            {race.issues.length > 0 && !race.unopposed && <ComparisonTable race={race} />}
+            <CandidatesHeader
+              profileCandidates={race.candidates}
+              activeCount={race.candidates.length}
+              suspendedCount={0}
+              raceId={race.id}
+              unopposed={race.unopposed}
+              coverageNote="Every candidate on your ballot for this office has a profile. Sections fill in as we research them; every item links to its source, and nothing is published without one."
+            />
           </section>
         ))}
 
-        <footer className="mt-16 pt-6 border-t border-[var(--color-ink-3)] text-[12px] leading-[1.6] text-[var(--color-paper-3)] max-w-2xl">
-          ballot.ai is independent and nonpartisan. Contest and candidate information comes from official election data
-          via the sources listed on each contest. Your county elections office is the official source for your ballot.
+        {measures.length > 0 && (
+          <section id={`race-${MEASURES_ID}`} className="scroll-mt-4 pt-16">
+            <header className="pb-8 border-b border-[var(--color-ink-3)] mb-10">
+              <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2 mb-6">
+                <span className="race-number text-[var(--color-accent)] tabular-nums">
+                  {String(races.length + 1).padStart(2, "0")}
+                </span>
+                Statewide and local
+              </span>
+              <h2 className="font-display text-[40px] sm:text-[50px] xl:text-[64px] leading-[0.95] tracking-[-0.025em]">
+                Ballot measures
+              </h2>
+              <div className="mt-5 font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
+                <ListChecks size={12} className="text-[var(--color-accent)]" />
+                {measures.length} measures on your ballot
+              </div>
+            </header>
+            <div className="space-y-5">
+              {measures.map((mv) => (
+                <MeasureCard
+                  key={mv.contest.id}
+                  contest={mv.contest}
+                  enrichment={mv.enrichment}
+                  docs={mv.sourceDocs}
+                  officialGuideUrl={officialUrl}
+                  anchorId={`candidate-${MEASURES_ID}-${mv.contest.id}`}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <footer className="mt-20 pt-6 border-t border-[var(--color-ink-3)] text-[12px] leading-[1.6] text-[var(--color-paper-3)] max-w-2xl">
+          ballot.ai is independent and nonpartisan. Which contests and candidates appear comes from official election data
+          (sources listed on each race). Researched content is cited item by item. Your county elections office is the
+          official source for your ballot.
         </footer>
       </main>
     </div>
   );
 }
 
-function groupContests(contests: Contest[]): { category: ContestCategory; contests: Contest[] }[] {
-  const by = new Map<ContestCategory, Contest[]>();
-  for (const c of contests) by.set(c.category, [...(by.get(c.category) ?? []), c]);
-  return CATEGORY_ORDER.filter((cat) => by.has(cat)).map((category) => ({ category, contests: by.get(category)! }));
+function measuresNavRace(measures: MeasureView[]): Race {
+  return {
+    id: MEASURES_ID,
+    office: "Ballot measures",
+    navLabel: `${measures.length} measures`,
+    jurisdiction: "",
+    format: "",
+    formatExplainer: "",
+    meta: [],
+    unopposed: false,
+    intro: { context: "", whyItMatters: "", bigPicture: "", whatsAtStake: "", polling: "" },
+    issues: [],
+    candidates: measures.map((mv) => ({
+      id: mv.contest.id,
+      name: mv.contest.measure?.identifier ?? mv.contest.title,
+      party: "Nonpartisan",
+      major: false,
+      pollingStatus: "",
+      currentRole: "",
+      pastRoles: [],
+      background: "",
+      priorities: [],
+      stances: [],
+      strengths: [],
+      criticisms: [],
+      history: [],
+      endorsements: [],
+      voteForIf: [],
+      bottomLine: "",
+      issues: {},
+    })),
+  };
 }
 
-function Notices({ ballot }: { ballot: ResolvedBallot }) {
-  const admin = ballot.administration;
-  // Local election office first: it publishes the sample ballot for this address.
-  const officialUrl = admin?.electionInfoUrl ?? admin?.ballotInfoUrl;
+function Cover({
+  location,
+  electionName,
+  electionDate,
+  raceCount,
+  measureCount,
+  candidateCount,
+  retrievedAt,
+}: {
+  location: string;
+  electionName: string;
+  electionDate: string;
+  raceCount: number;
+  measureCount: number;
+  candidateCount: number;
+  retrievedAt: string;
+}) {
   return (
-    <div className="mt-8 flex flex-col gap-3">
+    <header className="pt-14 pb-10 border-b border-[var(--color-ink-3)]">
+      <div className="font-mono-cap text-[11px] text-[var(--color-accent)] mb-3 tracking-[0.16em]">A guide to your ballot</div>
+      <h1 className="font-display text-[44px] sm:text-[60px] xl:text-[76px] leading-[0.95] tracking-[-0.03em] text-balance">
+        Voter{"’"}s Guide
+      </h1>
+      <p className="mt-6 max-w-2xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
+        <mark>Every race, every candidate, every measure</mark> on your ballot, with every fact linked to its source.
+      </p>
+      <h2 className="font-display italic font-light text-[22px] sm:text-[26px] mt-8 text-[var(--color-paper-2)] text-balance">
+        {electionName}
+        {electionDate && <span className="text-[var(--color-paper-3)]"> · {electionDate}</span>}
+      </h2>
+      <div className="mt-1.5 font-mono-cap text-[15px] text-[var(--color-paper-2)] tracking-[0.18em]">{location}</div>
+      <div className="mt-12 flex flex-wrap items-end gap-x-10 gap-y-6">
+        <Stat label="Races on your ballot" value={String(raceCount)} />
+        <Stat label="Candidates" value={String(candidateCount)} />
+        <Stat label="Measures" value={String(measureCount)} />
+        <Stat
+          label="Ballot data retrieved"
+          value={new Date(retrievedAt).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: "America/Los_Angeles",
+            timeZoneName: "short",
+          })}
+        />
+      </div>
+    </header>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="font-mono-cap text-[var(--color-paper-4)] text-[9px] tracking-[0.18em]">{label}</div>
+      <div className="text-[var(--color-paper)] text-[14px] mt-1 font-mono race-number tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?: string }) {
+  const admin = ballot.administration;
+  return (
+    <div className="mt-8 flex flex-col gap-3 max-w-3xl">
       {ballot.status === "PARTIAL" && (
         <div role="status" className="rounded-lg border border-[var(--color-accent-soft)] bg-[var(--color-ink-1)] px-4 py-3">
           <p className="flex items-center gap-2 text-[14px] text-[var(--color-paper)] font-medium">
@@ -123,7 +233,7 @@ function Notices({ ballot }: { ballot: ResolvedBallot }) {
       )}
       <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3 text-[13px] leading-[1.55] text-[var(--color-paper-2)]">
         Compare with your <span className="text-[var(--color-paper)]">official sample ballot</span>
-        {admin?.name ? <> from {admin.name}</> : null}
+        {admin?.name ? <> from {admin.name} election officials</> : null}
         {officialUrl ? (
           <>
             {" "}
@@ -132,17 +242,8 @@ function Notices({ ballot }: { ballot: ResolvedBallot }) {
             </a>
           </>
         ) : null}
-        . Contests may differ by address within the same city or ZIP code.
+        . Contests can differ by address within the same city or ZIP code.
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="font-mono-cap text-[var(--color-paper-4)] text-[9px] tracking-[0.18em]">{label}</div>
-      <div className="text-[var(--color-paper)] text-[14px] mt-1 font-mono tabular-nums">{value}</div>
     </div>
   );
 }

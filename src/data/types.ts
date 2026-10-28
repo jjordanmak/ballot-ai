@@ -1,3 +1,6 @@
+import type { CandidateEnrichment, ContestEnrichment, SourceDoc } from "@/domain/enrichment";
+import type { SourceRef } from "@/domain/ballot";
+
 export type Party =
   | "Democratic"
   | "Republican"
@@ -6,7 +9,9 @@ export type Party =
   | "Peace and Freedom"
   | "American Independent"
   | "No Party Preference"
-  | "Independent";
+  | "Independent"
+  /** Nonpartisan office: no party appears on the ballot. */
+  | "Nonpartisan";
 
 export type PartyKey = "dem" | "rep" | "grn" | "lib" | "pf" | "aip" | "np";
 
@@ -74,6 +79,18 @@ export interface Candidate {
   issues: Record<string, IssuePosition>;
   /** Optional news feed for this candidate (will be live in v2). */
   news?: NewsItem[];
+  /**
+   * Address-first ballot (Nov 2026+): exact official ballot name and the
+   * cited FR-K4 profile. When present, profiles render in "general" mode.
+   */
+  ballotName?: string;
+  general?: GeneralProfile;
+}
+
+/** Cited profile content plus the resolved sources it references. */
+export interface GeneralProfile extends CandidateEnrichment {
+  sourceDocs: Record<string, SourceDoc>;
+  campaignUrl?: string;
 }
 
 export const ENDORSEMENT_ORDER: EndorsementCategory[] = [
@@ -170,11 +187,27 @@ export interface Race {
     /** Display label for the polling source (e.g. "Emerson · Inside CA Politics · Apr 14–15") */
     pollingSourceLabel?: string;
     suspendedNote?: string;
+    /** e.g. "Undecided 12%" — shown under the poll bars when sourced. */
+    pollingFootnote?: string;
   };
   issues: Issue[];
   candidates: Candidate[];
   /** Optional race-wide news feed (will be live in v2). */
   news?: NewsItem[];
+  /** Overrides the "N active" line under the race in the sidebar/mobile nav. */
+  navLabel?: string;
+  /**
+   * Address-first ballot (Nov 2026+): cited race content and its sources.
+   * When present, the race header renders in "general" mode (no hardcoded
+   * polling defaults, "being researched" placeholders, citations).
+   */
+  general?: {
+    enrichment?: ContestEnrichment;
+    sourceDocs: Record<string, SourceDoc>;
+    officialSources: SourceRef[];
+    voteFor?: number;
+    numberElected?: number;
+  };
 }
 
 export const PARTY_TO_KEY: Record<Party, PartyKey> = {
@@ -186,4 +219,5 @@ export const PARTY_TO_KEY: Record<Party, PartyKey> = {
   "American Independent": "aip",
   "No Party Preference": "np",
   Independent: "np",
+  Nonpartisan: "np",
 };

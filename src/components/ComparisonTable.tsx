@@ -406,6 +406,8 @@ function CandidateColHeader({ candidate, raceId }: { candidate: Candidate; raceI
           <span className={`w-1 h-1 rounded-full ${partyDot(candidate.party)}`} />
           {partyLabel(candidate.party)}
         </span>
+{/* General-election races carry no polling-status labels (PRD §14). */}
+        {(candidate.pollingStatus || candidate.pollingPct != null || isSuspended) && (
         <StatusPill tone={isSuspended ? "warn" : "default"} size="xs">
           <span>
             {candidate.pollingStatus}
@@ -413,6 +415,7 @@ function CandidateColHeader({ candidate, raceId }: { candidate: Candidate; raceI
           </span>
           {!isSuspended && candidate.trend && <TrendArrow trend={candidate.trend} />}
         </StatusPill>
+        )}
       </div>
     </div>
   );

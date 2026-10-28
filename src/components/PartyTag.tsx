@@ -11,6 +11,7 @@ const PARTY_LABEL: Record<Party, string> = {
   "American Independent": "American Indep.",
   "No Party Preference": "No Party Pref.",
   Independent: "Independent",
+  Nonpartisan: "Nonpartisan",
 };
 
 export function partyLabel(p: Party) {

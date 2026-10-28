@@ -172,7 +172,7 @@ function RaceNavItem({
             {race.office}
           </span>
           <span className="block text-[10px] font-mono-cap text-[var(--color-paper-3)] mt-1 tracking-[0.14em]">
-            {race.unopposed ? "Unopposed" : `${activeCount} active`}
+            {race.navLabel ?? (race.unopposed ? "Unopposed" : `${activeCount} active`)}
           </span>
         </span>
         <ChevronRight
