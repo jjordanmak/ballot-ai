@@ -5,6 +5,8 @@
 -- status backfill for the one existing election. Reversible via
 -- supabase/rollback/0004_address_first_domain_down.sql.
 --
+-- Contains no DROP statements (applies once; the objects it creates are new).
+--
 -- See docs/architecture/DATA_MODEL.md and docs/architecture/PRIVACY.md.
 -- No table in this migration stores a residential address.
 
@@ -17,7 +19,6 @@ alter table public.elections
   add column if not exists scope_ocd_id  text,
   add column if not exists external_ids  jsonb not null default '{}'::jsonb;
 
-alter table public.elections drop constraint if exists elections_status_check;
 alter table public.elections
   add constraint elections_status_check check (status in ('upcoming', 'active', 'archived'));
 
@@ -196,18 +197,12 @@ alter table public.manual_overrides   enable row level security;
 alter table public.ballot_resolutions enable row level security;
 alter table public.resolution_events  enable row level security;
 
-drop policy if exists "public read" on public.divisions;
 create policy "public read" on public.divisions          for select using (true);
-drop policy if exists "public read" on public.contests;
 create policy "public read" on public.contests           for select using (true);
-drop policy if exists "public read" on public.contest_candidates;
 create policy "public read" on public.contest_candidates for select using (true);
-drop policy if exists "public read" on public.measures;
 create policy "public read" on public.measures           for select using (true);
-drop policy if exists "public read" on public.contest_measures;
 create policy "public read" on public.contest_measures   for select using (true);
 -- Corrections are public for transparency; only active ones.
-drop policy if exists "public read active" on public.manual_overrides;
 create policy "public read active" on public.manual_overrides for select using (active);
 -- provider_records, ballot_resolutions, resolution_events: no policies → service role only.
 
@@ -225,6 +220,5 @@ begin
 end;
 $$;
 
-drop trigger if exists contests_touch on public.contests;
 create trigger contests_touch before update on public.contests
   for each row execute function public.touch_updated_at();
