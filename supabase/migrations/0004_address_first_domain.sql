@@ -5,7 +5,7 @@
 -- status backfill for the one existing election. Reversible via
 -- supabase/rollback/0004_address_first_domain_down.sql.
 --
--- Contains no DROP statements (applies once; the objects it creates are new).
+-- Create-only: applies once; every object it creates is new.
 --
 -- See docs/architecture/DATA_MODEL.md and docs/architecture/PRIVACY.md.
 -- No table in this migration stores a residential address.
