@@ -55,6 +55,9 @@ describe("2026-11-03 enrichment ↔ Daly City reference ballot", () => {
     expect(caps).toEqual([]);
     const evans = races.find((r) => r.candidates[0]?.ballotName === "KELLI M. EVANS")!;
     expect(evans.office).toBe("Associate Justice of the Supreme Court: Kelli M. Evans");
+    expect(evans.formatExplainer).toBe(
+      "Shall Associate Justice of the Supreme Court Kelli M. Evans be elected to the office for the term provided by law?",
+    );
     expect(races.find((r) => r.candidates[0]?.ballotName === "VICTOR A. RODRIGUEZ")!.candidates[0].name).toBe("Victor A. Rodríguez");
   });
   it("groups races by jurisdiction and lists statewide measures first", () => {

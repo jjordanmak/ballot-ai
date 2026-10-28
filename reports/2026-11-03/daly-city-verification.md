@@ -1,8 +1,8 @@
 # Daly City reference ballot — official verification
 
-Checked 2026-10-28 against official sources. **39 verified · 0 discrepancies · 10 not yet verifiable.**
+Checked 2026-10-28 against official sources. **49 verified · 0 discrepancies · 0 not yet verifiable.**
 
-Sources: [CA SoS Certified List of Candidates](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) · [CA SoS Qualified Statewide Ballot Measures](https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures) · [Daly City Clerk — 2026 Municipal Election](https://www.dalycity.org/1325/2026-Municipal-Election)
+Sources: [CA SoS Certified List of Candidates](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) · [CA SoS Qualified Statewide Ballot Measures](https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures) · [Daly City Clerk — 2026 Municipal Election](https://www.dalycity.org/1325/2026-Municipal-Election) · [San Mateo County Roster of Candidates](https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf) · [San Mateo County Elections — current election measures](https://smcacre.gov/elections/current-election)
 
 | Contest | Status | Official source | Notes |
 |---|---|---|---|
@@ -28,10 +28,10 @@ Sources: [CA SoS Certified List of Candidates](https://elections.cdn.sos.ca.gov/
 | Associate Justice, Court of Appeal, First District, Division Five | verified | [link](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) | Added from the certified list (missing from provider data) |
 | Associate Justice, Court of Appeal, First District, Division Five | verified | [link](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) | Added from the certified list (missing from provider data) |
 | Associate Justice, Court of Appeal, First District, Division Five | verified | [link](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) | Added from the certified list (missing from provider data) |
-| Member, Board of Supervisors, District 5 (Short Term) | unverified | — | County/district contest: needs San Mateo County Elections (smcacre.gov), not reachable yet |
+| Member, Board of Supervisors, District 5 (Short Term) | verified | [link](https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf) | County roster (Sept 3): MARK NAGALES, JUSLYN CABRERA MANALO; vote for 1; on ballot: yes |
 | City of Daly City Member, City Council | verified | [link](https://www.dalycity.org/1325/2026-Municipal-Election) | City Clerk list of nominees (updated 8/8/26): Tony Bayudan, Rod Daus-Magbual, Pamela DiGiovanni, Thomas A. Nuris, Teresa Proaño, Barry Rodriguez, Asia Su; 3 seats |
-| County Board of Education Member, Trustee Area 2 | unverified | — | County/district contest: needs San Mateo County Elections (smcacre.gov), not reachable yet |
-| San Mateo County Community College District Member, Governing Board, Trustee Area 2 | unverified | — | County/district contest: needs San Mateo County Elections (smcacre.gov), not reachable yet |
+| County Board of Education Member, Trustee Area 2 | verified | [link](https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf) | County roster (Sept 3): BEVERLY GERARD, DANA JOHNSON; vote for 1; on ballot: yes |
+| San Mateo County Community College District Member, Governing Board, Trustee Area 2 | verified | [link](https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf) | County roster (Sept 3): MIKE GUINGONA, JASON HOLT; vote for 1; on ballot: yes |
 | U.S. Representative, District 15 | verified | [link](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) | Kevin Mullin (Democratic) — ballot designation: U.S. Representative; Charles Hoelter (Republican) — ballot designation: Retired Training Supervisor |
 | Member of the State Assembly, District 19 | verified | [link](https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf) | Catherine Stefani (Democratic, incumbent) — ballot designation: Assemblymember; Philip Louis Wing (Republican) — ballot designation: Retired Financial Advisor |
 | Proposition 1 | verified | [link](https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures) | Listed as Proposition 1: Authorizes Bonds for Housing Affordability Programs. Legislative Statute. |
@@ -48,10 +48,10 @@ Sources: [CA SoS Certified List of Candidates](https://elections.cdn.sos.ca.gov/
 | Proposition 43 | verified | [link](https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures) | Listed as Proposition 43: Limits Voters’ Ability to Raise Revenues for Local Government Services. Legislative Constitutional Amendment. |
 | Proposition 44 | verified | [link](https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures) | Listed as Proposition 44: Requires Community Health Clinics Spend 90% Of Revenue on Program Services. Initiative Statute. |
 | Proposition 45 | verified | [link](https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures) | Listed as Proposition 45: Modifies Environmental Review for Certain Projects. Initiative Statute. |
-| Measure M | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
-| Measure AA | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
-| Measure J | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
-| Measure U | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
-| Regional Transit Measure | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
-| Measure L | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
-| Measure V | unverified | — | Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet |
+| Measure M | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Measure M – Jefferson Union High School District: Parcel Tax Measure |
+| Measure AA | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Measure AA – San Mateo County Charter Amendment Measure – Affirmation of Rights |
+| Measure J | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Measure J – San Mateo County Charter Amendment Measure – Extension to Call a Special Election or Appoint |
+| Measure U | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Measure U – San Mateo County Charter Amendment Measure – Reapportionment of Supervisorial Districts |
+| Regional Transit Measure | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Regional Transit Measure – Public Transit Revenue Measure District: Transactions and Use Tax Measure |
+| Measure L | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Measure L – San Mateo County Charter Amendment Measure – Extreme Weather Events |
+| Measure V | verified | [link](https://smcacre.gov/elections/current-election) | Listed by San Mateo County Elections: Measure V – San Mateo County Community College District: Bond Measure |

@@ -1,9 +1,9 @@
 {
   "generated": "2026-10-28",
   "summary": {
-    "verified": 39,
+    "verified": 49,
     "discrepancy": 0,
-    "unverified": 10
+    "unverified": 0
   },
   "rows": [
     {
@@ -312,9 +312,9 @@
       "contest": "Member, Board of Supervisors, District 5 (Short Term)",
       "kind": "candidate",
       "category": "county",
-      "status": "unverified",
-      "source": null,
-      "note": "County/district contest: needs San Mateo County Elections (smcacre.gov), not reachable yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "note": "County roster (Sept 3): MARK NAGALES, JUSLYN CABRERA MANALO; vote for 1; on ballot: yes"
     },
     {
       "contest": "City of Daly City Member, City Council",
@@ -328,17 +328,17 @@
       "contest": "County Board of Education Member, Trustee Area 2",
       "kind": "candidate",
       "category": "education",
-      "status": "unverified",
-      "source": null,
-      "note": "County/district contest: needs San Mateo County Elections (smcacre.gov), not reachable yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "note": "County roster (Sept 3): BEVERLY GERARD, DANA JOHNSON; vote for 1; on ballot: yes"
     },
     {
       "contest": "San Mateo County Community College District Member, Governing Board, Trustee Area 2",
       "kind": "candidate",
       "category": "education",
-      "status": "unverified",
-      "source": null,
-      "note": "County/district contest: needs San Mateo County Elections (smcacre.gov), not reachable yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "note": "County roster (Sept 3): MIKE GUINGONA, JASON HOLT; vote for 1; on ballot: yes"
     },
     {
       "contest": "U.S. Representative, District 15",
@@ -500,57 +500,57 @@
       "contest": "Measure M",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure M – Jefferson Union High School District: Parcel Tax Measure"
     },
     {
       "contest": "Measure AA",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure AA – San Mateo County Charter Amendment Measure – Affirmation of Rights"
     },
     {
       "contest": "Measure J",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure J – San Mateo County Charter Amendment Measure – Extension to Call a Special Election or Appoint"
     },
     {
       "contest": "Measure U",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure U – San Mateo County Charter Amendment Measure – Reapportionment of Supervisorial Districts"
     },
     {
       "contest": "Regional Transit Measure",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Regional Transit Measure – Public Transit Revenue Measure District: Transactions and Use Tax Measure"
     },
     {
       "contest": "Measure L",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure L – San Mateo County Charter Amendment Measure – Extreme Weather Events"
     },
     {
       "contest": "Measure V",
       "kind": "measure",
       "category": "measures",
-      "status": "unverified",
-      "source": null,
-      "note": "Local measure: needs San Mateo County Elections (smcacre.gov), which is not reachable from this environment yet"
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure V – San Mateo County Community College District: Bond Measure"
     }
   ]
 }

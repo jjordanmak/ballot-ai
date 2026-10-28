@@ -111,7 +111,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
     jurisdiction: c.division.name || "",
     format: formatLabel(c),
     // Retention contests show the official ballot question when nothing richer is researched.
-    formatExplainer: e?.formatExplainer?.text ?? (c.contestType === "retention" ? c.ballotTitle ?? "" : ""),
+    formatExplainer: e?.formatExplainer?.text ?? (c.contestType === "retention" ? retentionQuestion(c, candidates) : ""),
     meta,
     unopposed: c.choices.length === 1 && c.contestType !== "retention",
     intro: {
@@ -136,6 +136,11 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
       numberElected: c.numberElected,
     },
   };
+}
+
+/** The official retention question, with the justice's name in readable case. */
+function retentionQuestion(c: Contest, candidates: Candidate[]): string {
+  return c.choices.reduce((q, ch, i) => q.split(ch.ballotName).join(candidates[i].name), c.ballotTitle ?? "");
 }
 
 /** Official proper-case name when researched; otherwise a readable form of the ballot name. */
