@@ -1,19 +1,110 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight, MapPin, ShieldCheck } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
 import { STATUS_COPY } from "@/lib/ballot/copy";
 
+interface Suggestion {
+  placeId: string;
+  main: string;
+  secondary: string;
+}
+
+const DEBOUNCE_MS = 200;
+
 /**
  * Single-field residential address form. No ZIP step: ZIP alone can't
- * determine a ballot. Autocomplete (Places) is a later enhancement; manual
- * entry always works.
+ * determine a ballot. As the visitor types, matching street addresses are
+ * suggested (Google Places via our server); picking one fills in the full
+ * address with ZIP. Typing the whole address by hand always works too.
  */
 export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
   const [state, formAction, pending] = useActionState<AddressFormState, FormData>(resolveAddressAction, {});
   const [address, setAddress] = useState("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const [filling, setFilling] = useState(false);
+  const session = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const inflight = useRef<AbortController | null>(null);
   const error = state.status ? STATUS_COPY[state.status] : null;
+
+  useEffect(() => () => {
+    clearTimeout(timer.current);
+    inflight.current?.abort();
+  }, []);
+
+  function onType(value: string) {
+    setAddress(value);
+    setActive(-1);
+    clearTimeout(timer.current);
+    inflight.current?.abort();
+    if (value.trim().length < 3) {
+      setOpen(false);
+      return;
+    }
+    timer.current = setTimeout(async () => {
+      session.current ??= crypto.randomUUID();
+      const ctrl = new AbortController();
+      inflight.current = ctrl;
+      try {
+        const res = await fetch("/api/address/suggest", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ input: value, sessionToken: session.current }),
+          signal: ctrl.signal,
+        });
+        const list = ((await res.json()) as { suggestions?: Suggestion[] }).suggestions ?? [];
+        setSuggestions(list);
+        setOpen(list.length > 0);
+      } catch {
+        // Aborted or offline: keep typing manually.
+      }
+    }, DEBOUNCE_MS);
+  }
+
+  async function pick(s: Suggestion) {
+    clearTimeout(timer.current);
+    inflight.current?.abort();
+    setOpen(false);
+    setActive(-1);
+    setAddress(s.secondary ? `${s.main}, ${s.secondary}` : s.main);
+    const token = session.current;
+    session.current = null;
+    if (!token) return;
+    setFilling(true);
+    try {
+      const res = await fetch("/api/address/place", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ placeId: s.placeId, sessionToken: token }),
+      });
+      const full = ((await res.json()) as { address?: string }).address;
+      if (full) setAddress(full);
+    } catch {
+      // Keep the suggestion text; it still resolves.
+    } finally {
+      setFilling(false);
+    }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      // Cycles through the options and back to the typed text (-1).
+      const last = suggestions.length - 1;
+      setActive((i) => (e.key === "ArrowDown" ? (i >= last ? -1 : i + 1) : i <= -1 ? last : i - 1));
+    } else if (e.key === "Enter" && active >= 0 && active < suggestions.length) {
+      e.preventDefault();
+      pick(suggestions[active]);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setActive(-1);
+    }
+  }
 
   return (
     <form action={formAction} className="w-full max-w-xl flex flex-col gap-3" noValidate>
@@ -31,17 +122,61 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
           name="address"
           type="text"
           inputMode="text"
-          autoComplete="street-address"
+          // Our own suggestion list replaces the browser's autofill dropdown.
+          autoComplete="off"
           autoFocus={autoFocus}
           required
           minLength={5}
-          placeholder="Street address, city, state"
+          placeholder="Start typing your street address"
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          onChange={(e) => onType(e.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={() => setOpen(false)}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls="address-suggestions"
+          aria-activedescendant={open && active >= 0 && active < suggestions.length ? `address-option-${active}` : undefined}
           aria-invalid={!!error}
           aria-describedby={error ? "address-error" : "address-privacy"}
           className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg pl-10 pr-4 py-3.5 text-[16px] text-[var(--color-paper)] placeholder:text-[var(--color-paper-4)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
         />
+        {open && (
+          <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] shadow-lg overflow-hidden">
+            <ul id="address-suggestions" role="listbox" aria-label="Suggested addresses">
+              {suggestions.map((s, i) => (
+                <li
+                  key={s.placeId}
+                  id={`address-option-${i}`}
+                  role="option"
+                  aria-selected={i === active}
+                  // mousedown (not click) so the pick lands before the input blurs.
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    pick(s);
+                  }}
+                  onMouseEnter={() => setActive(i)}
+                  className={`flex items-start gap-2.5 px-4 py-2.5 cursor-pointer transition-colors ${
+                    i === active ? "bg-[var(--color-ink-3)]" : ""
+                  }`}
+                >
+                  <MapPin
+                    size={12}
+                    aria-hidden
+                    className={`mt-[4px] shrink-0 ${i === active ? "text-[var(--color-accent)]" : "text-[var(--color-paper-4)]"}`}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[14px] text-[var(--color-paper)] truncate">{s.main}</span>
+                    {s.secondary && <span className="block text-[12px] text-[var(--color-paper-3)] truncate">{s.secondary}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="px-4 py-1.5 border-t border-[var(--color-ink-3)] font-mono-cap text-[8px] tracking-[0.18em] text-[var(--color-paper-4)]">
+              Suggestions from Google Maps
+            </div>
+          </div>
+        )}
       </div>
 
       <div aria-live="polite" id="address-error">
@@ -55,7 +190,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
 
       <button
         type="submit"
-        disabled={pending || address.trim().length < 5}
+        disabled={pending || filling || address.trim().length < 5}
         className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
       >
         {pending ? "Finding your ballot…" : "View my ballot"}
@@ -64,7 +199,8 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
 
       <p id="address-privacy" className="mt-1 flex items-start gap-2 text-[12px] leading-[1.5] text-[var(--color-paper-3)]">
         <ShieldCheck size={13} aria-hidden className="mt-[2px] shrink-0 text-[var(--color-accent)]" />
-        We use your address once to look up your ballot, then discard it. It isn{"’"}t saved, logged, or shared with AI tools.
+        We send your address to Google to suggest matches and look up your ballot, then discard it. It isn{"’"}t saved,
+        logged, or shared with AI tools.
       </p>
     </form>
   );

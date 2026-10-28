@@ -36,7 +36,7 @@
 | P1-4 | `divisionsByAddress` → OCD IDs for division keys |
 | P1-5 | Expired `ballot_resolutions` cleanup (Vercel cron) + quota monitoring |
 | P1-6 | Statewide proposition official links (CA SoS Official Voter Information Guide) as durable `measures` |
-| P1-7 | Address autocomplete (owner request 2026-10-28): server-side Google Places API (New) proxy, separate server-only `GOOGLE_PLACES_API_KEY`, session tokens, no logging; manual entry keeps working. Needs the owner to enable the API and add the key |
+| P1-7 | Address autocomplete (owner request 2026-10-28): **built 2026-10-28.** Server-side Google Places API (New) proxy (`/api/address/suggest`, `/api/address/place`), server-only `GOOGLE_PLACES_API_KEY`, session tokens, no logging, same-site only; manual entry keeps working. Verified with simulated Google responses; live check pending on the Vercel preview |
 
 ## P2: after the election / next cycle
 

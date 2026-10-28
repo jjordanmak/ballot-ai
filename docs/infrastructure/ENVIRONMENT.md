@@ -13,7 +13,7 @@
 | `GOOGLE_CIVIC_ELECTION_ID` | Optional override of the discovered election ID | server only | opt | opt | opt | new, optional |
 | `BALLOT_PROVIDER` | `google-civic` (default) or `fixture` (UI dev/tests) | server only | opt | opt | ✗ (do not set) | new |
 | `BALLOT_QA_ADDRESS_94015` | Private Daly City QA address, used only by `scripts/qa-resolve.ts` | **local/cloud dev only. Never Vercel, never CI** | ✓ | ✗ | ✗ | new, private |
-| `GOOGLE_MAPS_API_KEY` | Places Autocomplete (P2, deferred) | client key restricted by HTTP referrer + Places API | — | — | — | future |
+| `GOOGLE_PLACES_API_KEY` | Address suggestions via Places API (New), called from `/api/address/*` | **server only**. Never `NEXT_PUBLIC_`. Restrict the key to Places API (New). Cap usage with a daily quota and a billing budget alert | opt | ✓ | ✓ | **new, optional** (without it the form still works; it just shows no suggestions) |
 | `ANTHROPIC_API_KEY` | Offline enrichment (P2) | **server/scripts only** | opt | ✗ | P2 | future |
 | `ANTHROPIC_DEFAULT_MODEL` / `ANTHROPIC_EXTRACTION_MODEL` | Model overrides ([AI_ARCHITECTURE](../architecture/AI_ARCHITECTURE.md) §4) | server only | opt | opt | opt | future |
 | `GNEWS_API_KEY`, `NEWSDATA_API_KEY` | News ingestion (spec only, unused) | server only | — | — | — | unused |

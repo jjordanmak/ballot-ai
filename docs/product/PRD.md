@@ -302,7 +302,7 @@ Dimensions are limited to state, election, provider, status, and contest counts.
   Principles:
   - Official ballot information and neutral profiles are **never paywalled**. Paid features only add matching on top.
   - Stored political preferences are sensitive personal information (CCPA/CPRA), so this tier needs explicit consent, minimization, and deletion controls before launch.
-- **Medium term (2027):** repeatable election ingestion; official state/county enrichment; Tier 2 profiles via the offline AI pipeline; measure explainers; Places autocomplete; public candidate and measure pages.
+- **Medium term (2027):** repeatable election ingestion; official state/county enrichment; Tier 2 profiles via the offline AI pipeline; measure explainers; public candidate and measure pages.
 - **Long term:** direct VIP and state feeds behind a composite resolver; nationwide Tier 2/3; partner API and embeds; multilingual support; durable civic-information product across every election cycle.
 
 ## 23. Success metrics
@@ -339,6 +339,6 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 3. **Auto-highlighting (`<mark>`)** chooses which phrases to emphasize. Is that editorializing? Proposed: restrict to factual anchors (dates, amounts, office names) in new surfaces.
 4. **News feeds.** Kept (decided 2026-10-28). Open: the source-balance policy, meaning which publishers are included and how they are mixed across candidates.
 5. **Durable storage of Civic-derived contest lists** beyond cache TTL is subject to the Google API terms review. The fallback is to store only officially verified contests durably.
-6. **Places Autocomplete:** worth the added Google dependency and cost? (P2 evaluation.)
+6. ~~Places Autocomplete~~. **Resolved 2026-10-28:** shipped as a server-side proxy (owner request). Costs are capped by a daily quota and a budget alert; see [PRIVACY](../architecture/PRIVACY.md) §2.
 7. **Multilingual support:** which languages first (Spanish, Chinese, Tagalog, Vietnamese, Korean for California)?
 8. **Geography public pages for SEO:** timing and granularity.

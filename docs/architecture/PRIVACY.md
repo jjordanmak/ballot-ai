@@ -10,7 +10,8 @@ A residential address is used **once, server-side**, to ask the ballot resolver 
 
 | Stage | Where the address exists | Retention |
 |---|---|---|
-| Typed in the form | Browser input field | Until navigation. Not in `localStorage`. With autocomplete off, the browser may still remember form values per user settings |
+| Typed in the form | Browser input field | Until navigation. Not in `localStorage`. Browser autofill is off (`autocomplete="off"`), since our own suggestion list replaces it |
+| Address suggestions (while typing) | Partial input in an HTTPS POST to `/api/address/suggest`, forwarded to Google Places API (New) `places:autocomplete`. Picking a suggestion sends only Google's place ID to `/api/address/place`, which returns the full formatted address | Request memory only. Not logged (the Places client logs only op, HTTP status and latency), not cached (`no-store`), same-site requests only. Suggestion and lookup calls share a random session token made in the browser, which carries no identity |
 | Submitted | HTTPS POST body to the Next.js server action | Request memory only |
 | Resolution | `AddressInput` wrapper → Google Civic `voterinfo` request (query param, per the API) | Request memory only. The wrapper's `toString`/`toJSON` redact it |
 | After resolution | **Nowhere.** The normalized ballot carries only coarse location (city, county, state) and district descriptors | — |
@@ -24,6 +25,8 @@ The address is **never**:
 - included in committed fixtures or reports.
 
 Google's `normalizedInput` echo is dropped during normalization.
+
+Google (Civic for the ballot, Places for suggestions) is the only third party that receives the address or any part of it. The landing page says so next to the field.
 
 ## 3. Ballot key
 
