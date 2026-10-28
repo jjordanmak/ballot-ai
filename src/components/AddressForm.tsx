@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight, MapPin, ShieldCheck } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
 import { STATUS_COPY } from "@/lib/ballot/copy";
+import { readyToSuggest } from "@/lib/providers/google-places/ready";
 
 interface Suggestion {
   placeId: string;
@@ -11,7 +12,7 @@ interface Suggestion {
   secondary: string;
 }
 
-const DEBOUNCE_MS = 200;
+const DEBOUNCE_MS = 300;
 
 /**
  * Single-field residential address form. No ZIP step: ZIP alone can't
@@ -41,7 +42,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
     setActive(-1);
     clearTimeout(timer.current);
     inflight.current?.abort();
-    if (value.trim().length < 3) {
+    if (!readyToSuggest(value)) {
       setOpen(false);
       return;
     }
