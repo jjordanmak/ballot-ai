@@ -6,7 +6,9 @@
  * can't be reached, the call is skipped: suggestions switch off and typing
  * the address keeps working. Failing closed is what keeps the bill at $0.
  *
- * Defaults stay under Google's free 10,000 requests per SKU per month.
+ * Defaults equal Google's free 10,000 requests per SKU per month. Every
+ * call made with the key goes through this counter (calls made before it
+ * existed were entered by hand), so the count matches Google's.
  * To allow paid usage, raise the env vars in Vercel. Set one to 0 to turn
  * that call off.
  */
@@ -17,8 +19,8 @@ import { logEvent } from "@/lib/observability/log";
 export type QuotaMetric = "places.autocomplete" | "places.details";
 
 const LIMITS: Record<QuotaMetric, { env: string; fallback: number }> = {
-  "places.autocomplete": { env: "PLACES_AUTOCOMPLETE_MONTHLY_LIMIT", fallback: 9000 },
-  "places.details": { env: "PLACES_DETAILS_MONTHLY_LIMIT", fallback: 9000 },
+  "places.autocomplete": { env: "PLACES_AUTOCOMPLETE_MONTHLY_LIMIT", fallback: 10000 },
+  "places.details": { env: "PLACES_DETAILS_MONTHLY_LIMIT", fallback: 10000 },
 };
 
 /** The month's limit for a metric: env override if it's a whole number ≥ 0, else the free-tier default. */

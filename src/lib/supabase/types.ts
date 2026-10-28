@@ -21,6 +21,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_usage: {
+        Row: {
+          count: number
+          metric: string
+          period: string
+          updated_at: string
+        }
+        Insert: {
+          count?: number
+          metric: string
+          period: string
+          updated_at?: string
+        }
+        Update: {
+          count?: number
+          metric?: string
+          period?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ballot_resolutions: {
         Row: {
           ballot: Json

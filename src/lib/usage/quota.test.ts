@@ -4,14 +4,14 @@ import { billingPeriod, consumeQuota, monthlyLimit } from "./quota";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("monthly API quota", () => {
-  it("defaults below Google's free 10,000 per month and takes whole-number overrides", () => {
-    expect(monthlyLimit("places.autocomplete")).toBe(9000);
+  it("defaults to Google's free 10,000 per month and takes whole-number overrides", () => {
+    expect(monthlyLimit("places.autocomplete")).toBe(10000);
     vi.stubEnv("PLACES_AUTOCOMPLETE_MONTHLY_LIMIT", "50000");
     expect(monthlyLimit("places.autocomplete")).toBe(50000);
     vi.stubEnv("PLACES_DETAILS_MONTHLY_LIMIT", "0");
     expect(monthlyLimit("places.details")).toBe(0);
     vi.stubEnv("PLACES_DETAILS_MONTHLY_LIMIT", "lots");
-    expect(monthlyLimit("places.details")).toBe(9000);
+    expect(monthlyLimit("places.details")).toBe(10000);
   });
 
   it("counts by calendar month in Pacific time", () => {
