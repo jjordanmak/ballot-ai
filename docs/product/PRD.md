@@ -89,6 +89,7 @@ ballot.ai does the following:
 - Not a real-time results tracker, and not an outcome predictor.
 - Not a source of official election information. Official sources are authoritative. ballot.ai links to them and defers to them.
 - No personalized political inference. We do not profile users' preferences.
+- **No accounts, profiles, login, or personalization in the current product.** Preference-based features are reserved for a possible future membership tier (§22).
 
 ## 9. Core user journey
 
@@ -145,6 +146,13 @@ Navigation: a desktop sidebar and a mobile top nav, with scroll-spy between cont
 - FR-K1: Show every valid candidate with the **exact ballot name**, and party or ballot designation where applicable.
 - FR-K2: Missing enrichment shows "Profile not yet available". The candidate is never hidden.
 - FR-K3: Profile tiers: Tier 1 (party, URL, incumbency) → Tier 2 (role, experience, education, bio) → Tier 3 (documented positions, finance, endorsements as factual records).
+- FR-K4: **Profile sections** (Tier 2/3). Every candidate in a contest gets the same sections in the same order. Every claim is sourced.
+  - **Their platform.** The 3–5 main claims of the candidate's platform, attributed and in their own framing ("Proposes…", "Pledges to…"). This replaces the prototype's "Bottom line". The profile header already carries name, party, and current role, so there is no separate summary.
+  - **Relevant experience.** How past positions, jobs, and offices relate to *this office's official responsibilities* and to the candidate's platform for this race. It includes a fixed set of comparable fields shown for every candidate: *executive experience · state office · federal office · local office · years in elected office*. An empty field reads "none held" and carries no commentary.
+  - **Track record on their priorities.** For each platform claim, what the candidate has documented doing about it: votes, bills, actions in office, outcomes with figures. Substantive concerns from the prototype's "criticisms" belong here as facts, never as "critics say".
+  - **Notable facts.** Verifiable milestones applied by consistent rule, for example "If elected, would be the first Latino governor of California". The rule applies to any candidate who qualifies.
+  - **Campaign funding.** Same fields for everyone, each with an as-of date: total raised, cash on hand, self-funding, top contributor categories, top N donors by amount (mechanical cutoff), and independent expenditures supporting and opposing. Sources are the state campaign-finance system (CA: Cal-Access / SoS Power Search) and the FEC for federal contests.
+  - Where documentation is thin, the section says "Limited documented information in reviewed sources". It never pads.
 
 ### 11.6 Measures
 - FR-M1: Show the identifier, official title, jurisdiction, and official source link.
@@ -193,8 +201,19 @@ Details: [PROVIDER_ARCHITECTURE.md](../architecture/PROVIDER_ARCHITECTURE.md), [
 
 **Not allowed:** a "best" or "worst" candidate; scores; rankings; recommended votes; partisan persuasion; outcome predictions; inference of user preferences.
 
-**Implications for existing prototype features** (see Open Questions):
-- "You should vote for X if…" (`voteForIf`), "Bottom line", "Strengths / Criticisms" and polling "Frontrunner / Long shot" labels are **retired from the new ballot experience**. They remain only in the archived June primary view, pending a decision.
+**Neutrality is procedural.** Balance comes from identical sections, identical prompts and inputs, attribution, sourcing, and mechanical selection rules. Mixing left and right critiques does not create balance on its own.
+
+**Decisions on prototype features (2026-10-28):**
+
+| Prototype field | Decision |
+|---|---|
+| `bottomLine` | **Replaced** by "Their platform" (FR-K4). |
+| `strengths` / `criticisms` | **Removed.** They are written from a point of view, their selection is editorial, and their attribution is often vague ("critics on the left", "elites"). The factual substance moves to *Relevant experience* and *Track record*. Opinion-only content ("vague and untested") has no neutral form and is dropped. |
+| `voteForIf` | **Removed from the free product.** It is reserved for a possible future membership tier as user-driven matching (§22). |
+| Polling "Frontrunner / Long shot" labels | **Removed.** These are predictive framing. |
+| Wording rules | Plain verbs. No evaluative adjectives ("strong", "weak", "impressive", "controversial"). Gaps are stated as fields ("State office: none held"), never as "has never…" framing. |
+
+The archived June primary view keeps its original fields with an "archived prototype" label.
 - Party colors (red and blue) encode party only. Ordering never implies preference.
 
 ## 15. Privacy requirements
@@ -262,6 +281,15 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 ## 22. Product roadmap
 
 - **Near term (Nov 3, 2026):** address-first lookup; Google Civic resolver; normalized domain model; Tier 0/1 nationally; fully validated Daly City reference ballot; California and national coverage QA; June primary archived.
+- **Possible membership tier (exploratory, not before 2027):**
+  - Accounts and saved preferences.
+  - "What matters to you" issue matching.
+  - "Vote for X if…" style matching, driven by the user's own selections against documented positions.
+  - Personalized insights.
+
+  Principles:
+  - Official ballot information and neutral profiles are **never paywalled**. Paid features only add matching on top.
+  - Stored political preferences are sensitive personal information (CCPA/CPRA), so this tier needs explicit consent, minimization, and deletion controls before launch.
 - **Medium term (2027):** repeatable election ingestion; official state/county enrichment; Tier 2 profiles via the offline AI pipeline; measure explainers; Places autocomplete; public candidate and measure pages.
 - **Long term:** direct VIP and state feeds behind a composite resolver; nationwide Tier 2/3; partner API and embeds; multilingual support; durable civic-information product across every election cycle.
 
@@ -295,7 +323,7 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 ## 25. Open questions
 
 1. **Candidate-coverage rules** (`specs/phase-4-ingestion.md`: debate qualification, ≥3% poll, ≥$50K raised, or major-party nominee). Proposed resolution: these rules govern **enrichment priority only**. Every ballot-qualified candidate always appears at Tier 0. *Needs owner confirmation.*
-2. **Editorial fields in the archive** (`voteForIf`, `bottomLine`, `strengths`, `criticisms`, polling status labels). Keep in the archive with an "archived prototype" label, or remove? They conflict with §14.
+2. ~~Editorial fields~~. **Resolved 2026-10-28**, see the §14 decisions table.
 3. **Auto-highlighting (`<mark>`)** chooses which phrases to emphasize. Is that editorializing? Proposed: restrict to factual anchors (dates, amounts, office names) in new surfaces.
 4. **News feeds:** keep for Tier 3 with source-balance rules, or drop until a balance policy exists?
 5. **Durable storage of Civic-derived contest lists** beyond cache TTL is subject to the Google API terms review. The fallback is to store only officially verified contests durably.
