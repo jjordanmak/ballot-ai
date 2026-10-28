@@ -39,6 +39,7 @@
 
 ## P2: after the election / next cycle
 
+- **Supabase key migration**: swap the legacy `anon` and `service_role` keys for `sb_publishable_` and `sb_secret_` keys on every surface, then disable the legacy keys. This also covers the overdue service-role rotation. Steps are in [ENVIRONMENT.md §3.1](../../infrastructure/ENVIRONMENT.md#31-post-election-move-to-supabases-new-api-keys). Do it after results are certified, not during election week.
 - Places Autocomplete evaluation.
 - Offline enrichment pipeline (Claude, central config).
 - Measure explainers.
