@@ -65,17 +65,22 @@ Implementation notes for when the pipeline is built (P2):
 The output schema has these fields. Every claim carries `sourceIds: string[]` (non-empty):
 
 ```ts
-platform:        { claim: string; sourceIds: string[] }[]   // 3–5 main claims, attributed ("Proposes…")
-experience: {
-  narrative:     { text: string; sourceIds: string[] }[]    // past roles ↔ this office's duties ↔ platform
-  fields:        { executive; state; federal; local; yearsElected }  // structured, same for every candidate
-}
-trackRecord:     { priority: string; actions: { text; date?; sourceIds }[] }[]
-notableFacts:    { text: string; rule: string; sourceIds: string[] }[]  // rule-based, e.g. "historic_first"
-issues:          Record<issueId, { stance: string; sourceIds: string[] }>
+type Cited<T> = T & { sourceIds: string[] }        // every item; rendered as inline citation markers
+
+platform:      Cited<{ claim: string }>[]                          // 3–5 main claims ("Proposes…")
+background:    Cited<{ text: string }>[]
+pastPositions: Cited<{ title; organization; kind: 'elected'|'appointed'|'job'|'nonprofit'|'board'|'military'|'advisory'|'other'; start?; end? }>[]
+experience:    Cited<{ text: string }>[]                           // past roles ↔ this office's duties ↔ platform
+trackRecord:   { priority: string; actions: Cited<{ text; date? }>[] }[]
+priorities:    Cited<{ text: string }>[]
+issues:        Record<issueId, Cited<{ stance: string }>>          // "key stances"
+history:       Cited<{ year; event }>[]                            // timeline
+notableFacts:  Cited<{ text; rule: string }>[]                     // rule-based, e.g. "historic_first"
 ```
 
-- **Campaign funding** is not AI-generated. It is extracted mechanically from Cal-Access/FEC data into structured fields, and the extraction model is used only to parse documents where no API exists.
+Endorsements are stored as rows (`endorsements` plus a `source_id`), not synthesized text. News items are ingested (Phase 4a), not generated.
+
+- **Campaign funding** is not AI-generated. It is extracted mechanically from Cal-Access/FEC data: totals, the source-type breakdown, the full itemized contributor list, and independent expenditures. The extraction model is used only to parse documents where no API exists.
 - **Removed:** `strengths`, `criticisms`, `bottomLine`, `voteForIf`. They remain only in the archived June primary data. `voteForIf`-style matching is reserved for a future membership tier and would be computed from the user's own selections, not generated per candidate.
 - **Balance checks** run before publish:
   - section and length parity across candidates in a contest;
