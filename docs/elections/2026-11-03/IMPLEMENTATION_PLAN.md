@@ -28,6 +28,8 @@
 
 ## P1: before or around Nov 3, as time allows
 
+> Owner decision 2026-10-28: finish the desktop web version first. The tablet and mobile responsive pass comes after desktop is final.
+
 | ID | Task |
 |---|---|
 | P1-1 | California coverage QA: about 12 diverse counties using public (government-building) addresses → `california-coverage.md` |
