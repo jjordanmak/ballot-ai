@@ -3,7 +3,7 @@
 -- ADDITIVE ONLY. Existing tables/rows (June 2026 primary archive) are not
 -- modified except: new nullable/defaulted columns on `elections`, and a
 -- status backfill for the one existing election. Reversible via
--- 0004_address_first_domain_down.sql.
+-- supabase/rollback/0004_address_first_domain_down.sql.
 --
 -- See docs/architecture/DATA_MODEL.md and docs/architecture/PRIVACY.md.
 -- No table in this migration stores a residential address.
