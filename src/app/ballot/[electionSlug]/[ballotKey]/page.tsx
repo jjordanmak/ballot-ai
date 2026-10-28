@@ -8,7 +8,7 @@ import { ComparisonTable } from "@/components/ComparisonTable";
 import { CandidatesHeader } from "@/components/CandidatesHeader";
 import { MeasureCard } from "@/components/ballot/MeasureCard";
 import type { Race } from "@/data/types";
-import type { ResolvedBallot } from "@/domain/ballot";
+import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
 import { formatElectionDate, locationLabel, STATUS_COPY } from "@/lib/ballot/copy";
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { loadBallot } from "@/lib/ballot/loadBallot";
@@ -19,8 +19,11 @@ export const dynamic = "force-dynamic";
 
 type Params = Promise<{ electionSlug: string; ballotKey: string }>;
 
-/** Nav-only pseudo race so measures appear in the sidebar like races do. */
-const MEASURES_ID = "measures";
+/** Measures are listed in the nav as two pseudo races (statewide / local), one row per measure. */
+const MEASURE_GROUPS = [
+  { id: "measures-state", statewide: true, title: "State propositions", eyebrow: "Statewide" },
+  { id: "measures-local", statewide: false, title: "Local measures", eyebrow: "County, city and district" },
+] as const;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { electionSlug, ballotKey } = await params;
@@ -43,14 +46,24 @@ export default async function BallotPage({ params }: { params: Params }) {
   const location = locationLabel(ballot.location);
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
-  const navRaces = measures.length ? [...races, measuresNavRace(measures)] : races;
+  const measureGroups = MEASURE_GROUPS.map((g) => ({ ...g, items: measures.filter((m) => m.statewide === g.statewide) })).filter(
+    (g) => g.items.length > 0,
+  );
+  const navRaces = [...races, ...measureGroups.map((g) => measuresNavRace(g.id, g.title, g.items))];
   const officialUrl = ballot.administration?.electionInfoUrl ?? ballot.administration?.ballotInfoUrl;
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
     <div className="flex flex-col lg:flex-row">
       <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
-      <Sidebar races={navRaces} productName="ballot.ai" location={location} electionName={electionName} electionDate={electionDate} />
+      <Sidebar
+        races={navRaces}
+        productName="ballot.ai"
+        location={location}
+        electionName={electionName}
+        electionDate={electionDate}
+        footer={`Live data · ${races.length} races · ${measures.length} measures`}
+      />
 
       <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
         <Cover
@@ -80,37 +93,37 @@ export default async function BallotPage({ params }: { params: Params }) {
           </section>
         ))}
 
-        {measures.length > 0 && (
-          <section id={`race-${MEASURES_ID}`} className="scroll-mt-4 pt-16">
+        {measureGroups.map((g, gi) => (
+          <section key={g.id} id={`race-${g.id}`} className="scroll-mt-4 pt-16" data-race-id={g.id}>
             <header className="pb-8 border-b border-[var(--color-ink-3)] mb-10">
               <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2 mb-6">
                 <span className="race-number text-[var(--color-accent)] tabular-nums">
-                  {String(races.length + 1).padStart(2, "0")}
+                  {String(races.length + gi + 1).padStart(2, "0")}
                 </span>
-                Statewide and local
+                {g.eyebrow}
               </span>
               <h2 className="font-display text-[40px] sm:text-[50px] xl:text-[64px] leading-[0.95] tracking-[-0.025em]">
-                Ballot measures
+                {g.title}
               </h2>
               <div className="mt-5 font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
                 <ListChecks size={12} className="text-[var(--color-accent)]" />
-                {measures.length} measures on your ballot
+                {g.items.length} {g.items.length === 1 ? "measure" : "measures"} on your ballot
               </div>
             </header>
             <div className="space-y-5">
-              {measures.map((mv) => (
+              {g.items.map((mv) => (
                 <MeasureCard
                   key={mv.contest.id}
                   contest={mv.contest}
                   enrichment={mv.enrichment}
                   docs={mv.sourceDocs}
                   officialGuideUrl={officialUrl}
-                  anchorId={`candidate-${MEASURES_ID}-${mv.contest.id}`}
+                  anchorId={`candidate-${g.id}-${mv.contest.id}`}
                 />
               ))}
             </div>
           </section>
-        )}
+        ))}
 
         <footer className="mt-20 pt-6 border-t border-[var(--color-ink-3)] text-[12px] leading-[1.6] text-[var(--color-paper-3)] max-w-2xl">
           ballot.ai is independent and nonpartisan. Which contests and candidates appear comes from official election data
@@ -122,11 +135,12 @@ export default async function BallotPage({ params }: { params: Params }) {
   );
 }
 
-function measuresNavRace(measures: MeasureView[]): Race {
+function measuresNavRace(id: string, office: string, measures: MeasureView[]): Race {
   return {
-    id: MEASURES_ID,
-    office: "Ballot measures",
-    navLabel: `${measures.length} measures`,
+    id,
+    office,
+    group: CATEGORY_LABEL.measures,
+    navLabel: `${measures.length} ${measures.length === 1 ? "measure" : "measures"}`,
     jurisdiction: "",
     format: "",
     formatExplainer: "",

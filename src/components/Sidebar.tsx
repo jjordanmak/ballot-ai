@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronRight, ArrowUp, MapPin } from "lucide-react";
 import { partyDot } from "./PartyTag";
 import type { Race } from "@/data/types";
@@ -16,6 +16,8 @@ interface SidebarProps {
   location?: string;
   electionName?: string;
   electionDate?: string;
+  /** Footer line; defaults to the race count. */
+  footer?: string;
 }
 
 export function Sidebar({
@@ -24,6 +26,7 @@ export function Sidebar({
   location = "Daly City, CA · 94015",
   electionName = "Statewide Direct Primary",
   electionDate = "Jun 2, 2026",
+  footer,
 }: SidebarProps) {
   // Hover-driven expansion: which race the cursor is over. Distinct from
   // active (scroll-spy) so the active highlight stays put as the user
@@ -99,8 +102,9 @@ export function Sidebar({
       <nav className="flex-1 overflow-y-auto p-3 pr-2">
         <ol className="flex flex-col gap-0.5">
           {races.map((race, i) => (
+            <Fragment key={race.id}>
+            {startsGroup(races, i) && <NavGroupHeading label={race.group!} first={i === 0} />}
             <RaceNavItem
-              key={race.id}
               race={race}
               index={i + 1}
               // Expand when EITHER the cursor is over the row OR the
@@ -114,15 +118,33 @@ export function Sidebar({
                 setHoveredRaceId((prev) => (prev === race.id ? null : prev))
               }
             />
+            </Fragment>
           ))}
         </ol>
       </nav>
 
       {/* Footer */}
       <div className="p-4 border-t border-[var(--color-ink-3)] text-[11px] text-[var(--color-paper-3)] font-mono-cap tracking-[0.16em]">
-        Live data · {races.length} races
+        {footer ?? `Live data · ${races.length} races`}
       </div>
     </aside>
+  );
+}
+
+/** True when race `i` opens a new jurisdiction group (races are pre-sorted by group). */
+export function startsGroup(races: Race[], i: number): boolean {
+  return !!races[i].group && races[i].group !== races[i - 1]?.group;
+}
+
+/** Jurisdiction heading (Federal, Statewide, …) above a run of races in the nav. */
+export function NavGroupHeading({ label, first }: { label: string; first: boolean }) {
+  return (
+    <li
+      role="presentation"
+      className={`px-3 pb-1 font-mono-cap text-[9px] tracking-[0.18em] text-[var(--color-paper-4)] ${first ? "pt-1" : "pt-4"}`}
+    >
+      {label}
+    </li>
   );
 }
 

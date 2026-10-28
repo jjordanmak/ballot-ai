@@ -5,12 +5,14 @@
  */
 import type { EnrichmentBundle } from "@/domain/enrichment";
 import caCertifiedCandidates from "./ca-certified-candidates.json";
+import caJustices from "./ca-justices.json";
 import caStatewideMeasures from "./ca-statewide-measures.json";
 import dalyCityCouncil from "./daly-city-council.json";
 
 const bundles: EnrichmentBundle[] = [
   caStatewideMeasures as EnrichmentBundle,
   caCertifiedCandidates as EnrichmentBundle,
+  caJustices as EnrichmentBundle,
   dalyCityCouncil as EnrichmentBundle,
 ];
 

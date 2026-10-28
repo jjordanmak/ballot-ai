@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { Menu, X, ArrowUp, MapPin, ChevronRight } from "lucide-react";
 import type { Race } from "@/data/types";
 import { partyDot } from "./PartyTag";
+import { NavGroupHeading, startsGroup } from "./Sidebar";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 
 interface MobileNavProps {
@@ -107,7 +108,9 @@ export function MobileNav({ races, electionName, location, electionDate }: Mobil
                   ).length;
 
                   return (
-                    <li key={race.id}>
+                    <Fragment key={race.id}>
+                    {startsGroup(races, i) && <NavGroupHeading label={race.group!} first={i === 0} />}
+                    <li>
                       <button
                         onClick={() => scrollToRace(race.id)}
                         className={`w-full flex items-start gap-2.5 rounded-md px-3 py-2.5 transition-colors text-left ${
@@ -169,6 +172,7 @@ export function MobileNav({ races, electionName, location, electionDate }: Mobil
                         </ul>
                       )}
                     </li>
+                    </Fragment>
                   );
                 })}
               </ol>

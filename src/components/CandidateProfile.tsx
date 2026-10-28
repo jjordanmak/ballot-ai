@@ -825,7 +825,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
       <div className="pt-8 space-y-4">
         <Researching what="This candidate's profile is" />
         <p className="text-[13px] text-[var(--color-paper-2)]">
-          On your ballot as <span className="text-[var(--color-paper)]">{candidate.ballotName ?? candidate.name}</span>
+          On your ballot as <span className="text-[var(--color-paper)]">{candidate.name}</span>
           {candidate.party !== "Nonpartisan" && <> · {candidate.party}</>}.
         </p>
         {g.campaignUrl && <CampaignLink url={g.campaignUrl} />}

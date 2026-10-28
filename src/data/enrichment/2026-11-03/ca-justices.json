@@ -1,0 +1,312 @@
+{
+  "election": "2026-11-03",
+  "sources": {
+    "sos-vig-justices-supreme": {
+      "title": "Justices of the Supreme Court (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/supreme-court-justices/index.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    },
+    "sos-vig-justices-district1": {
+      "title": "Courts of Appeal, First District (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district1.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    },
+    "sos-vig-justices-district2": {
+      "title": "Courts of Appeal, Second District (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district2.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    },
+    "sos-vig-justices-district3": {
+      "title": "Courts of Appeal, Third District (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district3.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    },
+    "sos-vig-justices-district4": {
+      "title": "Courts of Appeal, Fourth District (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district4.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    },
+    "sos-vig-justices-district5": {
+      "title": "Courts of Appeal, Fifth District (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district5.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    },
+    "sos-vig-justices-district6": {
+      "title": "Courts of Appeal, Sixth District (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district6.htm",
+      "official": true,
+      "accessed": "2026-10-28"
+    }
+  },
+  "candidates": {
+    "supreme court|associate justice of the supreme court::kelli m evans": {
+      "displayName": "Kelli M. Evans",
+      "incumbent": true
+    },
+    "supreme court|associate justice of the supreme court::joshua groban": {
+      "displayName": "Joshua P. Groban",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division one::charles a smiley": {
+      "displayName": "Charles A. Smiley",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division one::kathleen m banke": {
+      "displayName": "Kathleen M. Banke",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division one::monique langhorne wilson": {
+      "displayName": "Monique Langhorne Wilson",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|presiding justice court of appeal first district division two::therese m stewart": {
+      "displayName": "Therese M. Stewart",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division two::tara m desautels": {
+      "displayName": "Tara M. Desautels",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division three::ioana petrou": {
+      "displayName": "Ioana Petrou",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division three::victor a rodriguez": {
+      "displayName": "Victor A. Rodríguez",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|presiding justice court of appeal first district division four::tracie l brown": {
+      "displayName": "Tracie L. Brown",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division five::mark simons": {
+      "displayName": "Mark Simons",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division five::danny y chou": {
+      "displayName": "Danny Y. Chou",
+      "incumbent": true
+    },
+    "court of appeal first appellate district|associate justice court of appeal first district division five::gordon burns": {
+      "displayName": "Gordon Burns",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division one::michelle c kim": {
+      "displayName": "Michelle C. Kim",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division one::gregory j weingart": {
+      "displayName": "Gregory J. Weingart",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division two::steve goorvitch": {
+      "displayName": "Steve Goorvitch",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division two::anne richardson": {
+      "displayName": "Anne Richardson",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|presiding justice court of appeal second district division three::rashida a adams": {
+      "displayName": "Rashida A. Adams",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division three::mark hanasono": {
+      "displayName": "Mark Hanasono",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|presiding justice court of appeal second district division four::helen zukin": {
+      "displayName": "Helen Zukin",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division four::audra m mori": {
+      "displayName": "Audra M. Mori",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division four::nicholas daum": {
+      "displayName": "Nicholas Daum",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division four::armen tamzarian": {
+      "displayName": "Armen Tamzarian",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|presiding justice court of appeal second district division five::brian m hoffstadt": {
+      "displayName": "Brian M. Hoffstadt",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|presiding justice court of appeal second district division six::tari l cody": {
+      "displayName": "Tari L. Cody",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division six::kenneth r yegan": {
+      "displayName": "Kenneth R. Yegan",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|presiding justice court of appeal second district division seven::gonzalo c martinez": {
+      "displayName": "Gonzalo C. Martinez",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division seven::natalie stone": {
+      "displayName": "Natalie Stone",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division eight::john wiley": {
+      "displayName": "John Wiley",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division eight::matthew a scherb": {
+      "displayName": "Matthew A. Scherb",
+      "incumbent": true
+    },
+    "court of appeal second appellate district|associate justice court of appeal second district division eight::victor g viramontes": {
+      "displayName": "Victor G. Viramontes",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|administrative presiding justice court of appeal third district::laurie earl": {
+      "displayName": "Laurie Earl",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|associate justice court of appeal third district::shama mesiwala": {
+      "displayName": "Shama Mesiwala",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|associate justice court of appeal third district::david b sapp": {
+      "displayName": "David B. Sapp",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|associate justice court of appeal third district::lauri damrell": {
+      "displayName": "Lauri Damrell",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|associate justice court of appeal third district::stacy boulware eurie": {
+      "displayName": "Stacy Boulware Eurie",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|associate justice court of appeal third district::aimee a feinberg": {
+      "displayName": "Aimee A. Feinberg",
+      "incumbent": true
+    },
+    "court of appeal third appellate district|associate justice court of appeal third district::jonathan renner": {
+      "displayName": "Jonathan Renner",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::eran m bermudez": {
+      "displayName": "Eran M. Bermudez",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::jose s castillo": {
+      "displayName": "Jose S. Castillo",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::truc t do": {
+      "displayName": "Truc T. Do",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::lisa rodriguez": {
+      "displayName": "Lisa Rodriguez",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::david m rubin": {
+      "displayName": "David M. Rubin",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::william s dato": {
+      "displayName": "William S. Dato",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division one::julia c kelety": {
+      "displayName": "Julia C. Kelety",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division two::corey g lee": {
+      "displayName": "Corey G. Lee",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division two::michael j raphael": {
+      "displayName": "Michael J. Raphael",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|presiding justice court of appeal fourth district division three::joanne motoike": {
+      "displayName": "Joanne Motoike",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division three::nathan r scott": {
+      "displayName": "Nathan R. Scott",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division three::juliet o macaulay": {
+      "displayName": "Juliet O. Macaulay",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division three::martha k gooding": {
+      "displayName": "Martha K. Gooding",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division three::thomas a delaney": {
+      "displayName": "Thomas A. Delaney",
+      "incumbent": true
+    },
+    "court of appeal fourth appellate district|associate justice court of appeal fourth district division three::deborah c servino": {
+      "displayName": "Deborah C. Servino",
+      "incumbent": true
+    },
+    "court of appeal fifth appellate district|associate justice court of appeal fifth district::arlan l harrell": {
+      "displayName": "Arlan L. Harrell",
+      "incumbent": true
+    },
+    "court of appeal fifth appellate district|associate justice court of appeal fifth district::sonny s sandhu": {
+      "displayName": "Sonny S. Sandhu",
+      "incumbent": true
+    },
+    "court of appeal fifth appellate district|associate justice court of appeal fifth district::amy k guerra": {
+      "displayName": "Amy K. Guerra",
+      "incumbent": true
+    },
+    "court of appeal fifth appellate district|associate justice court of appeal fifth district::kathleen a meehan": {
+      "displayName": "Kathleen A. Meehan",
+      "incumbent": true
+    },
+    "court of appeal fifth appellate district|associate justice court of appeal fifth district::mark w snauffer": {
+      "displayName": "Mark W. Snauffer",
+      "incumbent": true
+    },
+    "court of appeal fifth appellate district|associate justice court of appeal fifth district::thomas desantos": {
+      "displayName": "Thomas DeSantos",
+      "incumbent": true
+    },
+    "court of appeal sixth appellate district|associate justice court of appeal sixth district::daniel h bromberg": {
+      "displayName": "Daniel H. Bromberg",
+      "incumbent": true
+    },
+    "court of appeal sixth appellate district|associate justice court of appeal sixth district::charles e wilson ii": {
+      "displayName": "Charles E. Wilson II",
+      "incumbent": true
+    },
+    "court of appeal sixth appellate district|associate justice court of appeal sixth district::charles f adams": {
+      "displayName": "Charles F. Adams",
+      "incumbent": true
+    },
+    "court of appeal sixth appellate district|associate justice court of appeal sixth district::frederick s chung": {
+      "displayName": "Frederick S. Chung",
+      "incumbent": true
+    },
+    "court of appeal sixth appellate district|associate justice court of appeal sixth district::allison marston danner": {
+      "displayName": "Allison Marston Danner",
+      "incumbent": true
+    }
+  }
+}

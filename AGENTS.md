@@ -143,3 +143,13 @@ Phases 1 (data layer), 2 (landing + routing) and 3 (mobile) are done; 4 (ingesti
 1. `git log --oneline -15` — recent commits with detailed messages
 2. `docs/product/PRD.md` (decisions, open questions) and `docs/architecture/` — plus the local memory file if you have one
 3. **Ask the user before doing anything structural.** Better to confirm than to undo.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

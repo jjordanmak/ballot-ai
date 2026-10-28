@@ -196,6 +196,8 @@ export interface Race {
   news?: NewsItem[];
   /** Overrides the "N active" line under the race in the sidebar/mobile nav. */
   navLabel?: string;
+  /** Jurisdiction heading the race is listed under in the sidebar/mobile nav (e.g. "Federal"). */
+  group?: string;
   /**
    * Address-first ballot (Nov 2026+): cited race content and its sources.
    * When present, the race header renders in "general" mode (no hardcoded

@@ -4,25 +4,33 @@
  * district, vote-for-N, ballot names, party) come only from the resolved
  * ballot; enrichment adds cited context and profiles.
  */
-import type { Contest, ResolvedBallot } from "@/domain/ballot";
+import { CATEGORY_LABEL, CATEGORY_ORDER, type Contest, type ResolvedBallot } from "@/domain/ballot";
 import type { CandidateEnrichment, EnrichmentBundle, MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import type { Candidate, Party, Race } from "@/data/types";
+import { readableName } from "@/domain/text";
 import { candidateKey, contestKey, measureKey } from "./enrichmentKeys";
 
 export interface MeasureView {
   contest: Contest;
+  /** Statewide proposition (vs. county, city or district measure). */
+  statewide: boolean;
   enrichment?: MeasureEnrichment;
   sourceDocs: Record<string, SourceDoc>;
 }
 
+/**
+ * Races come back grouped by jurisdiction (CATEGORY_ORDER), keeping the
+ * provider's order within each group; measures come back statewide first.
+ */
 export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { races: Race[]; measures: MeasureView[] } {
-  const races: Race[] = [];
+  const races: { race: Race; rank: number }[] = [];
   const measures: MeasureView[] = [];
   for (const c of ballot.contests) {
     if (c.kind === "measure") {
       const me = bundle.measures?.[measureKey(c)];
       measures.push({
         contest: c,
+        statewide: isStatewide(c),
         enrichment: me,
         sourceDocs: pickSources(
           bundle.sources,
@@ -31,9 +39,16 @@ export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { rac
       });
       continue;
     }
-    races.push(contestToRace(c, bundle));
+    races.push({ race: contestToRace(c, bundle), rank: CATEGORY_ORDER.indexOf(c.category) });
   }
-  return { races, measures };
+  return {
+    races: races.sort((a, b) => a.rank - b.rank).map((r) => r.race),
+    measures: measures.sort((a, b) => Number(b.statewide) - Number(a.statewide)),
+  };
+}
+
+function isStatewide(c: Contest): boolean {
+  return c.division.scope === "statewide" || /^ocd-division\/country:us\/state:[a-z]{2}$/.test(c.division.ocdId ?? "");
 }
 
 function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
@@ -45,10 +60,11 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
   const officialSource = c.sources.find((s) => s.official);
   const candidates = c.choices.map((ch) => {
     const ce = bundle.candidates?.[candidateKey(c, ch)];
-    const poll = e?.polling?.poll?.results.find((r) => sameName(r.name, ce?.displayName ?? ch.ballotName));
+    const name = displayName(c, ch, bundle);
+    const poll = e?.polling?.poll?.results.find((r) => sameName(r.name, name));
     const candidate: Candidate = {
       id: ch.id,
-      name: ce?.displayName ?? ch.ballotName,
+      name,
       ballotName: ch.ballotName,
       party: toParty(ch.party),
       headshot: ce?.headshot?.url,
@@ -91,7 +107,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
   return {
     id: c.id,
     // Two retention contests can share an office title; name the justice.
-    office: c.contestType === "retention" && c.choices.length === 1 ? `${c.title}: ${c.choices[0].ballotName}` : c.title,
+    office: c.contestType === "retention" && c.choices.length === 1 ? `${c.title}: ${candidates[0].name}` : c.title,
     jurisdiction: c.division.name || "",
     format: formatLabel(c),
     // Retention contests show the official ballot question when nothing richer is researched.
@@ -111,6 +127,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
     issues: e?.issues ?? [],
     candidates,
     navLabel: c.contestType === "retention" ? "Retention · Yes / No" : undefined,
+    group: CATEGORY_LABEL[c.category],
     general: {
       enrichment: e,
       sourceDocs: docs,
@@ -119,6 +136,11 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
       numberElected: c.numberElected,
     },
   };
+}
+
+/** Official proper-case name when researched; otherwise a readable form of the ballot name. */
+function displayName(c: Contest, ch: Contest["choices"][number], bundle: EnrichmentBundle): string {
+  return bundle.candidates?.[candidateKey(c, ch)]?.displayName ?? readableName(ch.ballotName);
 }
 
 function formatLabel(c: Contest): string {

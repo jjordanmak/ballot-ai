@@ -23,7 +23,7 @@
 | P0-13 | Remove `/api/zip` from runtime. Update CLAUDE.md, AGENTS.md, README | P0-10 | done |
 | P0-14 | Browser verification (Playwright, desktop + 390px) with the fixture provider | P0-11 | done |
 | P0-15 | **Live Daly City QA** → `reports/2026-11-03/daly-city-qa.md` + normalized fixture. Verify every contest against SMC / SoS / Daly City | creds | **mostly done 2026-10-28:** 49 contests. **39 verified, 0 discrepancies** against the CA SoS certified list, the SoS qualified-measures list and the Daly City Clerk nominee list (`reports/2026-11-03/daly-city-verification.md`). **Provider gap found and fixed:** Civic omitted all 13 judicial retention contests, which are now added from the certified list. **Remaining 10 (county, district and local measures) need `smcacre.gov`**, which is still blocked by the network policy |
-| P0-16 | Official records for the verified Daly City contests and statewide propositions | P0-15 | **partly done:** judicial retention for all of CA (64 contests, by county); official proposition titles, summaries, YES/NO meanings, fiscal effects and arguments for all 14 props; ballot designations and incumbency for 22 candidates; Daly City council facts. Stored as reviewed files (`src/data/official`, `src/data/enrichment`), not database rows, for review speed before Nov 3 |
+| P0-16 | Official records for the verified Daly City contests and statewide propositions | P0-15 | **partly done:** judicial retention for all of CA (64 contests, by county); official proposition titles, summaries, YES/NO meanings, fiscal effects and arguments for all 14 props; ballot designations and incumbency for 22 candidates; official proper-case names for all 64 CA retention justices (SoS voter guide justices pages); Daly City council facts. Stored as reviewed files (`src/data/official`, `src/data/enrichment`), not database rows, for review speed before Nov 3 |
 | P0-17 | Production deploy (merge to main) + smoke test + Google key in Vercel | P0-14, owner | |
 
 ## P1: before or around Nov 3, as time allows
@@ -36,11 +36,11 @@
 | P1-4 | `divisionsByAddress` → OCD IDs for division keys |
 | P1-5 | Expired `ballot_resolutions` cleanup (Vercel cron) + quota monitoring |
 | P1-6 | Statewide proposition official links (CA SoS Official Voter Information Guide) as durable `measures` |
+| P1-7 | Address autocomplete (owner request 2026-10-28): server-side Google Places API (New) proxy, separate server-only `GOOGLE_PLACES_API_KEY`, session tokens, no logging; manual entry keeps working. Needs the owner to enable the API and add the key |
 
 ## P2: after the election / next cycle
 
 - **Supabase key migration**: swap the legacy `anon` and `service_role` keys for `sb_publishable_` and `sb_secret_` keys on every surface, then disable the legacy keys. This also covers the overdue service-role rotation. Steps are in [ENVIRONMENT.md §3.1](../../infrastructure/ENVIRONMENT.md#31-post-election-move-to-supabases-new-api-keys). Do it after results are certified, not during election week.
-- Places Autocomplete evaluation.
 - Offline enrichment pipeline (Claude, central config).
 - Measure explainers.
 - Tier 2 candidate profiles.
