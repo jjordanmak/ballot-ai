@@ -1,5 +1,5 @@
 import "server-only";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export interface ResolvedJurisdiction {
@@ -74,7 +74,7 @@ export async function resolveZip(zip: string): Promise<ResolvedJurisdiction | nu
     state: census.state,
     districts: districts as Record<string, string | number | undefined>,
   };
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("jurisdictions")
     .upsert(row, { onConflict: "zip" });
   if (error) {

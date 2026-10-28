@@ -1,0 +1,404 @@
+{
+  "kind": "civicinfo#voterInfoResponse",
+  "election": {
+    "id": "9999",
+    "name": "SAMPLE General Election (fictional data)",
+    "electionDay": "2026-11-03",
+    "ocdDivisionId": "ocd-division/country:us"
+  },
+  "normalizedInput": {
+    "line1": "1 Sample Way",
+    "city": "Sample City",
+    "state": "CA",
+    "zip": "00000"
+  },
+  "mailOnly": false,
+  "state": [
+    {
+      "name": "California",
+      "electionAdministrationBody": {
+        "name": "Sample Secretary of State",
+        "electionInfoUrl": "https://example.org/elections"
+      },
+      "local_jurisdiction": {
+        "name": "Sample County",
+        "electionAdministrationBody": {
+          "name": "Sample County Elections",
+          "electionInfoUrl": "https://example.org/county-elections",
+          "ballotInfoUrl": "https://example.org/sample-ballot"
+        }
+      }
+    }
+  ],
+  "contests": [
+    {
+      "type": "General",
+      "office": "U.S. Representative",
+      "level": [
+        "country"
+      ],
+      "roles": [
+        "legislatorLowerBody"
+      ],
+      "district": {
+        "name": "Sample's 99th congressional district",
+        "scope": "congressional",
+        "id": "99"
+      },
+      "numberElected": "1",
+      "numberVotingFor": "1",
+      "ballotPlacement": "1",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Avery Sample",
+          "party": "Democratic Party",
+          "orderOnBallot": "1",
+          "candidateUrl": "https://example.org/avery"
+        },
+        {
+          "name": "Jordan Placeholder",
+          "party": "Republican Party",
+          "orderOnBallot": "2"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Governor",
+      "level": [
+        "administrativeArea1"
+      ],
+      "roles": [
+        "headOfGovernment"
+      ],
+      "district": {
+        "name": "California",
+        "scope": "statewide",
+        "id": "ca"
+      },
+      "numberElected": "1",
+      "numberVotingFor": "1",
+      "ballotPlacement": "2",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Riley Example",
+          "party": "Democratic Party",
+          "orderOnBallot": "1"
+        },
+        {
+          "name": "Casey Fictional",
+          "party": "Republican Party",
+          "orderOnBallot": "2"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "State Assembly Member",
+      "level": [
+        "administrativeArea1"
+      ],
+      "roles": [
+        "legislatorLowerBody"
+      ],
+      "district": {
+        "name": "Assembly District 98",
+        "scope": "stateLower",
+        "id": "98"
+      },
+      "numberElected": "1",
+      "numberVotingFor": "1",
+      "ballotPlacement": "3",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Morgan Test",
+          "party": "Democratic Party",
+          "orderOnBallot": "1"
+        },
+        {
+          "name": "Morgan Test",
+          "party": "Democratic Party",
+          "orderOnBallot": "1"
+        },
+        {
+          "name": "Taylor Mock",
+          "party": "Democratic Party",
+          "orderOnBallot": "2"
+        }
+      ]
+    },
+    {
+      "type": "Retention",
+      "office": "Associate Justice, Supreme Court",
+      "level": [
+        "administrativeArea1"
+      ],
+      "roles": [
+        "highestCourtJudge"
+      ],
+      "district": {
+        "name": "California",
+        "scope": "statewide",
+        "id": "ca"
+      },
+      "ballotPlacement": "4",
+      "referendumBallotResponses": [
+        "Yes",
+        "No"
+      ],
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Justice Quinn Sample"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Member, Board of Supervisors, District 9",
+      "level": [
+        "administrativeArea2"
+      ],
+      "roles": [
+        "legislatorUpperBody"
+      ],
+      "district": {
+        "name": "Sample County Supervisorial District 9",
+        "scope": "countyCouncil",
+        "id": "9"
+      },
+      "numberElected": "1",
+      "numberVotingFor": "1",
+      "ballotPlacement": "5",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Drew Illustration"
+        },
+        {
+          "name": "Sam Specimen"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Member, City Council",
+      "level": [
+        "locality"
+      ],
+      "roles": [
+        "legislatorLowerBody"
+      ],
+      "district": {
+        "name": "Sample City",
+        "scope": "citywide",
+        "id": "sample-city"
+      },
+      "numberElected": "3",
+      "numberVotingFor": "3",
+      "ballotPlacement": "6",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Pat One"
+        },
+        {
+          "name": "Lee Two"
+        },
+        {
+          "name": "Kim Three"
+        },
+        {
+          "name": "Ash Four"
+        },
+        {
+          "name": "Rae Five"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Governing Board Member, Sample Unified School District",
+      "level": [
+        "special"
+      ],
+      "roles": [
+        "schoolBoard"
+      ],
+      "district": {
+        "name": "Sample Unified School District",
+        "scope": "schoolBoard",
+        "id": "susd"
+      },
+      "numberElected": "2",
+      "numberVotingFor": "2",
+      "ballotPlacement": "7",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Robin Educator"
+        },
+        {
+          "name": "Jamie Teacher"
+        },
+        {
+          "name": "Charlie Parent"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Director, Sample Water District",
+      "level": [
+        "special"
+      ],
+      "roles": [
+        "specialPurposeOfficer"
+      ],
+      "district": {
+        "name": "Sample Water District",
+        "scope": "special",
+        "id": "swd"
+      },
+      "numberElected": "2",
+      "numberVotingFor": "two",
+      "ballotPlacement": "8",
+      "candidates": [
+        {
+          "name": "Dana Water"
+        },
+        {
+          "name": "Eli River"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Member, Sample Harbor Commission",
+      "district": {
+        "name": "Sample Harbor District",
+        "scope": "special",
+        "id": "shd"
+      },
+      "numberElected": "1",
+      "numberVotingFor": "1",
+      "ballotPlacement": "9",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": []
+    },
+    {
+      "type": "Referendum",
+      "referendumTitle": "Proposition 99",
+      "referendumSubtitle": "Sample Statewide Measure (fictional)",
+      "referendumBrief": "A fictional statewide measure used to test rendering.",
+      "referendumUrl": "https://example.org/prop99",
+      "referendumBallotResponses": [
+        "Yes",
+        "No"
+      ],
+      "referendumPassageThreshold": "Majority",
+      "district": {
+        "name": "California",
+        "scope": "statewide",
+        "id": "ca"
+      },
+      "ballotPlacement": "10",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "Referendum",
+      "referendumTitle": "Measure Z",
+      "referendumSubtitle": "Sample City Library Parcel Tax (fictional)",
+      "referendumUrl": "javascript:alert(1)",
+      "referendumBallotResponses": [
+        "Yes",
+        "No"
+      ],
+      "referendumPassageThreshold": "Two-thirds",
+      "district": {
+        "name": "Sample City",
+        "scope": "citywide",
+        "id": "sample-city"
+      },
+      "ballotPlacement": "11",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "Advisory Vote",
+      "office": "Advisory Question A",
+      "district": {
+        "name": "Sample County",
+        "scope": "countywide",
+        "id": "sample-county"
+      },
+      "ballotPlacement": "12",
+      "sources": [
+        {
+          "name": "Sample State Election Authority (fictional)",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "Yes"
+        },
+        {
+          "name": "No"
+        }
+      ]
+    }
+  ]
+}
