@@ -10,6 +10,7 @@ import { FixtureBallotResolver } from "@/lib/providers/fixture";
 import { CompositeBallotResolver } from "@/lib/providers/composite";
 import { GoogleCivicBallotResolver } from "@/lib/providers/google-civic/resolver";
 import type { BallotResolver } from "@/lib/providers/types";
+import { logEvent } from "@/lib/observability/log";
 import { FixtureElectionSource, SupabaseElectionSource, type ElectionSource } from "./elections";
 import { MemoryBallotStore, SupabaseBallotStore, type BallotStore } from "./store";
 
@@ -40,9 +41,20 @@ export function getBallotRuntime(): BallotRuntime {
           mode,
           elections: new SupabaseElectionSource(),
           resolver: new CompositeBallotResolver([new GoogleCivicBallotResolver()]),
-          store: new SupabaseBallotStore(),
+          store: liveStore(),
         };
   return g.__ballotRuntime;
+}
+
+/**
+ * Supabase in every deployed environment. Locally, without a service-role
+ * key (e.g. a Claude Code cloud session), keep resolutions in memory so the
+ * live Civic flow can still be exercised — never on Vercel.
+ */
+function liveStore(): BallotStore {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VERCEL) return new SupabaseBallotStore();
+  logEvent("ballot.store_memory_fallback", { reason: "no SUPABASE_SERVICE_ROLE_KEY outside Vercel" });
+  return new MemoryBallotStore();
 }
 
 /** Test hook. */

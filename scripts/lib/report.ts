@@ -14,7 +14,7 @@ export function ballotMarkdown(title: string, b: ResolvedBallot, extra: string[]
   lines.push(`- **Provider:** ${b.provider}, retrieved ${b.retrievedAt}`);
   lines.push(`- **Location (coarse):** ${[b.location.city, b.location.county, b.location.state].filter(Boolean).join(", ") || "—"}`);
   lines.push(`- **Contests:** ${b.contests.filter((c) => c.kind === "candidate").length} candidate · ${b.contests.filter((c) => c.kind === "measure").length} measure`);
-  lines.push(`- **Election administration:** ${b.administration?.name ?? "—"} ${b.administration?.ballotInfoUrl ?? b.administration?.electionInfoUrl ?? ""}`);
+  lines.push(`- **Election administration:** ${b.administration?.name ?? "—"} ${b.administration?.electionInfoUrl ?? b.administration?.ballotInfoUrl ?? ""}`);
   lines.push(...extra, "");
 
   for (const cat of CATEGORY_ORDER) {

@@ -76,7 +76,13 @@ export default async function BallotPage({ params }: { params: Params }) {
               <span className="text-[var(--color-paper-4)]">· {g.contests.length}</span>
             </h2>
             <div className="flex flex-col gap-5">
-              {g.contests.map((c) => (c.kind === "measure" ? <MeasureCard key={c.id} contest={c} /> : <ContestCard key={c.id} contest={c} />))}
+              {g.contests.map((c) =>
+                c.kind === "measure" ? (
+                  <MeasureCard key={c.id} contest={c} officialGuideUrl={ballot.administration?.electionInfoUrl ?? ballot.administration?.ballotInfoUrl} />
+                ) : (
+                  <ContestCard key={c.id} contest={c} />
+                ),
+              )}
             </div>
           </section>
         ))}
@@ -98,7 +104,8 @@ function groupContests(contests: Contest[]): { category: ContestCategory; contes
 
 function Notices({ ballot }: { ballot: ResolvedBallot }) {
   const admin = ballot.administration;
-  const officialUrl = admin?.ballotInfoUrl ?? admin?.electionInfoUrl;
+  // Local election office first: it publishes the sample ballot for this address.
+  const officialUrl = admin?.electionInfoUrl ?? admin?.ballotInfoUrl;
   return (
     <div className="mt-8 flex flex-col gap-3">
       {ballot.status === "PARTIAL" && (

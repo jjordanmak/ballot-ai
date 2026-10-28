@@ -15,14 +15,14 @@
 | P0-5 | Provider interfaces + `GoogleCivicElectionProvider` + `GoogleCivicBallotResolver` (client, normalize, error mapping) + `FixtureBallotResolver` + `CompositeBallotResolver` stub | P0-4 | done |
 | P0-6 | Validators + `scripts/validate-ballot.ts` (JSON + MD output) | P0-4 | done |
 | P0-7 | Unit tests: normalization (candidate, retention, referendum, vote-for-N, unknown type, duplicates), status mapping, ballot key, redaction | P0-5 | done |
-| P0-8 | Migration 0004 (additive) → **owner reviews SQL** → apply → regenerate types → advisors | P0-4 | done (applied 2026-10-28; 0005 election row ships with the deploy) |
+| P0-8 | Migration 0004 (additive) → **owner reviews SQL** → apply → regenerate types → advisors | P0-4 | done (0004 and 0005 applied 2026-10-28) |
 | P0-9 | Application service `resolveBallot` + `ballot_resolutions` persistence + `resolution_events` + redacting logger | P0-5, P0-8 | done |
 | P0-10 | Address-first landing + server action + status error copy | P0-9 | done |
 | P0-11 | Ballot page `/ballot/[electionSlug]/[ballotKey]`: grouped contests, vote-for-N, choices, measures, sources, freshness, partial/expired banners, `noindex` | P0-9 | done |
 | P0-12 | Archive the June primary at `/archive/[electionId]/[zip]` + legacy redirect | — | done |
 | P0-13 | Remove `/api/zip` from runtime. Update CLAUDE.md, AGENTS.md, README | P0-10 | done |
 | P0-14 | Browser verification (Playwright, desktop + 390px) with the fixture provider | P0-11 | done |
-| P0-15 | **Live Daly City QA** → `reports/2026-11-03/daly-city-qa.md` + normalized fixture. Verify every contest against SMC / SoS / Daly City | creds | **blocked on `GOOGLE_CIVIC_API_KEY` + `BALLOT_QA_ADDRESS_94015`** |
+| P0-15 | **Live Daly City QA** → `reports/2026-11-03/daly-city-qa.md` + normalized fixture. Verify every contest against SMC / SoS / Daly City | creds | **partly done 2026-10-28:** live lookup works (Civic election `12000`, 36 contests: 15 candidate, 21 measure; status SUCCESS) and the address-free fixture + report are committed. Live data exposed three normalizer gaps (`ballot-measure` type, scope-less statewide districts, measure titles), now fixed and covered by tests. **Official verification is blocked:** the cloud network policy denies sos.ca.gov, voterguide.sos.ca.gov, smcacre.gov/.org, and dalycity.org |
 | P0-16 | Durable official records for the verified Daly City contests and statewide propositions (`contests`, `measures`, `sources`) | P0-15 | |
 | P0-17 | Production deploy (merge to main) + smoke test + Google key in Vercel | P0-14, owner | |
 

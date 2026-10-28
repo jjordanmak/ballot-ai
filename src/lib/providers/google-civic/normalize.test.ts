@@ -31,7 +31,7 @@ describe("normalizeVoterInfo", () => {
     expect(byTitle("City Council").category).toBe("city");
     expect(byTitle("School District").category).toBe("education");
     expect(byTitle("Water District").category).toBe("special_district");
-    expect(byTitle("Sample Statewide Measure").category).toBe("measures");
+    expect(byTitle("Proposition 99").category).toBe("measures");
   });
 
   it("parses vote-for-N and flags unparseable counts", () => {
@@ -124,5 +124,64 @@ describe("normalizeVoterInfo", () => {
   it("reports unexpected top-level keys as a possible provider shape change", () => {
     const weird = normalizeVoterInfo({ ...(sample as object), newField: 1 } as CivicVoterInfoResponse, election, T);
     expect(weird.warnings).toContainEqual(expect.objectContaining({ code: "PROVIDER_SHAPE_CHANGE" }));
+  });
+});
+
+// Shape observed in the live 2026-11-03 VIP feed (fictional names/places).
+import vip from "../fixture/vip-shaped-voterinfo.json";
+import { parseMeasureTitle } from "./normalize";
+
+describe("VIP-shaped feeds", () => {
+  const v = normalizeVoterInfo(vip as CivicVoterInfoResponse, election, T);
+  const t = (s: string) => v.contests.find((c) => c.title.includes(s))!;
+
+  it("treats 'ballot-measure' contests as measures, not choiceless races", () => {
+    const measures = v.contests.filter((c) => c.kind === "measure");
+    expect(measures).toHaveLength(6);
+    expect(v.warnings.filter((w) => w.code === "CONTEST_WITHOUT_CHOICES")).toHaveLength(0);
+    expect(v.warnings.filter((w) => w.code === "UNSUPPORTED_CONTEST_TYPE")).toHaveLength(0);
+    expect(measures.every((m) => m.contestType === "referendum" && m.category === "measures")).toBe(true);
+  });
+
+  it("parses identifier, jurisdiction and threshold from measure titles", () => {
+    expect(parseMeasureTitle("Proposition 1 (Majority Approval Required)")).toEqual({ identifier: "Proposition 1", threshold: "Majority", remainder: undefined });
+    expect(parseMeasureTitle("Sample Union High School District, Measure M (2/3 Approval Required)")).toEqual({
+      jurisdiction: "Sample Union High School District",
+      identifier: "Measure M",
+      threshold: "2/3",
+    });
+    expect(parseMeasureTitle("County of Sample, Measure AA (Majority Approval Required)").identifier).toBe("Measure AA");
+    expect(parseMeasureTitle("X District, Measure V (55 Percent Approval Required)").threshold).toBe("55 Percent");
+    expect(parseMeasureTitle("Regional Transit Measure (Majority Approval Required)")).toEqual({ remainder: "Regional Transit Measure", threshold: "Majority" });
+  });
+
+  it("places statewide offices and propositions in the state, not the voter's county", () => {
+    for (const office of ["Governor", "Superintendent of Public Instruction", "State Board of Equalization"]) {
+      expect(t(office).category).toBe("statewide");
+      expect(t(office).division.name).toBe("California");
+    }
+    const prop = v.contests.find((c) => c.measure?.identifier === "Proposition 50")!;
+    expect(prop.division.key).toBe("ocd-division/country:us/state:ca");
+    const local = v.contests.find((c) => c.measure?.identifier === "Measure AA")!;
+    expect(local.division.name).toBe("County of Sample");
+  });
+
+  it("categorizes scope-less contests by office title", () => {
+    expect(t("U.S. Representative").category).toBe("federal");
+    expect(t("State Assembly").category).toBe("state_legislature");
+    expect(t("City Council").category).toBe("city");
+    expect(t("County Board of Education").category).toBe("education");
+    expect(t("Board of Supervisors").category).toBe("county");
+  });
+
+  it("keeps official names verbatim and reports missing measure summaries as info, not partial", () => {
+    expect(t("Governor").choices[0].ballotName).toBe("ALEX EXAMPLE");
+    expect(v.warnings.filter((w) => w.code === "MEASURE_SUMMARY_MISSING").every((w) => w.severity === "info")).toBe(true);
+    expect(v.administration).toEqual({
+      name: "Sample",
+      electionInfoUrl: "http://example.org/county",
+      ballotInfoUrl: "https://example.org/sos/ballot",
+      votingLocationFinderUrl: undefined,
+    });
   });
 });

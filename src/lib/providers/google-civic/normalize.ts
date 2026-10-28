@@ -17,7 +17,7 @@ import type {
   Measure,
   SourceRef,
 } from "@/domain/ballot";
-import { categorizeContest, KNOWN_SCOPES } from "@/domain/categorize";
+import { categorizeContest, KNOWN_SCOPES, STATE_NAMES } from "@/domain/categorize";
 import { stableId } from "@/domain/ids";
 import { normalizeForMatch, parseCount } from "@/domain/text";
 import {
@@ -28,7 +28,7 @@ import {
   type CivicVoterInfoResponse,
 } from "./types";
 
-export const NORMALIZER_VERSION = "civic-v2.1";
+export const NORMALIZER_VERSION = "civic-v2.2";
 
 const CIVIC_CONDUIT = "Google Civic Information API";
 
@@ -80,7 +80,7 @@ export function normalizeVoterInfo(
   const byKey = new Map<string, Contest>();
 
   for (const { c } of indexed) {
-    const contest = normalizeContest(c, election, retrievedAt, warnings);
+    const contest = normalizeContest(c, election, retrievedAt, warnings, stateCode(res));
     const matchKey = `${contest.division.key}|${normalizeForMatch(contest.measure?.identifier ?? contest.title)}`;
     const existing = byKey.get(matchKey);
     if (existing) {
@@ -118,18 +118,37 @@ function normalizeContest(
   election: ElectionRef,
   retrievedAt: string,
   warnings: BallotWarning[],
+  stateCode: string | undefined,
 ): Contest {
-  const isMeasure = /^referendum$/i.test(c.type ?? "");
-  const contestType = mapContestType(c.type);
-  const division = mapDivision(c);
+  // VIP feeds send measures as "ballot-measure"; Civic docs say "Referendum".
+  const isMeasure = /^(referendum|ballot[- ]?measure|measure|proposition|initiative)$/i.test(c.type ?? "") ||
+    (!c.candidates?.length && !!c.referendumTitle);
+  const contestType = mapContestType(c.type, isMeasure);
+  const parsed = isMeasure ? parseMeasureTitle(c.referendumTitle || c.ballotTitle || c.office || "") : undefined;
   const title = (isMeasure
-    ? c.referendumSubtitle || c.ballotTitle || c.referendumTitle || c.office
+    ? parsed!.identifier || c.referendumSubtitle || parsed!.remainder || c.ballotTitle || c.office
     : c.office || c.ballotTitle) ?? "";
+
+  const category = categorizeContest({
+    kind: isMeasure ? "measure" : "candidate",
+    scope: c.district?.scope,
+    roles: c.roles,
+    levels: c.level,
+    title,
+    districtName: c.district?.name,
+  });
+  const division = mapDivision(c, {
+    stateCode,
+    statewide:
+      !c.district?.scope &&
+      (category === "statewide" || (isMeasure && /^(proposition|prop\.?)\s/i.test(parsed!.identifier ?? ""))),
+  });
+
   const id = stableId(
     "ct",
     election.id,
     division.key,
-    normalizeForMatch(isMeasure ? c.referendumTitle ?? title : title),
+    normalizeForMatch(isMeasure ? parsed!.identifier || title : title),
   );
 
   if (!c.district) {
@@ -166,9 +185,13 @@ function normalizeContest(
 
   let measure: Measure | undefined;
   if (isMeasure) {
-    measure = mapMeasure(c, id, sources);
-    if (!measure.title) {
+    measure = mapMeasure(c, parsed!, id, sources);
+    if (!measure.title && !measure.identifier) {
       warnings.push({ code: "MEASURE_WITHOUT_TITLE", severity: "warn", contestId: id });
+    } else if (!measure.title || !measure.brief) {
+      // Provider gave only "Proposition 1"-style naming; the official title and
+      // summary must come from the state/county voter guide (durable records).
+      warnings.push({ code: "MEASURE_SUMMARY_MISSING", severity: "info", contestId: id });
     }
   }
 
@@ -180,13 +203,7 @@ function normalizeContest(
     title: title || measure?.identifier || "",
     ballotTitle: c.ballotTitle,
     division,
-    category: categorizeContest({
-      kind: isMeasure ? "measure" : "candidate",
-      scope: c.district?.scope,
-      roles: c.roles,
-      levels: c.level,
-      title,
-    }),
+    category,
     numberElected,
     voteFor,
     primaryParties: c.primaryParties,
@@ -201,17 +218,28 @@ function normalizeContest(
   };
 }
 
-function mapContestType(t: string | undefined): ContestType {
+function mapContestType(t: string | undefined, isMeasure: boolean): ContestType {
   const v = (t ?? "").trim().toLowerCase();
+  if (isMeasure) return "referendum";
   if (v === "general") return "general";
   if (v === "primary") return "primary";
   if (v === "run-off" || v === "runoff") return "runoff";
-  if (v === "referendum") return "referendum";
   if (v.includes("retention")) return "retention";
   return "other";
 }
 
-function mapDivision(c: CivicContest): Division {
+function mapDivision(c: CivicContest, ctx: { stateCode?: string; statewide: boolean }): Division {
+  // VIP often labels a statewide contest with the voter's county as its
+  // "district". When the office is statewide by title, say so.
+  if (ctx.statewide && ctx.stateCode) {
+    const code = ctx.stateCode.toUpperCase();
+    return {
+      key: `ocd-division/country:us/state:${code.toLowerCase()}`,
+      ocdId: `ocd-division/country:us/state:${code.toLowerCase()}`,
+      name: STATE_NAMES[code] ?? code,
+      scope: "statewide",
+    };
+  }
   const d = c.district;
   if (!d) return { key: `unknown::${normalizeForMatch(c.office ?? c.referendumTitle)}`, name: "" };
   const scope = d.scope?.toLowerCase();
@@ -280,28 +308,57 @@ function mapCandidates(
   return out.map(({ _i, ...c }) => c);
 }
 
-function mapMeasure(c: CivicContest, contestId: string, sources: SourceRef[]): Measure {
-  const rt = c.referendumTitle?.trim();
-  const looksLikeIdentifier = !!rt && IDENTIFIER.test(rt);
+interface ParsedMeasureTitle {
+  identifier?: string;
+  jurisdiction?: string;
+  threshold?: string;
+  remainder?: string;
+}
+
+/**
+ * Split provider measure titles such as
+ *   "Proposition 1 (Majority Approval Required)"
+ *   "Jefferson Union High School District, Measure M (2/3 Approval Required)"
+ *   "San Mateo County Community College District, Measure V (55 Percent Approval Required)"
+ *   "Regional Transit Measure (Majority Approval Required)"
+ * into identifier / jurisdiction / approval threshold / remaining title.
+ * Display text is taken verbatim from these parts — nothing is invented.
+ */
+export function parseMeasureTitle(raw: string): ParsedMeasureTitle {
+  let rest = raw.replace(/\s+/g, " ").trim();
+  let threshold: string | undefined;
+  const t = /\s*\(([^()]*?)\s+(?:vote\s+)?approval\s+required\)\s*$/i.exec(rest);
+  if (t) {
+    threshold = t[1].trim();
+    rest = rest.slice(0, t.index).trim();
+  }
+  const withPrefix = new RegExp(`^(.*?),\\s*(${IDENT_SRC})$`, "i").exec(rest);
+  if (withPrefix) return { jurisdiction: withPrefix[1].trim(), identifier: withPrefix[2].trim(), threshold };
+  const bare = new RegExp(`^(${IDENT_SRC})(?:\\s*[:\\-–—]\\s*(.+))?$`, "i").exec(rest);
+  if (bare) return { identifier: bare[1].trim(), remainder: bare[2]?.trim(), threshold };
+  return { remainder: rest || undefined, threshold };
+}
+
+const IDENT_SRC =
+  "(?:proposition|prop\\.?|measure|question|amendment|issue|initiative|referendum|constitutional amendment|ballot measure)\\s*[A-Za-z]{0,3}-?\\d+[A-Za-z]?|(?:measure|question|issue)\\s+[A-Z]{1,3}";
+
+function mapMeasure(c: CivicContest, parsed: ParsedMeasureTitle, contestId: string, sources: SourceRef[]): Measure {
   return {
     id: stableId("ms", contestId),
-    identifier: looksLikeIdentifier ? rt : undefined,
-    title: (c.referendumSubtitle || c.ballotTitle || (!looksLikeIdentifier ? rt : undefined) || "").trim(),
-    subtitle: looksLikeIdentifier ? undefined : c.referendumSubtitle,
+    identifier: parsed.identifier,
+    title: (c.referendumSubtitle || parsed.remainder || "").trim(),
+    subtitle: undefined,
     brief: c.referendumBrief,
     text: c.referendumText,
     url: safeUrl(c.referendumUrl),
     responses: c.referendumBallotResponses ?? [],
-    passageThreshold: c.referendumPassageThreshold,
+    passageThreshold: c.referendumPassageThreshold || parsed.threshold,
     effectOfAbstain: c.referendumEffectOfAbstain,
     proStatement: c.referendumProStatement,
     conStatement: c.referendumConStatement,
     sources,
   };
 }
-
-const IDENTIFIER =
-  /^(proposition|prop\.?|measure|question|amendment|issue|initiative|referendum|constitutional amendment|ballot measure)\s*[\w-]+$/i;
 
 function countField(
   raw: string | undefined,
@@ -333,23 +390,32 @@ export function safeUrl(u: string | undefined): string | undefined {
   }
 }
 
+function stateCode(res: CivicVoterInfoResponse): string | undefined {
+  const fromInput = res.normalizedInput?.state?.trim();
+  if (fromInput && /^[A-Za-z]{2}$/.test(fromInput)) return fromInput.toUpperCase();
+  const name = res.state?.[0]?.name?.trim().toLowerCase();
+  return Object.entries(STATE_NAMES).find(([, n]) => n.toLowerCase() === name)?.[0];
+}
+
 function coarseLocation(res: CivicVoterInfoResponse): CoarseLocation {
   const local = res.state?.[0]?.local_jurisdiction?.name;
   return {
     city: res.normalizedInput?.city || undefined,
-    state: res.normalizedInput?.state || undefined,
+    state: stateCode(res),
     county: local && /county/i.test(local) ? local : undefined,
   };
 }
 
+/** Local election office first; state election office fills missing links. */
 function administration(res: CivicVoterInfoResponse): ElectionAdministration | undefined {
   const region = res.state?.[0];
-  const body = region?.local_jurisdiction?.electionAdministrationBody ?? region?.electionAdministrationBody;
-  if (!body) return undefined;
+  const local = region?.local_jurisdiction?.electionAdministrationBody;
+  const state = region?.electionAdministrationBody;
+  if (!local && !state) return undefined;
   return {
-    name: body.name ?? region?.local_jurisdiction?.name ?? region?.name,
-    electionInfoUrl: safeUrl(body.electionInfoUrl),
-    ballotInfoUrl: safeUrl(body.ballotInfoUrl),
-    votingLocationFinderUrl: safeUrl(body.votingLocationFinderUrl),
+    name: region?.local_jurisdiction?.name ?? local?.name ?? state?.name ?? region?.name,
+    electionInfoUrl: safeUrl(local?.electionInfoUrl) ?? safeUrl(state?.electionInfoUrl),
+    ballotInfoUrl: safeUrl(local?.ballotInfoUrl) ?? safeUrl(state?.ballotInfoUrl),
+    votingLocationFinderUrl: safeUrl(local?.votingLocationFinderUrl) ?? safeUrl(state?.votingLocationFinderUrl),
   };
 }

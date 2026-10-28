@@ -1,0 +1,2714 @@
+{
+  "status": "SUCCESS",
+  "provider": "google-civic",
+  "election": {
+    "id": "us-2026-11-03-general",
+    "slug": "2026-11-03",
+    "name": "2026 General Midterm Election",
+    "date": "2026-11-03",
+    "externalIds": {
+      "google-civic": "12000"
+    }
+  },
+  "contests": [
+    {
+      "id": "ct_l8nwltkrmb",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Governor",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 1,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_lbgmum658y",
+          "ballotName": "XAVIER BECERRA",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_rjrukccq5y",
+          "ballotName": "STEVE HILTON",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1u8j1awit56",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Lieutenant Governor",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 2,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_1e0ygpe94hs",
+          "ballotName": "FIONA MA",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_xscmf51wup",
+          "ballotName": "GLORIA ROMERO",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_19iizbd5z5f",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Secretary of State",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 3,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_pd1t9n723x",
+          "ballotName": "SHIRLEY N. WEBER",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_4vt8o74mm5",
+          "ballotName": "DONALD P. (DON) WAGNER",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_thlb97jkhp",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Controller",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 4,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_1hq97y32om7",
+          "ballotName": "MALIA M. COHEN",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1i0fun77k6v",
+          "ballotName": "HERB W MORGAN",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_djmr607yqs",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Treasurer",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 5,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_mpj3466nzm",
+          "ballotName": "ELENI KOUNALAKIS",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_a7pqt6dk9e",
+          "ballotName": "JENNIFER HAWKS",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_tnpsh5diul",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Attorney General",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 6,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_c7dfh9iprl",
+          "ballotName": "ROB BONTA",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1q2i8a4wlu",
+          "ballotName": "MICHAEL E. GATES",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_ncmyhl1at",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Insurance Commissioner",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 7,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_wfifnm61wq",
+          "ballotName": "BEN ALLEN",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1fvwj2i79e6",
+          "ballotName": "JANE KIM",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1wcshh3lkwf",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Superintendent of Public Instruction",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 12,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_oc6lv3cvol",
+          "ballotName": "RICHARD BARRERA",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1w5aoxf8om7",
+          "ballotName": "SONJA SHAW",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1204islexar",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Member, State Board of Equalization, District 2",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "statewide",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 13,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_1l0c9jb9xaz",
+          "ballotName": "SALLY J. LIEBER",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_gxj9a865e",
+          "ballotName": "JOHN PIMENTEL",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_18fci7fdruf",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Member, Board of Supervisors, District 5 (Short Term)",
+      "division": {
+        "key": "countycouncil::5th supervisorial district 2022",
+        "name": "5th Supervisorial District - 2022",
+        "scope": "countyCouncil"
+      },
+      "category": "county",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 16,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_10gan8v467z",
+          "ballotName": "MARK NAGALES",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_tgntuwjjji",
+          "ballotName": "JUSLYN CABRERA MANALO",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_3ukg9shwek",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "City of Daly City Member, City Council",
+      "division": {
+        "key": "unknown::city of daly city",
+        "name": "City of Daly City"
+      },
+      "category": "city",
+      "voteFor": 3,
+      "special": false,
+      "ballotOrder": 18,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_1cwhz9biw2n",
+          "ballotName": "THOMAS A. NURIS",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1nol52p10v7",
+          "ballotName": "PAMELA DIGIOVANNI",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_ig91gc44w",
+          "ballotName": "TERESA PROAÑO",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_mqnn7n2k3h",
+          "ballotName": "TONY BAYUDAN",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_ne3b9u5i6a",
+          "ballotName": "ROD DAUS-MAGBUAL",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1ecto5llqj9",
+          "ballotName": "ASIA SU",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_lsjoboelr0",
+          "ballotName": "BARRY RODRIGUEZ",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_73wn68b8c",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "County Board of Education Member, Trustee Area 2",
+      "division": {
+        "key": "schoolboard::san mateo county board of education trustee area 2 2022",
+        "name": "San Mateo County Board of Education Trustee Area 2 - 2022",
+        "scope": "schoolBoard"
+      },
+      "category": "education",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 30,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_4hjqeu8u6m",
+          "ballotName": "BEVERLY GERARD",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_t9w7rgn0l",
+          "ballotName": "DANA JOHNSON",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_jky88ilrsa",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "San Mateo County Community College District Member, Governing Board, Trustee Area 2",
+      "division": {
+        "key": "schoolboard::smc community college district trustee area 2 2022",
+        "name": "SMC Community College District Trustee Area 2 - 2022",
+        "scope": "schoolBoard"
+      },
+      "category": "education",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 37,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_11pdgjl2651",
+          "ballotName": "MIKE GUINGONA",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1kumkudidy7",
+          "ballotName": "JASON HOLT",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1dfyztpb7sp",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "U.S. Representative, District 15",
+      "division": {
+        "key": "unknown::15th congressional district 2025",
+        "name": "15th Congressional District - 2025"
+      },
+      "category": "federal",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 56,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_192og72hbea",
+          "ballotName": "KEVIN MULLIN",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1yw4nwbhncx",
+          "ballotName": "CHARLES HOELTER",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1d3koe9d8kz",
+      "kind": "candidate",
+      "contestType": "general",
+      "rawType": "General",
+      "title": "Member of the State Assembly, District 19",
+      "division": {
+        "key": "statelower::19th assembly district 2022",
+        "name": "19th Assembly District - 2022",
+        "scope": "stateLower"
+      },
+      "category": "state_legislature",
+      "voteFor": 1,
+      "special": false,
+      "ballotOrder": 58,
+      "roles": [],
+      "levels": [],
+      "choices": [
+        {
+          "id": "cd_x3iikcghqm",
+          "ballotName": "CATHERINE STEFANI",
+          "party": "Democratic",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        },
+        {
+          "id": "cd_1gac7ti5odk",
+          "ballotName": "PHILIP LOUIS WING",
+          "party": "Republican",
+          "urls": {
+            "channels": []
+          },
+          "sources": [
+            {
+              "provider": "google-civic",
+              "name": "Voting Information Project",
+              "official": true,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            },
+            {
+              "provider": "google-civic",
+              "name": "Google Civic Information API",
+              "url": "https://developers.google.com/civic-information",
+              "official": false,
+              "retrievedAt": "2026-10-28T20:32:23.631Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_9ixuri5fmk",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 1",
+      "ballotTitle": "Proposition 1 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 93,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1ptfaz45vw",
+        "identifier": "Proposition 1",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_98y92jdhqz",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 2",
+      "ballotTitle": "Proposition 2 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 94,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_125dnufepgt",
+        "identifier": "Proposition 2",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_8yyndkat1i",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 3",
+      "ballotTitle": "Proposition 3 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 95,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1shoa09ey8f",
+        "identifier": "Proposition 3",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_awvv8djul9",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 4",
+      "ballotTitle": "Proposition 4 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 96,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1s4lkh5is4b",
+        "identifier": "Proposition 4",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_amw9jeh5vs",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 5",
+      "ballotTitle": "Proposition 5 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 97,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1686woeg9i",
+        "identifier": "Proposition 5",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1n4g1ml7r45",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 37",
+      "ballotTitle": "Proposition 37 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 98,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1fjuqbjh1lr",
+        "identifier": "Proposition 37",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1iym080k786",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 38",
+      "ballotTitle": "Proposition 38 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 99,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1x3qra171vl",
+        "identifier": "Proposition 38",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1j8llwzeuj",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 39",
+      "ballotTitle": "Proposition 39 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 100,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_k9r1tbgi8r",
+        "identifier": "Proposition 39",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1nz34t3ica9",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 40",
+      "ballotTitle": "Proposition 40 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 101,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1m66z4egs4s",
+        "identifier": "Proposition 40",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1np3j44fnks",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 41",
+      "ballotTitle": "Proposition 41 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 102,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_mx8mkbilml",
+        "identifier": "Proposition 41",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1oj2c7118m3",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 42",
+      "ballotTitle": "Proposition 42 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 103,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_5xbx71a7ev",
+        "identifier": "Proposition 42",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1o92qi2l0zq",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 43",
+      "ballotTitle": "Proposition 43 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 104,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1dr4f0tbywr",
+        "identifier": "Proposition 43",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1mv4q177lgd",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 44",
+      "ballotTitle": "Proposition 44 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 105,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_aoc4qybzc6",
+        "identifier": "Proposition 44",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1ml54c84wqw",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Proposition 45",
+      "ballotTitle": "Proposition 45 (Majority Approval Required)",
+      "division": {
+        "key": "ocd-division/country:us/state:ca",
+        "ocdId": "ocd-division/country:us/state:ca",
+        "name": "California",
+        "scope": "statewide"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 106,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_18abbic35l4",
+        "identifier": "Proposition 45",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_11kk3jufulm",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Measure M",
+      "ballotTitle": "Jefferson Union High School District, Measure M (2/3 Approval Required)",
+      "division": {
+        "key": "unknown::jefferson union high school district",
+        "name": "Jefferson Union High School District"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 107,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_ebmhz3flm5",
+        "identifier": "Measure M",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "2/3",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1pu9b31eh5v",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Measure AA",
+      "ballotTitle": "County of San Mateo, Measure AA (Majority Approval Required)",
+      "division": {
+        "key": "unknown::county of san mateo",
+        "name": "County of San Mateo"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 108,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_m7uwfcddu4",
+        "identifier": "Measure AA",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_f6scj4oc9",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Measure J",
+      "ballotTitle": "County of San Mateo, Measure J (Majority Approval Required)",
+      "division": {
+        "key": "unknown::county of san mateo",
+        "name": "County of San Mateo"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 109,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1lamzekfmfw",
+        "identifier": "Measure J",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1ymc18qk2qa",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Measure U",
+      "ballotTitle": "County of San Mateo, Measure U (Majority Approval Required)",
+      "division": {
+        "key": "unknown::county of san mateo",
+        "name": "County of San Mateo"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 110,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_zwfg088e0",
+        "identifier": "Measure U",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1lwi4plgcdx",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Regional Transit Measure",
+      "ballotTitle": "Regional Transit Measure (Majority Approval Required)",
+      "division": {
+        "key": "unknown::county of san mateo",
+        "name": "County of San Mateo"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 111,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_1xxpo5od4b0",
+        "title": "Regional Transit Measure",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_234eidls0f",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Measure L",
+      "ballotTitle": "County of San Mateo, Measure L (Majority Approval Required)",
+      "division": {
+        "key": "unknown::county of san mateo",
+        "name": "County of San Mateo"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 123,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_46qrklpkv",
+        "identifier": "Measure L",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "Majority",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    },
+    {
+      "id": "ct_1e872vyc2k4",
+      "kind": "measure",
+      "contestType": "referendum",
+      "rawType": "ballot-measure",
+      "title": "Measure V",
+      "ballotTitle": "San Mateo County Community College District, Measure V (55 Percent Approval Required)",
+      "division": {
+        "key": "schoolboard::san mateo county community college district",
+        "name": "San Mateo County Community College District",
+        "scope": "schoolBoard"
+      },
+      "category": "measures",
+      "special": false,
+      "ballotOrder": 131,
+      "roles": [],
+      "levels": [],
+      "choices": [],
+      "measure": {
+        "id": "ms_7w61xtb9sr",
+        "identifier": "Measure V",
+        "title": "",
+        "responses": [
+          "YES",
+          "NO"
+        ],
+        "passageThreshold": "55 Percent",
+        "sources": [
+          {
+            "provider": "google-civic",
+            "name": "Voting Information Project",
+            "official": true,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          },
+          {
+            "provider": "google-civic",
+            "name": "Google Civic Information API",
+            "url": "https://developers.google.com/civic-information",
+            "official": false,
+            "retrievedAt": "2026-10-28T20:32:23.631Z"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "provider": "google-civic",
+          "name": "Voting Information Project",
+          "official": true,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        },
+        {
+          "provider": "google-civic",
+          "name": "Google Civic Information API",
+          "url": "https://developers.google.com/civic-information",
+          "official": false,
+          "retrievedAt": "2026-10-28T20:32:23.631Z"
+        }
+      ]
+    }
+  ],
+  "location": {
+    "city": "Daly City",
+    "state": "CA"
+  },
+  "administration": {
+    "name": "San Mateo",
+    "electionInfoUrl": "http://www.smcacre.org/",
+    "ballotInfoUrl": "https://voterstatus.sos.ca.gov/",
+    "votingLocationFinderUrl": "https://www.sos.ca.gov/elections/polling-place"
+  },
+  "retrievedAt": "2026-10-28T20:32:23.631Z",
+  "expiresAt": "2026-10-29T02:32:23.631Z",
+  "warnings": [
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_9ixuri5fmk"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_98y92jdhqz"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_8yyndkat1i"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_awvv8djul9"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_amw9jeh5vs"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1n4g1ml7r45"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1iym080k786"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1j8llwzeuj"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1nz34t3ica9"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1np3j44fnks"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1oj2c7118m3"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1o92qi2l0zq"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1mv4q177lgd"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1ml54c84wqw"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_11kk3jufulm"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1pu9b31eh5v"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_f6scj4oc9"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1ymc18qk2qa"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1lwi4plgcdx"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_234eidls0f"
+    },
+    {
+      "code": "MEASURE_SUMMARY_MISSING",
+      "severity": "info",
+      "contestId": "ct_1e872vyc2k4"
+    }
+  ],
+  "districtDescriptors": [
+    "countycouncil::5th supervisorial district 2022",
+    "ocd-division/country:us/state:ca",
+    "schoolboard::san mateo county board of education trustee area 2 2022",
+    "schoolboard::san mateo county community college district",
+    "schoolboard::smc community college district trustee area 2 2022",
+    "statelower::19th assembly district 2022",
+    "unknown::15th congressional district 2025",
+    "unknown::city of daly city",
+    "unknown::county of san mateo",
+    "unknown::jefferson union high school district"
+  ]
+}
