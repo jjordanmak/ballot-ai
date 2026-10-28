@@ -9,7 +9,9 @@ For deeper context (decisions, history, open questions): check the last 10–15 
 ---
 
 ## What this is
-A live, source-grounded voter guide. Given a ZIP and an election, it shows every race + candidate on the voter's ballot, profiled in depth, with live news feeds. Goal: nationally scalable, fully data-driven.
+A live, source-grounded voter guide. **Enter your address. Get your ballot. Understand every choice.** Given a residential address, it resolves the exact contests, candidates and measures on that voter's ballot (via a provider layer — Google Civic today) and explains them with sourced facts. Goal: nationally scalable, fully data-driven, politically neutral.
+
+**Canonical docs:** product → `docs/product/PRD.md`; architecture → `docs/architecture/` (start with `TARGET_ARCHITECTURE.md`); Nov 3, 2026 plan → `docs/elections/2026-11-03/`.
 
 ## Stack
 Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabase Postgres (with RLS + Realtime) · Vercel · IBM Plex serif/sans/mono. Brand is **`ballot.ai`** (lowercase `b`).
@@ -21,7 +23,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 ### Brand & copy
 - The product name is **`ballot.ai`** (lowercase `b`). Not "Ballot.ai", not "Ballotwise", not "Voterly".
 - Slogan: **"a guide to your ballot"**. Not "your live sample ballot".
-- Tab titles: landing = `ballot.ai • your voting guide`; ballot = `ballot.ai • your voting guide for [ZIP]`.
+- Tab titles: landing = `ballot.ai • your voting guide`; ballot = `ballot.ai • your voting guide for [City, ST]` (coarse location — never a street or full address).
 
 ### Color discipline (this is load-bearing)
 - **Yellow accent** (`--color-accent`, golden ~`oklch(80% 0.155 82)`): ONLY for `<mark>` highlights and small UI accents (icons in section eyebrows, hover states, the polling rail). NEVER as a tinted background on cards/tables/profiles.
@@ -33,7 +35,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 ### Highlights (`<mark>`)
 - Solid-fill bar (no gradient) with rounded corners. Already styled in `globals.css`.
 - Auto-highlight algorithm in `src/components/Highlight.tsx` runs at render. Manual `<mark>` tags pass through. Don't disable it without a reason.
-- For Phase 4 synthesis: the LLM prompt should wrap 2–3 load-bearing phrases per text field in `<mark>`.
+- For AI synthesis (Phase 5): the LLM prompt should wrap 2–3 load-bearing phrases per text field in `<mark>`.
 
 ### Sticky behavior pattern
 - Comparison sticky group: `sticky top-0 z-[100] bg-[var(--color-ink-0)] pt-8`; it includes the eyebrow row, chip toolbar, and table header so the comparison controls pin as one opaque unit.
@@ -50,9 +52,17 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 - "Top" button is always visible — disabled (muted gray) when at top, enabled when scrolled.
 - "Change" button is a `<Link href="/">` (back to landing).
 
+### Address-first, privacy, neutrality (load-bearing)
+- **Address, not ZIP.** The ballot is resolved from a residential address. Never reintroduce a ZIP-first "your ballot" flow; ZIP alone can't determine a ballot.
+- **Never persist, log, or send the residential address anywhere but the ballot provider.** Wrap it in `AddressInput` (`src/lib/providers/address.ts`); log only via `logEvent` (`src/lib/observability/log.ts`), which redacts. No address in URLs, Supabase, fixtures, reports, analytics, or Anthropic prompts. See `docs/architecture/PRIVACY.md`.
+- **UI depends on the domain model only** (`src/domain/`). Provider response shapes stop in `src/lib/providers/<provider>/`.
+- **A provider failure is never an empty ballot.** Every `ResolutionStatus` has its own copy (`src/lib/ballot/copy.ts`).
+- **AI never decides ballot facts** (which contests apply, names, vote-for-N, measure wording, dates). AI output is labeled, sourced, and offline — never on page load. See `docs/architecture/AI_ARCHITECTURE.md`.
+- **Neutrality:** no rankings, recommendations, predictions, "vote for X if", strengths/criticisms, or evaluative adjectives in new surfaces. Profiles use the PRD §11.5 FR-K4 sections, every item cited.
+
 ### Other rules
 - DB column was renamed `current_role` → `current_position` (Postgres reserved word). TS still uses `currentRole`; the mapper in `src/lib/db/getBallot.ts` translates.
-- The Update button is **Realtime-driven**: disabled until a row changes in `candidates`/`races`/`endorsements`/`polls`. Don't make it always-clickable.
+- (Archive view) The Update button is **Realtime-driven**: disabled until a row changes in `candidates`/`races`/`endorsements`/`polls`. Don't make it always-clickable.
 - News updates push via Supabase Realtime separately — don't use the Update button for news.
 - Suspended candidates render with a red status pill, NOT yellow/orange.
 
@@ -62,10 +72,10 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 
 1. **Pause before every task and state your plan.** Before any implementation, describe what you're going to do, which files you'll touch, and flag any ambiguity in the spec. Stop and report if the spec is missing or contradictory — don't guess.
 2. **Verify in browser before claiming done.** Start the dev server (`npm run dev`) and load the page to confirm any visible change works correctly before reporting it done.
-2. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
-3. **Check the memory file + recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
-4. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
-5. **Ask before changing the design system.** If a request implies "use a different color" or "change the spacing rhythm", confirm before doing it.
+3. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
+4. **Check recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
+5. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
+6. **Ask before changing the design system.** If a request implies "use a different color" or "change the spacing rhythm", confirm before doing it.
 
 ---
 
@@ -74,21 +84,29 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 ```
 src/
 ├── app/
-│   ├── page.tsx                       Landing (ZIP picker)
-│   ├── ballot/[zip]/[electionId]/page.tsx   Ballot view
-│   ├── api/zip/[zip]/route.ts         ZIP → jurisdiction lookup
+│   ├── page.tsx                       Landing (address form)
+│   ├── actions.ts                     Server action: address → ballot → redirect
+│   ├── ballot/[electionSlug]/[ballotKey]/page.tsx   Ballot view (address-free key, noindex)
+│   ├── archive/[electionId]/[zip]/page.tsx          June 2026 primary prototype (read-only)
 │   ├── layout.tsx                     Root metadata, fonts
 │   └── globals.css                    Design tokens, mark styles, animations
-├── components/                        UI components (one per concern)
-├── data/                              Seed-data TS files (governor, scaffolds, county) — being phased out as Supabase fills in
+├── components/                        UI components (one per concern); ballot/ = new ballot view
+├── domain/                            Provider-independent ballot types (the UI's only data contract)
+├── data/                              June-primary seed data (archive only)
 └── lib/
-    ├── db/                            Server-side fetchers (getBallot, getElection, getJurisdiction, resolveZip)
+    ├── ballot/                        Application service: resolve, load, store, validate, copy
+    ├── providers/                     BallotResolver/ElectionProvider + google-civic/ + fixture/
+    ├── observability/                 Redacting logger
+    ├── db/                            Archive fetchers (getBallot, getElection, getJurisdiction)
     └── supabase/                      Typed clients (server/browser/admin) + DB types
 supabase/
 └── migrations/                        SQL migrations
 scripts/
-└── seed.ts                            Seeds Supabase from TS data files (`npm run seed`)
-specs/                                 Feature specs, design system, data model, phase plans
+├── seed.ts                            Seeds the archive from TS data files (`npm run seed`)
+├── validate-ballot.ts                 Validators over fixtures (`npm run validate:ballots`, CI)
+└── qa-resolve.ts                      Live QA from a private env address (`npm run qa:resolve`)
+docs/                                  PRD, architecture, environment, election plans (canonical)
+specs/                                 Historical specs + design system (PRD in docs/ supersedes specs/product.md)
 ├── product.md                         Vision, target user, brand, non-goals
 ├── design-system.md                   Full palette, typography, highlight system, sticky patterns
 ├── data-model.md                      All DB tables, JSONB shapes, TS conventions, Realtime setup
@@ -107,6 +125,9 @@ specs/                                 Feature specs, design system, data model,
 - Preview config (Claude Code only): `.claude/launch.json`
 - `npm run seed` to (re)populate Supabase from the TS data files
 - `npm run build` to typecheck + production build
+- `npm test` (Vitest), `npm run typecheck`, `npm run validate:ballots` — CI runs all of these plus lint and build
+- `BALLOT_PROVIDER=fixture npm run dev` runs the whole address → ballot flow on fictional data with no credentials (try addresses containing `invalid`, `ratelimit`, `nocoverage`, `error`, `ambiguous` for failure states)
+- Env var names/purposes: `docs/infrastructure/ENVIRONMENT.md`
 - Env vars in `.env.local` (gitignored). `.env.example` lists all required vars.
 
 ## Deployment
@@ -114,11 +135,11 @@ specs/                                 Feature specs, design system, data model,
 - Environment variables set in the Vercel dashboard
 
 ## Status
-Current phase status and the `[NEXT]` queue are in the memory file (`project_ballot_ai.md`). Phases 1 + 2 are done; Phases 3 (data ingestion), 4 (AI synthesis), and 5 (mobile responsive) are open. **There's an unresolved product question on candidate-coverage rules** — see memory.
+Phases 1 (data layer), 2 (landing + routing) and 3 (mobile) are done; 4 (ingestion) and 5 (AI synthesis) follow the Nov 3 refresh. Current work: the November 3, 2026 address-first refresh — status and P0–P3 queue in `docs/elections/2026-11-03/IMPLEMENTATION_PLAN.md`. Open product questions: `docs/product/PRD.md` §25.
 
 ---
 
 ## When in doubt
 1. `git log --oneline -15` — recent commits with detailed messages
-2. Memory file — decisions, rationale, open questions
+2. `docs/product/PRD.md` (decisions, open questions) and `docs/architecture/` — plus the local memory file if you have one
 3. **Ask the user before doing anything structural.** Better to confirm than to undo.

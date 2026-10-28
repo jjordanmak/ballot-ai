@@ -128,3 +128,33 @@ export function StatusPill({
     </span>
   );
 }
+
+/**
+ * Party key from a provider's free-text party name ("Democratic Party",
+ * "Republican", "Peace and Freedom"…). Anything unrecognized — including
+ * nonpartisan — maps to neutral gray. Red/blue are party-only.
+ */
+export function partyKeyFromName(name: string | undefined): string {
+  const n = (name ?? "").toLowerCase();
+  if (/democrat/.test(n)) return "dem";
+  if (/republican/.test(n)) return "rep";
+  if (/\bgreen\b/.test(n)) return "grn";
+  if (/libertarian/.test(n)) return "lib";
+  if (/peace and freedom/.test(n)) return "pf";
+  if (/american independent/.test(n)) return "aip";
+  return "np";
+}
+
+/** Party pill showing the source's party name verbatim. */
+export function PartyNameTag({ name }: { name: string }) {
+  const key = partyKeyFromName(name);
+  return (
+    <span
+      className={`font-mono-cap inline-flex items-center gap-1.5 rounded-full ${PARTY_BG_PILL[key]} text-[10px] px-2 py-0.5 font-medium`}
+      title={name}
+    >
+      <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${PARTY_BG_SOLID[key]}`} />
+      {name}
+    </span>
+  );
+}

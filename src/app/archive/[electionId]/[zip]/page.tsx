@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -14,6 +15,13 @@ import { getJurisdiction } from "@/lib/db/getJurisdiction";
 // Dynamic — page reads from Supabase per request, with realtime news.
 export const dynamic = "force-dynamic";
 
+/**
+ * ARCHIVE: the June 2, 2026 CA primary prototype (ZIP-based, hand-researched).
+ * Kept read-only for reference; the live product is address-first at
+ * /ballot/[electionSlug]/[ballotKey]. Legacy /ballot/:zip/:electionId URLs
+ * redirect here (next.config.ts).
+ */
+
 /** Per-ZIP page title: "ballot.ai • your voting guide for 94015". */
 export async function generateMetadata({
   params,
@@ -21,7 +29,7 @@ export async function generateMetadata({
   params: Promise<{ zip: string; electionId: string }>;
 }): Promise<Metadata> {
   const { zip } = await params;
-  return { title: `ballot.ai • your voting guide for ${zip}` };
+  return { title: `ballot.ai • your voting guide for ${zip} (archive)`, robots: { index: false } };
 }
 
 export default async function BallotPage({
@@ -93,6 +101,11 @@ export default async function BallotPage({
       />
 
       <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
+        <div className="mt-6 rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3 text-[13px] leading-[1.55] text-[var(--color-paper-2)]">
+          <span className="font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)]">Archived prototype</span>{" "}
+          This is the June 2, 2026 primary guide, kept for reference. It is not your current ballot and is no longer
+          updated. <Link href="/" className="underline hover:text-[var(--color-accent)]">Look up your November 3 ballot</Link>.
+        </div>
         <Cover
           races={races}
           totalCandidates={totalCandidates}

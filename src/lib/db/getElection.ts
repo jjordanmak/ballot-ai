@@ -30,15 +30,3 @@ export async function listElections(): Promise<Election[]> {
   if (!data) return [];
   return data as Election[];
 }
-
-/** Elections for a specific state, future-first then past. */
-export async function listElectionsByState(state: string): Promise<Election[]> {
-  const { data, error } = await supabaseServer
-    .from("elections")
-    .select("id, state, date, name, type")
-    .eq("state", state)
-    .order("date", { ascending: false });
-  if (error) throw error;
-  if (!data) return [];
-  return data as Election[];
-}

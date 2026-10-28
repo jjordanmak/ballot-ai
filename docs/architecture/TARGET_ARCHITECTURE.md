@@ -75,7 +75,7 @@ Official docs / sources ─► extraction (Claude where useful) ─► schema + 
 
 - **Daly City → California → US** uses the same code path. Scaling consists of QA, durable official records for priority jurisdictions, and normalization fixes. It does not add new resolvers.
 - **Future providers** plug in behind `CompositeBallotResolver([directFeed, state, googleCivicFallback])` without UI changes.
-- **Quota:** `ballotKey` caching means repeat visitors from the same geography within the TTL don't re-query Google. A quota increase should be requested before peak traffic.
+- **Quota:** every new address lookup costs one Civic `voterinfo` call. The geography-keyed cache serves page loads, reloads, and shared links without calling Google, but it can't skip the lookup for a new address, because the geography isn't known until Google answers. Request a quota increase before peak traffic, and watch `RATE_LIMITED` in `resolution_events`.
 
 ## 6. Non-functional
 

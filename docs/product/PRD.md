@@ -324,7 +324,7 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 | Inaccurate ballot resolution | Authoritative providers only; official verification for reference ballots; "check your official sample ballot" link everywhere |
 | Provider downtime | Explicit `PROVIDER_ERROR` state; official fallback links; short cache |
 | Google dependency | Provider interface; composite resolver; VIP/state feeds roadmap |
-| Quota exhaustion | Geography-keyed cache within terms; rate-limit state; quota monitoring; quota increase request |
+| Quota exhaustion | One Civic call per new address (page views and shared links are served from the cache); `RATE_LIMITED` state with retry copy; quota monitoring; quota increase request before peak |
 | Stale data | Freshness timestamps; lifecycle states; validators for stale elections |
 | Misinformation | Neutrality rules; provenance on every fact; official sources win |
 | AI hallucination | AI excluded from Tier 0; schema and provenance validation; human review for flagged synthesis |

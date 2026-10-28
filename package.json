@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate:ballots": "tsx scripts/validate-ballot.ts",
-    "qa:resolve": "tsx scripts/qa-resolve.ts"
+    "qa:resolve": "tsx --conditions=react-server scripts/qa-resolve.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

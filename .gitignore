@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Git worktrees
 .worktrees
+
+# Generated validation output (CI)
+/reports/validation/
