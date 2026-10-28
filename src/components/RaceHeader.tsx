@@ -48,7 +48,11 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           </p>
         )}
         <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mt-3 tracking-[0.16em]">
-          {race.unopposed ? "Unopposed" : `${totalCount} candidates`}
+          {race.unopposed
+            ? "Unopposed"
+            : race.navLabel?.startsWith("Retention")
+              ? "Retention vote"
+              : `${totalCount} candidate${totalCount === 1 ? "" : "s"}`}
           {g?.voteFor && g.voteFor > 1 ? ` · vote for up to ${g.voteFor}` : ""}
         </div>
       </div>

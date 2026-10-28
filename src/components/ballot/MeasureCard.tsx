@@ -75,6 +75,43 @@ export function MeasureCard({
         </div>
       )}
 
+      {(e?.argumentFor || e?.argumentAgainst) && (
+        <details className="mt-6 max-w-4xl group/args">
+          <summary className="cursor-pointer font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] hover:text-[var(--color-accent)]">
+            Official arguments for and against
+          </summary>
+          <p className="mt-2 text-[12px] text-[var(--color-paper-4)]">
+            Written by each side and printed in the official voter guide. ballot.ai does not edit or endorse them.
+          </p>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {e?.argumentFor && <Meaning label="Argument in favor" item={e.argumentFor} docs={docs} muted />}
+            {e?.argumentAgainst && <Meaning label="Argument against" item={e.argumentAgainst} docs={docs} muted />}
+          </div>
+          {(e?.supporters || e?.opponents) && (
+            <dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-[13px] text-[var(--color-paper-2)]">
+              {e?.supporters && (
+                <div>
+                  <dt className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em] mb-1">Listed supporters</dt>
+                  <dd>
+                    {e.supporters.text}
+                    <Cite ids={e.supporters.sources} docs={docs} />
+                  </dd>
+                </div>
+              )}
+              {e?.opponents && (
+                <div>
+                  <dt className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em] mb-1">Listed opponents</dt>
+                  <dd>
+                    {e.opponents.text}
+                    <Cite ids={e.opponents.sources} docs={docs} />
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
+        </details>
+      )}
+
       {m && m.responses.length > 0 && (
         <p className="mt-5 text-[13px] text-[var(--color-paper-3)]">
           On your ballot: <span className="text-[var(--color-paper-2)]">{m.responses.join(" · ")}</span>
@@ -115,11 +152,21 @@ export function MeasureCard({
   );
 }
 
-function Meaning({ label, item, docs }: { label: string; item: { text: string; sources: string[] }; docs: Record<string, SourceDoc> }) {
+function Meaning({
+  label,
+  item,
+  docs,
+  muted,
+}: {
+  label: string;
+  item: { text: string; sources: string[] };
+  docs: Record<string, SourceDoc>;
+  muted?: boolean;
+}) {
   return (
     <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-0)] p-4">
       <div className="font-mono-cap text-[9px] text-[var(--color-paper-3)] tracking-[0.16em] mb-1.5">{label}</div>
-      <p className="text-[14px] leading-[1.6] text-[var(--color-paper)]">
+      <p className={`leading-[1.6] ${muted ? "text-[13px] text-[var(--color-paper-2)]" : "text-[14px] text-[var(--color-paper)]"}`}>
         {item.text}
         <Cite ids={item.sources} docs={docs} />
       </p>

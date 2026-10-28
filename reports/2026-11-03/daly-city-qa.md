@@ -2,9 +2,9 @@
 
 - **Election:** 2026 General Midterm Election (2026-11-03), provider id `12000`
 - **Status:** SUCCESS
-- **Provider:** google-civic, retrieved 2026-10-28T20:32:23.631Z
-- **Location (coarse):** Daly City, CA
-- **Contests:** 15 candidate · 21 measure
+- **Provider:** google-civic, retrieved 2026-10-28T21:10:43.406Z
+- **Location (coarse):** Daly City, San Mateo County, CA
+- **Contests:** 28 candidate · 21 measure
 - **Election administration:** San Mateo http://www.smcacre.org/
 - **Civic election id discovered:** 12000 ("2026 General Midterm Election")
 - **Verification:** every row starts **unverified**; compare against the county sample ballot for the same address, the CA SoS voter guide, and city sources, then record results in the verification column.
@@ -34,6 +34,24 @@
 | Contest | District | Vote for | Choices | Source(s) | Official verification |
 |---|---|---|---|---|---|
 | Member of the State Assembly, District 19 | 19th Assembly District - 2022 | 1 | CATHERINE STEFANI (Democratic)<br>PHILIP LOUIS WING (Republican) | Voting Information Project ✔︎official; Google Civic Information API | **unverified** |
+
+## Judicial
+
+| Contest | District | Vote for | Choices | Source(s) | Official verification |
+|---|---|---|---|---|---|
+| Associate Justice of the Supreme Court | Supreme Court | Yes/No | KELLI M. EVANS | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice of the Supreme Court | Supreme Court | Yes/No | JOSHUA GROBAN | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division One | Court of Appeal, First Appellate District | Yes/No | CHARLES A. SMILEY | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division One | Court of Appeal, First Appellate District | Yes/No | KATHLEEN M. BANKE | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division One | Court of Appeal, First Appellate District | Yes/No | MONIQUE LANGHORNE WILSON | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Presiding Justice, Court of Appeal, First District, Division Two | Court of Appeal, First Appellate District | Yes/No | THERESE M. STEWART | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division Two | Court of Appeal, First Appellate District | Yes/No | TARA M. DESAUTELS | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division Three | Court of Appeal, First Appellate District | Yes/No | IOANA PETROU | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division Three | Court of Appeal, First Appellate District | Yes/No | VICTOR A. RODRIGUEZ | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Presiding Justice, Court of Appeal, First District, Division Four | Court of Appeal, First Appellate District | Yes/No | TRACIE L. BROWN | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division Five | Court of Appeal, First Appellate District | Yes/No | MARK SIMONS | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division Five | Court of Appeal, First Appellate District | Yes/No | DANNY Y. CHOU | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
+| Associate Justice, Court of Appeal, First District, Division Five | Court of Appeal, First Appellate District | Yes/No | GORDON BURNS | California Secretary of State (certified list of candidates) ✔︎official | verified: Certified by the California Secretary of State |
 
 ## County
 
@@ -105,5 +123,6 @@
 | MEASURE_SUMMARY_MISSING | info | Regional Transit Measure |  |
 | MEASURE_SUMMARY_MISSING | info | Measure L |  |
 | MEASURE_SUMMARY_MISSING | info | Measure V |  |
+| PROVIDER_GAP | info | — | 13 judicial retention contest(s) added from the certified list of candidates |
 
-Counts: MEASURE_SUMMARY_MISSING=21
+Counts: MEASURE_SUMMARY_MISSING=21, PROVIDER_GAP=1

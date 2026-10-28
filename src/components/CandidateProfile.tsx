@@ -157,6 +157,12 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
               <Cite ids={candidate.general.currentRole?.sources} docs={candidate.general.sourceDocs} />
             )}
           </div>
+          {candidate.general?.ballotDesignation && (
+            <div className="mt-1 text-[13px] text-[var(--color-paper-3)]">
+              Ballot designation: <span className="text-[var(--color-paper-2)]">{candidate.general.ballotDesignation.text}</span>
+              <Cite ids={candidate.general.ballotDesignation.sources} docs={candidate.general.sourceDocs} />
+            </div>
+          )}
           {candidate.ballotName && candidate.ballotName !== candidate.name && (
             <div className="mt-1 font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)]">
               On your ballot as {candidate.ballotName}

@@ -194,7 +194,9 @@ export type WarningCode =
   | "NUMBER_PARSE"
   | "SOURCE_CONFLICT"
   | "PROVIDER_SHAPE_CHANGE"
-  | "PROVIDER_PARTIAL";
+  | "PROVIDER_PARTIAL"
+  /** A contest certified by the election authority was missing from the provider and was added. */
+  | "PROVIDER_GAP";
 
 export interface BallotWarning {
   code: WarningCode;

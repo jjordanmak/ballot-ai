@@ -70,6 +70,10 @@ export interface CandidateEnrichment {
   displayName?: string;
   headshot?: { url: string; credit: string; sources: string[] };
   incumbent?: boolean;
+  /** Occupation/designation printed under the name on the ballot (official). */
+  ballotDesignation?: Cited;
+  /** Campaign website from an official filing, when the provider has none. */
+  campaignUrl?: string;
   currentRole?: Cited;
   platform?: Cited[];
   background?: Cited[];
@@ -93,6 +97,12 @@ export interface MeasureEnrichment {
   yesMeans?: Cited;
   noMeans?: Cited;
   fiscalEffect?: Cited;
+  /** Official ballot arguments, attributed to their authors by the guide. */
+  argumentFor?: Cited;
+  argumentAgainst?: Cited;
+  /** As listed in the official guide. */
+  supporters?: Cited;
+  opponents?: Cited;
   officialUrl?: string;
 }
 

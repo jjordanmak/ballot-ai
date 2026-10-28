@@ -102,7 +102,7 @@ export function normalizeVoterInfo(
 
   return {
     contests,
-    location: coarseLocation(res),
+    location: coarseLocation(res, contests),
     administration: administration(res),
     mailOnly: res.mailOnly,
     providerElection: res.election
@@ -397,12 +397,18 @@ function stateCode(res: CivicVoterInfoResponse): string | undefined {
   return Object.entries(STATE_NAMES).find(([, n]) => n.toLowerCase() === name)?.[0];
 }
 
-function coarseLocation(res: CivicVoterInfoResponse): CoarseLocation {
-  const local = res.state?.[0]?.local_jurisdiction?.name;
+function coarseLocation(res: CivicVoterInfoResponse, contests: Contest[] = []): CoarseLocation {
+  const local = res.state?.[0]?.local_jurisdiction?.name?.trim();
+  // VIP sometimes names the local jurisdiction without "County" ("San Mateo").
+  // Treat it as a county only when a contest district confirms it.
+  const confirmed =
+    local &&
+    !/county/i.test(local) &&
+    contests.some((c) => normalizeForMatch(c.division.name) === normalizeForMatch(`County of ${local}`));
   return {
     city: res.normalizedInput?.city || undefined,
     state: stateCode(res),
-    county: local && /county/i.test(local) ? local : undefined,
+    county: local && /county/i.test(local) ? local : confirmed ? `${local} County` : undefined,
   };
 }
 

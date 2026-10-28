@@ -24,7 +24,10 @@ export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { rac
       measures.push({
         contest: c,
         enrichment: me,
-        sourceDocs: pickSources(bundle.sources, citedIds(me?.summary, me?.yesMeans, me?.noMeans, me?.fiscalEffect)),
+        sourceDocs: pickSources(
+          bundle.sources,
+          citedIds(me?.summary, me?.yesMeans, me?.noMeans, me?.fiscalEffect, me?.argumentFor, me?.argumentAgainst, me?.supporters, me?.opponents),
+        ),
       });
       continue;
     }
@@ -68,7 +71,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
       ),
       general: {
         ...(ce ?? {}),
-        campaignUrl: ch.urls.campaign,
+        campaignUrl: ch.urls.campaign ?? ce?.campaignUrl,
         sourceDocs: pickSources(bundle.sources, candidateSourceIds(ce)),
       },
     };
@@ -87,10 +90,12 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
   const poll = e?.polling?.poll;
   return {
     id: c.id,
-    office: c.title,
+    // Two retention contests can share an office title; name the justice.
+    office: c.contestType === "retention" && c.choices.length === 1 ? `${c.title}: ${c.choices[0].ballotName}` : c.title,
     jurisdiction: c.division.name || "",
     format: formatLabel(c),
-    formatExplainer: e?.formatExplainer?.text ?? "",
+    // Retention contests show the official ballot question when nothing richer is researched.
+    formatExplainer: e?.formatExplainer?.text ?? (c.contestType === "retention" ? c.ballotTitle ?? "" : ""),
     meta,
     unopposed: c.choices.length === 1 && c.contestType !== "retention",
     intro: {
@@ -105,6 +110,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
     },
     issues: e?.issues ?? [],
     candidates,
+    navLabel: c.contestType === "retention" ? "Retention · Yes / No" : undefined,
     general: {
       enrichment: e,
       sourceDocs: docs,
@@ -155,6 +161,7 @@ function candidateSourceIds(ce: CandidateEnrichment | undefined): string[] {
     for (const i of Array.isArray(x) ? x : [x]) ids.push(...i.sources);
   };
   add(ce.currentRole);
+  add(ce.ballotDesignation);
   add(ce.platform);
   add(ce.background);
   add(ce.pastPositions);

@@ -33,3 +33,9 @@ For states outside California, Civic data is shown with its own `sources`. There
 ## 5. Fabrication guard
 
 No contest, candidate, or measure is ever added from memory or general knowledge. Every durable row needs a fetched, citable source URL and a verification timestamp.
+
+## 6. Findings from the Daly City reference ballot (2026-10-28)
+
+- **Google Civic / VIP omitted every judicial retention contest** (2 Supreme Court, 11 First District Court of Appeal). `src/lib/ballot/officialRecords.ts` now adds certified retention contests for any California county from the SoS certified list. Each addition is cited and carries a `PROVIDER_GAP` warning.
+- **VIP sends statewide contests with the county as "district"** and sends measures as `ballot-measure` with title-only data. The normalizer handles both.
+- **Official proposition content comes from the SoS Official Voter Information Guide quick-reference pages**, verbatim (`scripts/lib/parse_ca_vig_qrg.py`).

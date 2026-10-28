@@ -10,6 +10,7 @@ import { hasBallot, type ResolutionStatus } from "@/domain/ballot";
 import { AddressInput } from "@/lib/providers/address";
 import { logEvent } from "@/lib/observability/log";
 import { computeBallotKey } from "./ballotKey";
+import { supplementWithOfficialRecords } from "./officialRecords";
 import { getBallotRuntime, type BallotRuntime } from "./runtime";
 import { validateBallot } from "./validate";
 
@@ -40,6 +41,7 @@ export async function resolveBallotForAddress(
   const election = lookup.election;
 
   const ballot = await runtime.resolver.resolveBallot(address, election);
+  if (hasBallot(ballot)) supplementWithOfficialRecords(ballot);
   const today = new Date().toISOString().slice(0, 10);
   if (hasBallot(ballot)) {
     const seen = new Set(ballot.warnings.map((w) => `${w.code}|${w.contestId ?? ""}`));

@@ -1,0 +1,56 @@
+{
+  "election": "2026-11-03",
+  "sources": {
+    "dalycity-clerk-2026-nominees": {
+      "title": "2026 Municipal Election — List of Nominees (updated Aug 8, 2026)",
+      "publisher": "City of Daly City, City Clerk",
+      "url": "https://www.dalycity.org/1325/2026-Municipal-Election",
+      "official": true,
+      "accessed": "2026-10-28"
+    }
+  },
+  "contests": {
+    "city of daly city|city of daly city member city council": {
+      "formatExplainer": {
+        "text": "Three four-year City Council seats are up. The terms ending are those of Councilmembers Daus-Magbual, DiGiovanni and Proaño. The municipal election is consolidated with San Mateo County's Statewide General Election.",
+        "sources": ["dalycity-clerk-2026-nominees"]
+      }
+    }
+  },
+  "candidates": {
+    "city of daly city|city of daly city member city council::tony bayudan": {
+      "displayName": "Tony Bayudan",
+      "currentRole": { "text": "Chief of Staff", "sources": ["dalycity-clerk-2026-nominees"] },
+      "campaignUrl": "https://tonybayudan.com/"
+    },
+    "city of daly city|city of daly city member city council::rod daus magbual": {
+      "displayName": "Rod Daus-Magbual",
+      "incumbent": true,
+      "currentRole": { "text": "Councilman, Professor, Director", "sources": ["dalycity-clerk-2026-nominees"] },
+      "campaignUrl": "https://www.roddausmagbual.com/"
+    },
+    "city of daly city|city of daly city member city council::pamela digiovanni": {
+      "displayName": "Pamela DiGiovanni",
+      "incumbent": true,
+      "currentRole": { "text": "Daly City Councilmember", "sources": ["dalycity-clerk-2026-nominees"] }
+    },
+    "city of daly city|city of daly city member city council::thomas a nuris": {
+      "displayName": "Thomas A. Nuris",
+      "currentRole": { "text": "Attorney", "sources": ["dalycity-clerk-2026-nominees"] },
+      "campaignUrl": "https://tomnuris.com/"
+    },
+    "city of daly city|city of daly city member city council::teresa proano": {
+      "displayName": "Teresa Proaño",
+      "incumbent": true,
+      "currentRole": { "text": "City Councilmember/Businesswoman", "sources": ["dalycity-clerk-2026-nominees"] },
+      "campaignUrl": "https://teresaproano.com/"
+    },
+    "city of daly city|city of daly city member city council::asia su": {
+      "displayName": "Asia Su",
+      "currentRole": { "text": "Small Business Owner", "sources": ["dalycity-clerk-2026-nominees"] }
+    },
+    "city of daly city|city of daly city member city council::barry rodriguez": {
+      "displayName": "Barry Rodriguez"
+    }
+  }
+}

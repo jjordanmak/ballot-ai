@@ -185,3 +185,10 @@ describe("VIP-shaped feeds", () => {
     });
   });
 });
+
+describe("county from local jurisdiction", () => {
+  it("adds 'County' when a contest district confirms the local jurisdiction is a county", () => {
+    const v = normalizeVoterInfo(vip as CivicVoterInfoResponse, election, T);
+    expect(v.location).toEqual({ city: "Sample City", state: "CA", county: "Sample County" });
+  });
+});
