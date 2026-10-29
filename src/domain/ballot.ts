@@ -37,7 +37,8 @@ export interface SourceRef {
   verifiedAt?: string;
 }
 
-export type ElectionStatus = "upcoming" | "active" | "archived";
+/** "deprecated": internal reference only (never offered or resolved); "archived": the future user-facing archive. */
+export type ElectionStatus = "upcoming" | "active" | "archived" | "deprecated";
 
 export interface ElectionRef {
   /** ballot.ai election id (e.g. `us-2026-11-03-general`). */
@@ -51,7 +52,7 @@ export interface ElectionRef {
 }
 
 export interface Division {
-  /** OCD id when known, otherwise `{scope}:{id}:{normalized name}`. */
+  /** OCD id when known, otherwise `{state}:{scope}:{id}:{normalized name}` (the state keeps districts from colliding across states). */
   key: string;
   ocdId?: string;
   name: string;

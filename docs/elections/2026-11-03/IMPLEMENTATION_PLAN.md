@@ -19,7 +19,7 @@
 | P0-9 | Application service `resolveBallot` + `ballot_resolutions` persistence + `resolution_events` + redacting logger | P0-5, P0-8 | done |
 | P0-10 | Address-first landing + server action + status error copy | P0-9 | done |
 | P0-11 | Ballot page `/ballot/[electionSlug]/[ballotKey]`: grouped contests, vote-for-N, choices, measures, sources, freshness, partial/expired banners, `noindex` | P0-9 | done |
-| P0-12 | Archive the June primary at `/archive/[electionId]/[zip]` + legacy redirect | — | done |
+| P0-12 | Archive the June primary at `/archive/[electionId]/[zip]` + legacy redirect | — | done; since 2026-10-29 a deprecated internal snapshot (404 in production, legacy URLs → `/`; migration 0009) |
 | P0-13 | Remove `/api/zip` from runtime. Update CLAUDE.md, AGENTS.md, README | P0-10 | done |
 | P0-14 | Browser verification (Playwright, desktop + 390px) with the fixture provider | P0-11 | done |
 | P0-15 | **Live Daly City QA** → `reports/2026-11-03/daly-city-qa.md` + normalized fixture. Verify every contest against SMC / SoS / Daly City | creds | **done 2026-10-28:** all **49 contests verified, 0 discrepancies** against the CA SoS certified list, the SoS qualified-measures list, the Daly City Clerk nominee list, the San Mateo County roster of candidates and the county's measure list (`reports/2026-11-03/daly-city-verification.md`). **Provider gap found and fixed:** Civic omitted all 13 judicial retention contests, which are now added from the certified list |
@@ -40,8 +40,47 @@
 | P1-6 | Statewide proposition official links (CA SoS Official Voter Information Guide) as durable `measures` |
 | P1-7 | Address autocomplete (owner request 2026-10-28): **built 2026-10-28.** Server-side Google Places API (New) proxy (`/api/address/suggest`, `/api/address/place`), server-only `GOOGLE_PLACES_API_KEY`, session tokens, no logging, same-site only; manual entry keeps working. Verified with simulated Google responses; live check pending on the Vercel preview |
 | P1-8 | Voters registered by cross streets or a description (no house number): **handoff built 2026-10-29.** When input has no house number and no ballot is found, the form says a home street address is needed and links the state's official voter lookup (Civic `electionRegistrationConfirmationUrl`, e.g. CA My Voter Status; national fallback canivote.org). Map-point district lookup is parked as a feature idea (see P3), not planned |
-| P1-9 | Live content (owner decisions 2026-10-29: Vercel Pro, auto-publish, no Update button, no social collection yet): **built 2026-10-29, migration 0008 awaiting owner review.** November contests and candidates are stored durably at resolve time (`src/lib/ballot/durable.ts`); a news collector (`/api/cron/news`, every 2 minutes) reads about 160 approved sources nationwide (`src/data/sources/news.json`, pending owner approval: national, every state plus DC, and the largest metros; state and local outlets match only their own state's contests; see SOURCE_STRATEGY §5), matches articles to tracked contests and candidates, runs automated checks and publishes to `feed_items`; a daily job retracts dead links. Ballot pages show items live through one Realtime channel and "Last updated" tracks the newest item. Needs `CRON_SECRET` and the merge to main (crons run on production only) |
+| P1-9 | Live content (owner decisions 2026-10-29: Vercel Pro, auto-publish, no Update button, no social collection yet): **built 2026-10-29; migration 0008 applied 2026-10-29.** November contests and candidates are stored durably at resolve time (`src/lib/ballot/durable.ts`); a news collector (`/api/cron/news`, every 2 minutes) reads about 160 approved sources nationwide (`src/data/sources/news.json`, pending owner approval: national, every state plus DC, and the largest metros; state and local outlets match only their own state's contests; see SOURCE_STRATEGY §5), matches articles to tracked contests and candidates, runs automated checks and publishes to `feed_items`; a daily job retracts dead links. Ballot pages show items live through one Realtime Broadcast channel per election and state and "Last updated" tracks the newest item. `CRON_SECRET` is set by the owner in Vercel; crons run only after the merge to main (production only) |
 | P1-10 | Official links in profile headers: **built 2026-10-29.** Campaign website and X account from official filings (SoS voter guide statements, San Mateo County roster `Website` field; `ca-official-links.json`, 24 candidates), plus X accounts the daily job finds on a candidate's own campaign site (`src/lib/feeds/links.ts` → `candidate_links`). Each link is cited; nothing is guessed or searched |
+| P1-11 | Live polls: **built 2026-10-29.** `/api/cron/polls` (every 20 minutes) reads poll tables on Wikipedia's election pages for tracked contests and publishes polls from approved pollsters (`src/data/sources/pollsters.json`, 50, owner review pending) that pass the automated checks (SOURCE_STRATEGY §5.1). The race polling card shows the newest live poll with a "Poll list via Wikipedia (CC BY-SA)" credit |
+
+## Pre-merge audit (2026-10-29)
+
+National correctness, failure handling and live-feed safety, all built and on the branch:
+
+| Area | What changed |
+|---|---|
+| Election day | "Today" is the Hawaii date (`electionToday()` in `src/domain/electionDay.ts`), so Nov 3 stays current until the last polls close |
+| Division keys | Every non-OCD key starts with the lowercase state code (`tx:statelower:12:state house district 12`); DC uses `ocd-division/country:us/district:dc`. Durable registration is insert-if-missing then read ids, de-dupes batches, tells same-title contests apart by candidate names, and fills the division's state from the key |
+| Districts | From contest scope/category first, OCD ids second (`src/domain/districts.ts`); at-large seats show `XX-AL`; per-state chamber names in `DistrictLine.tsx` |
+| Parties | Ballot wording shown verbatim (`partyName`); colors only for Democratic, Republican, Green and Libertarian; every other party neutral gray |
+| Statewide contests | Statewide offices and measures recognized in every state; the measures heading uses the ballot's own term; retention detected from wording; ranked-choice contests (AK state and federal, ME federal, SF, Oakland/Berkeley/San Leandro/Albany, Portland OR) say "Rank candidates" |
+| Failures | Never a 500: storage errors map to `PROVIDER_ERROR` or an "unavailable" view; branded error, not-found and global-error pages; "Where to vote" link on every ballot |
+| Landing | Election dropdown (next election preselected) once the address is complete; the button waits for both; the server validates the slug |
+| Database | 0008 `live_feed` and 0009 `deprecated_elections` applied. Feed reaches pages via Realtime Broadcast per election and state; first load via `ballot_feed()`; public read is published items only |
+| June primary | Deprecated internal snapshot; DB fetchers, seed script, UpdateBar and the old `news_items` subscription removed |
+| Feeds | Due-based news collector with safe outbound fetch (public hosts only, redirects checked, 5 MB cap); daily retraction recheck and weekly X-link discovery; live polls (P1-11); matcher keeps state and local outlets to their own state |
+| Security and privacy | Places proxy refuses non-same-site requests; cron auth timing-safe; highlighter escapes all text, neutral auto-highlight on Nov 3 surfaces; Civic errors log only reason code and status |
+| CI | Node 24; `npm run typecheck` also checks `scripts/` |
+
+**Owner actions before and at merge:**
+1. Add a Vercel firewall rate-limit rule: 60 requests/minute per IP on `/api/address/` (tooling could not create the firewall config).
+2. Review the approved pollster list (`src/data/sources/pollsters.json`). (News sources approved 2026-10-29.)
+3. Merge to `main` (crons run on production only; previews are behind Vercel login).
+4. Right after the merge: check the first cron runs (`feed_source_state`, Vercel runtime logs), disable dead feeds, and confirm items arrive live on a ballot page.
+
+## Deferred from the audit (Tier 3)
+
+- Multiple concurrent elections and runoffs; state-specific Civic election ids.
+- Official retention lists outside California.
+- Named district ids (VT, NH, MA, AK).
+- Tooltips for multi-member districts.
+- Places suggestions for territories.
+- CSP and site-wide security headers.
+- Matcher indexing at scale.
+- Sharding the quota counter's hot row.
+- Playwright and `npm audit` in CI.
+- Pre-seeding other states' statewide contests (see P1-2).
 
 ## P2: after the election / next cycle
 
@@ -65,4 +104,4 @@
 
 ## Explicitly out of scope for Nov 3
 
-News ingestion, polling, AI synthesis, endorsements for the general, and photo resolution.
+AI synthesis, endorsements for the general, and photo resolution. (News ingestion and live polls shipped as P1-9 and P1-11.)

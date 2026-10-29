@@ -11,9 +11,9 @@ A residential address is used **once, server-side**, to ask the ballot resolver 
 | Stage | Where the address exists | Retention |
 |---|---|---|
 | Typed in the form | Browser input field | Until navigation. Not in `localStorage`. Browser autofill is off (`autocomplete="off"`), since our own suggestion list replaces it |
-| Address suggestions (while typing) | Partial input in an HTTPS POST to `/api/address/suggest`, forwarded to Google Places API (New) `places:autocomplete`. Picking a suggestion sends only Google's place ID to `/api/address/place`, which returns the full formatted address | Request memory only. Not logged (the Places client logs only op, HTTP status and latency), not cached (`no-store`), same-site requests only. Suggestion and lookup calls share a random session token made in the browser, which carries no identity. The monthly usage counter (`api_usage`) stores only a month, a metric name and a count |
+| Address suggestions (while typing) | Partial input in an HTTPS POST to `/api/address/suggest`, forwarded to Google Places API (New) `places:autocomplete`. Picking a suggestion sends only Google's place ID to `/api/address/place`, which returns the full formatted address | Request memory only. Not logged (the Places client logs only op, HTTP status and latency), not cached (`no-store`). Same-site requests only: the proxy refuses any request that has neither `Sec-Fetch-Site: same-origin` nor an `Origin` matching the site, so scripts can't use it as an open Places proxy (a Vercel firewall rate limit on `/api/address/` is a pending owner action). Suggestion and lookup calls share a random session token made in the browser, which carries no identity. The monthly usage counter (`api_usage`) stores only a month, a metric name and a count |
 | Submitted | HTTPS POST body to the Next.js server action | Request memory only |
-| Resolution | `AddressInput` wrapper → Google Civic `voterinfo` request, then `divisionsByAddress` for the district list (query param, per the API) | Request memory only. The wrapper's `toString`/`toJSON` redact it |
+| Resolution | `AddressInput` wrapper → Google Civic `voterinfo` request, then `divisionsByAddress` for the district list (query param, per the API) | Request memory only. The wrapper's `toString`/`toJSON` redact it. A Civic error logs only Google's reason code and HTTP status, never Google's message text, which can echo the request |
 | After resolution | **Nowhere.** The normalized ballot carries only coarse location (city, county, state, 5-digit ZIP), the district list (e.g. CA-15, AD-19) and district descriptors. The ZIP is shown in the sidebar and header (owner decision 2026-10-29); it covers tens of thousands of people and is never combined with a street | — |
 
 The address is **never**:
@@ -32,7 +32,7 @@ Google (Civic for the ballot, Places for suggestions) is the only third party th
 
 `ballotKey = base64url(sha256("v1|" + electionId + "|" + sorted(districtDescriptors).join("|")))[0..22]`
 
-- **District descriptors** are `scope:id:name` from the contests returned, plus the OCD division ids from `divisionsByAddress` (`ocd:…`) and the ZIP (`zip:94015`), so the key identifies a **set of electoral districts within a ZIP**. That set is shared by every household with the same ballot and ZIP. It is not derived from the street address. (Districts without a race this year, like a State Senate seat, are in the key so households in different districts never share a cached page.)
+- **District descriptors** are the contests' division keys (`st:scope:id:name`, or the state's OCD id for a statewide contest; see [DATA_MODEL](./DATA_MODEL.md) §4), plus the OCD division ids from `divisionsByAddress` (`ocd:…`) and the ZIP (`zip:94015`), so the key identifies a **set of electoral districts within a ZIP**. That set is shared by every household with the same ballot and ZIP. It is not derived from the street address. (Districts without a race this year, like a State Senate seat, are in the key so households in different districts never share a cached page.)
 - `precinctId` is **not** used, because a precinct is a smaller geography.
 - **Residual risk:** the set of districts reveals approximate geography, roughly the intersection of districts, which is typically thousands of voters. The same information is displayed on the page itself.
 
@@ -64,7 +64,9 @@ Allowed fields are timestamp, provider, status, latency, contest count, state co
 
 ## 8. Live feeds
 
-Collectors (`src/lib/feeds/`, `/api/cron/*`) work from the election's durable contests and candidates and approved public sources. They never receive an address, ballot key or location. `feed_items` and `candidate_links` hold only public article and campaign data. Ballot pages read them with the anon key; RLS hides held items.
+Collectors (`src/lib/feeds/`, `/api/cron/*`) work from the election's durable contests and candidates and approved public sources (news outlets' feeds, Wikipedia poll tables, candidates' own campaign sites). They never receive an address, ballot key or location. Outbound fetches go only to public hosts (`safeFetch.ts`). `feed_items` and `candidate_links` hold only public article, poll and campaign data. Ballot pages read them with the anon key; RLS shows only published items.
+
+New items reach open pages over Realtime Broadcast on a topic named only by election and state (`feed:{election}:{ST}`). The message is the public item itself (title, publisher, link, contest and candidate ids); it carries no address, ballot key or anything about the viewer, and each page filters by contest id in the browser.
 
 ## 9. QA
 

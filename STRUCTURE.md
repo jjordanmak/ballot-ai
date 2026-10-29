@@ -9,7 +9,8 @@ When the user says "the section header", "the toolbar", "the first column", etc.
 ## Top-level layout
 
 ```
-PAGE  (route: /ballot/[zip]/[electionId])
+PAGE  (route: /ballot/[electionSlug]/[ballotKey]; the legacy /ballot/[zip]/[electionId]
+       now redirects: → / in production, → the deprecated /archive snapshot elsewhere)
 ├── SIDEBAR     (left, sticky full-height, hidden below lg breakpoint)
 └── MAIN COLUMN (right, scrollable; max-w-1400)
 ```
@@ -72,12 +73,13 @@ COVER  (<header> in ballot page)
 ├── location                 (font-mono-cap text-[15px] paper-2 — primary city/ZIP)
 ├── districts                (font-mono-cap text-[11px] paper-4 — county + district codes,
 │                             tight `mt-1` so it reads as a sub-line of location)
-└── stats row                (Races on your ballot · Active candidates · UpdateBar)
+└── stats row                (Races on your ballot · Candidates · Measures · Last updated;
+                              no Update button: new feed items arrive live)
 ```
 
 The tagline paragraph sits **between** the h1 and the election name + location pair — election + location is the secondary identifier, placed just above the stats so they share the same data-eyebrow zone.
 
-Districts label format: `{County} County · CA-{us_house} · AD-{state_assembly} · SD-{state_senate} · BOE-{boe}` — only includes parts that are present in the jurisdiction record.
+Districts label format (`src/components/ballot/DistrictLine.tsx`): `{county} · {ST}-{us_house} · {lower}-{n} · {upper}-{n} · BOE-{boe}`, with each state's own chamber abbreviations (AD for Assembly states like CA, HD elsewhere, LD for Nebraska) and `{ST}-AL` for an at-large House seat. Only includes districts the ballot provides.
 
 ### Race section
 
@@ -231,4 +233,4 @@ Suspended candidates render a reduced PROFILE BODY: red status pill, suspension 
 
 ---
 
-_Last updated: 2026-05-07_
+_Last updated: 2026-10-29_

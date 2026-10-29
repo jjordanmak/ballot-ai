@@ -10,19 +10,20 @@ Every step is additive. There are no destructive database changes, and productio
 |---|---|---|
 | Design tokens, typography, `<mark>`, sticky patterns | **KEEP** | Brand rules in CLAUDE.md |
 | `Sidebar`, `MobileNav`, `useScrollSpy` | **KEEP → REFACTOR** | Accept generic nav items (contest id + label) instead of `Race[]` |
-| `CandidateProfile`, `ComparisonTable`, `CandidatesHeader`, `NewsFeed`, `RaceHeader`, `SuspendedList`, `AboutGuide` | **KEEP** (archive) | Used by `/archive`. New ballot cards reuse tokens and patterns, not these components, until enrichment exists |
+| `CandidateProfile`, `ComparisonTable`, `CandidatesHeader`, `NewsFeed`, `RaceHeader`, `SuspendedList` | **KEEP** (shared) | Used by both the November ballot page (fed by enrichment and the live feed) and the deprecated June snapshot. A render test on the snapshot catches shared-component regressions |
+| `AboutGuide` | **KEEP** (deprecated snapshot only) | |
 | `Highlight` | **KEEP** | Auto-highlight scope is an open question (PRD Q3) |
-| `UpdateBar` | **KEEP (archive only)** | New ballot data changes through re-resolution, not Realtime |
+| `UpdateBar` | **REMOVED** | The snapshot is frozen, so there is nothing to update. The November page gets new feed items live through one Realtime Broadcast channel (`LiveFeed`), with no Update button. The old `news_items` subscription is gone too |
 | `LandingForm` + ZIP server action | **REPLACE** | Replaced by `AddressForm` + `resolveBallotAction`. ZIP cannot determine a ballot |
-| `/api/zip/[zip]` | **REMOVE** (after the archive no longer needs it) | Public route that triggers a service-role write. Nothing on the new UI calls it. Deleted in step 7 |
-| `resolveZip` + `STATIC_DISTRICTS` | **REMOVE from runtime** | Imprecise and CA-only. The archive route reads the `jurisdictions` table directly |
-| `getBallot` / `raceIsOnBallot` | **REFACTOR** | Becomes the archive-only fetcher. No logic changes |
-| `/ballot/[zip]/[electionId]` | **REPLACE** | Moves to `/archive/[electionId]/[zip]`. A `next.config` redirect matches `/ballot/:zip(\d{5})/:electionId` |
+| `/api/zip/[zip]` | **REMOVED** | Public route that triggered a service-role write. Deleted in step 7 |
+| `resolveZip` + `STATIC_DISTRICTS` | **REMOVED from runtime** | Imprecise and CA-only |
+| `getBallot` / `raceIsOnBallot` (`src/lib/db/*`) | **REMOVED** | The June primary is now a deprecated snapshot (`src/data/deprecated/2026-06-02-ca-primary.json`, built by `scripts/snapshot-deprecated.ts` from an export of the June rows). Its pages never read the database |
+| `/ballot/[zip]/[electionId]` | **REPLACE** | A `next.config` redirect matches `/ballot/:zip(\d{5})/:electionId`: → `/` in production, → `/archive/[electionId]/[zip]` locally and on previews. `/archive` 404s in production |
 | `admin.ts` | **REFACTOR** | Lazy `getSupabaseAdmin()`, so a missing key fails per call and not at module load |
 | `src/lib/supabase/types.ts` | **REPLACE** | Generated with Supabase `generate_typescript_types` after 0004 |
-| Legacy tables (`races` …) | **KEEP** | Archive + future enrichment link via `contest_candidates.legacy_candidate_id` |
+| Legacy tables (`races` …) | **KEEP** | Data kept intact; the June `elections` row is `deprecated` (0009). Future enrichment can link via `contest_candidates.legacy_candidate_id` |
 | 0003 provenance tables | **KEEP + extend** | |
-| `scripts/seed.ts` | **KEEP** | Seeds the archive only |
+| `scripts/seed.ts` | **REMOVED** | `npm run seed` is gone. The snapshot script replaces it for the June data |
 | `specs/` | **KEEP** | Historical record. `specs/product.md` points to the canonical PRD |
 
 ## 2. Sequence

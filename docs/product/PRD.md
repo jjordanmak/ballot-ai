@@ -113,8 +113,8 @@ Address ─► Ballot ─► Contest ─► Candidate / Measure ─► Compariso
 | Contest detail (in-page now, deep link later) | One contest | Later, via the geography page |
 | Candidate detail | Profile | Later (public, indexable) |
 | Measure detail | Measure explainer | Later (public, indexable) |
-| `/archive/{election}/…` | Past elections | Yes |
-| About / Methodology / Sources | Trust | Yes |
+| `/archive/{election}/…` | Past elections. Today only the deprecated June 2026 primary snapshot, internal only (404 in production, no links); a user-facing archive comes later | **No** (today) |
+| About / Methodology / Sources | Trust | Yes (not built yet) |
 
 Contest groups on the ballot page are **Federal, Statewide, State Legislature, Judicial, County, City / Municipal, Education, Special Districts, Ballot Measures, and Other**. They are derived from data, not hardcoded. Unknown types appear under "Other" rather than being dropped.
 
@@ -225,7 +225,7 @@ Details: [PROVIDER_ARCHITECTURE.md](../architecture/PROVIDER_ARCHITECTURE.md), [
 | Wording rules | Plain verbs. No evaluative adjectives ("strong", "weak", "impressive", "controversial"). Experience gaps are never stated: the complete past-positions list lets users judge for themselves. |
 | Prototype sections kept | Background, Past positions (broadened), Key priorities, Key stances, Timeline, Endorsements, and In the news are kept and now cite every item. |
 
-The archived June primary view keeps its original fields with an "archived prototype" label.
+The deprecated June primary view (internal only) keeps its original fields with a "Deprecated · internal only" label.
 - Party colors (red and blue) encode party only. Ordering never implies preference.
 
 ## 15. Privacy requirements
@@ -244,7 +244,7 @@ Details: [PRIVACY.md](../architecture/PRIVACY.md).
 
 ## 17. SEO / public discovery
 
-- Public, indexable pages: landing, methodology, and later candidate, measure, and contest pages keyed by public geography (for example "San Mateo County measures, Nov 3 2026").
+- Public, indexable pages: landing, then methodology (not built yet), and later candidate, measure, and contest pages keyed by public geography (for example "San Mateo County measures, Nov 3 2026").
 - **Address-resolved ballot pages are never indexable.**
 - ZIP or city discovery pages may exist later as *navigation* into geography pages. They are never labeled "your ballot".
 
@@ -292,7 +292,7 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 
 ## 22. Product roadmap
 
-- **Near term (Nov 3, 2026):** address-first lookup; Google Civic resolver; normalized domain model; Tier 0/1 nationally; fully validated Daly City reference ballot; California and national coverage QA; June primary archived.
+- **Near term (Nov 3, 2026):** address-first lookup; Google Civic resolver; normalized domain model; Tier 0/1 nationally; fully validated Daly City reference ballot; California and national coverage QA; June primary kept as a deprecated internal snapshot.
 - **Possible membership tier (exploratory, not before 2027):**
   - Accounts and saved preferences.
   - "What matters to you" issue matching.

@@ -63,7 +63,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 - **Neutrality:** no rankings, recommendations, predictions, "vote for X if", strengths/criticisms, or evaluative adjectives in new surfaces. Profiles use the PRD §11.5 FR-K4 sections, every item cited.
 
 ### Other rules
-- DB column was renamed `current_role` → `current_position` (Postgres reserved word). TS still uses `currentRole`; the mapper in `src/lib/db/getBallot.ts` translates.
+- DB column was renamed `current_role` → `current_position` (Postgres reserved word). TS still uses `currentRole`; only the deprecated June snapshot uses those tables (mapper: `scripts/lib/deprecatedBallot.ts`).
 - **Deprecated June 2026 primary** (`/archive/[electionId]/[zip]`): internal reference only. It renders from a frozen snapshot (`src/data/deprecated/`, rebuilt by `scripts/snapshot-deprecated.ts`), never the database; it 404s in production and works locally and on Vercel previews; nothing links to it. A render test (`src/components/deprecated/JunePrimary.test.tsx`) must keep passing when shared components change. A user-facing archive of past elections is a future feature (`elections.status = 'archived'`).
 - (Nov 3 ballot page) **No Update button.** New feed items (news, polls) appear live through one Realtime **Broadcast** channel per page, `feed:{election}:{state}` (`src/components/ballot/LiveFeed.tsx`, trigger in migration 0008); "Last updated" is when the newest item appeared on this ballot (`ingested_at`), falling back to the ballot's retrieved time. Items auto-publish when they pass the automated checks in `src/lib/feeds/` — there is no manual queue.
 - **National by default.** Nothing may assume California: division keys carry the state, districts/chambers/categories come from the provider's division and scope, measure headings use the ballot's own term, copy says "local election office". Add a test for at least one non-CA case with any ballot logic change.
@@ -78,7 +78,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 2. **Verify in browser before claiming done.** A preview server is running. Use the Claude_Preview MCP (`preview_eval`, `preview_screenshot`, `preview_inspect`) for any visible change.
 3. **Don't add features the user didn't ask for.** A bug fix doesn't need surrounding cleanup. A small UI change doesn't need a refactor.
 4. **Check the memory file + recent commits before structural changes.** If you're about to undo something, check git log first — there's probably a reason it's that way.
-5. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, data fetchers in `src/lib/db/`.
+5. **Match existing conventions** — colors via CSS variables (`var(--color-X)`), components co-located in `src/components/`, server data access in `src/lib/ballot/` (ballots) and `src/lib/feeds/` (collectors).
 6. **Ask before changing the design system.** If a request implies "use a different color" or "change the spacing rhythm", confirm before doing it.
 
 ---

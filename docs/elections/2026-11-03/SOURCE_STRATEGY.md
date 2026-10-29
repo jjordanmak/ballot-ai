@@ -57,6 +57,15 @@ For states outside California, Civic data is shown with its own `sources`. There
 
 **Coverage outside California** begins when someone there looks up a ballot: that registers the contests the collectors track. More county-level outlets are added as usage shows where voters are.
 
+### 5.1 Live polls
+
+Owner decision 2026-10-29: polls come from the poll tables on Wikipedia's election pages as a **stopgap**. The owner may switch to a more official source later.
+
+- **Collector:** `/api/cron/polls`, every 20 minutes (`src/lib/feeds/polls.ts`, parser in `wikiPolls.ts`). For each tracked state-level contest (governor, U.S. Senate and House, statewide offices, statewide measures) it looks up the standard Wikipedia page and parses only pages that changed. A table is used only when its candidate columns are exactly this contest's candidates (or Yes/No for a measure).
+- **Approved pollsters:** `src/data/sources/pollsters.json`, 50 academic, media and independent pollsters with public methodology (owner review pending). Firms that mainly poll for parties or campaigns are left out.
+- **Automated checks**, no manual queue: the pollster is approved; the row is not marked sponsored or partisan; field dates, sample size and margin of error are all present; and the poll was fielded within 60 days. Anything else is held with a reason. Corrections on Wikipedia update the stored poll.
+- **Attribution:** each race's polling card shows the newest live poll with pollster, dates, sample, margin and a link to the release, plus a "Poll list via Wikipedia (CC BY-SA)" credit.
+
 ## 6. Fabrication guard
 
 No contest, candidate, or measure is ever added from memory or general knowledge. Every durable row needs a fetched, citable source URL and a verification timestamp.
