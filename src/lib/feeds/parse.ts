@@ -55,6 +55,11 @@ function date(...xs: unknown[]): Date | undefined {
 
 type Node = Record<string, unknown>;
 
+/** Whether a response body is an RSS, Atom or RDF feed (vs. an HTML page). */
+export function looksLikeFeed(body: string): boolean {
+  return /<(rss|feed|rdf:RDF)[\s>]/i.test(body.slice(0, 4000));
+}
+
 export function parseFeed(xml: string): FeedEntry[] {
   const doc = parser.parse(xml) as Node;
   const rss = (doc.rss as Node | undefined)?.channel as Node | undefined;

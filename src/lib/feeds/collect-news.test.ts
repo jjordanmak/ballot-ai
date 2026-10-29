@@ -4,6 +4,7 @@ import { collectNews, nextDue } from "./collect-news";
 import type { NewsSource } from "./sources";
 
 const NOW = new Date("2026-10-29T12:00:00Z");
+const publicDns = (async () => [{ address: "93.184.216.34", family: 4 }]) as never;
 
 describe("checkEntry", () => {
   const base = { title: "Becerra rally", link: "https://example.com/news/a", categories: [], published: new Date("2026-10-29T10:00:00Z") };
@@ -29,28 +30,45 @@ function fakeDb(existingUrls: string[] = []) {
       id: "gov",
       kind: "candidate",
       title: "Governor",
-      divisions: { name: "California", state: "CA" },
+      division_key: "ocd-division/country:us/state:ca",
+      divisions: { name: "California", state: "CA", scope: "statewide" },
       contest_candidates: [
         { id: "becerra", ballot_name: "XAVIER BECERRA", display_name: "Xavier Becerra" },
         { id: "hilton", ballot_name: "STEVE HILTON", display_name: "Steve Hilton" },
       ],
     },
   ];
+  const updates: { table: string; values: Record<string, unknown> }[] = [];
+  /** Chainable, awaitable stand-in for a PostgREST query: resolves by table and operation. */
+  const query = (table: string, op: "select" | "update" | "upsert", payload?: unknown) => {
+    const result = () => {
+      if (op === "upsert") {
+        (table === "feed_items" ? inserted : states).push(...(Array.isArray(payload) ? payload : [payload]) as Record<string, unknown>[]);
+        return { data: null, error: null };
+      }
+      if (op === "update") {
+        updates.push({ table, values: payload as Record<string, unknown> });
+        return { data: [], error: null };
+      }
+      if (table === "contests") return { data: contests, error: null };
+      if (table === "feed_items") return { data: existingUrls.map((url) => ({ url })), error: null };
+      return { data: [], error: null };
+    };
+    const q: Record<string, unknown> = {};
+    for (const m of ["eq", "in", "order", "range", "lte", "is", "select", "limit"]) q[m] = () => q;
+    q.then = (ok: (v: unknown) => unknown, bad?: (e: unknown) => unknown) => Promise.resolve(result()).then(ok, bad);
+    return q;
+  };
   const db = {
     from(table: string) {
       return {
-        select: () => ({
-          eq: async () => ({ data: table === "contests" ? contests : [], error: null }),
-          in: async () => ({ data: table === "feed_items" ? existingUrls.map((url) => ({ url })) : [], error: null }),
-        }),
-        upsert: async (rows: Record<string, unknown> | Record<string, unknown>[]) => {
-          (table === "feed_items" ? inserted : states).push(...(Array.isArray(rows) ? rows : [rows]));
-          return { error: null };
-        },
+        select: () => query(table, "select"),
+        update: (v: unknown) => query(table, "update", v),
+        upsert: (rows: unknown) => query(table, "upsert", rows),
       };
     },
   };
-  return { db, inserted, states };
+  return { db, inserted, states, updates };
 }
 
 const rss = (items: string) => `<rss version="2.0"><channel><title>t</title>${items}</channel></rss>`;
@@ -76,7 +94,7 @@ describe("collectNews", () => {
       "https://b.test/feed": rss(item("Xavier Becerra unveils plan", "https://news.test/debate", undefined, "Xavier Becerra said")),
     };
     const fetchImpl = vi.fn(async (url: string | URL | Request) => new Response(feeds[String(url)] ?? "", { status: feeds[String(url)] ? 200 : 404 }));
-    const summary = await collectNews({ db: db as never, electionId: "us-2026-11-03-general", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch });
+    const summary = await collectNews({ db: db as never, electionId: "us-2026-11-03-general", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
 
     expect(fetchImpl).toHaveBeenCalledTimes(2); // disabled source never fetched
     expect(inserted.map((r) => [r.url, r.status, r.held_reason])).toEqual([
@@ -98,6 +116,7 @@ describe("collectNews", () => {
       sources: [{ key: "a", name: "A", url: "https://a.test/feed", scope: "national", enabled: true }],
       now: NOW,
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolve: publicDns,
       publish: false,
     });
     expect(inserted).toMatchObject([{ status: "held", held_reason: "publishing paused" }]);
@@ -134,13 +153,40 @@ describe("collectNews scheduling", () => {
     };
     const sources: NewsSource[] = ["fresh", "a", "b", "c"].map((key) => ({ key, name: key, url: `https://${key}.test/feed`, scope: "national", enabled: true }));
     const fetchImpl = vi.fn(async () => new Response(rss("")));
-    const summary = await collectNews({ db: withState as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch });
+    const summary = await collectNews({ db: withState as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
     expect(summary).toMatchObject({ sources: 4, due: 3, deferred: 0, fetched: 3 });
     expect(fetchImpl).not.toHaveBeenCalledWith("https://fresh.test/feed", expect.anything());
 
     fetchImpl.mockClear();
-    const out = await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, budgetMs: -1 });
+    const out = await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns, budgetMs: -1 });
     expect(out).toMatchObject({ due: 4, deferred: 4 });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("collectNews robustness", () => {
+  it("treats a 200 that isn't a feed as a failure, and saves source state only after storing items", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db, states } = fakeDb();
+    const fetchImpl = vi.fn(async () => new Response("<!doctype html><html><body>Moved</body></html>"));
+    const summary = await collectNews({
+      db: db as never,
+      electionId: "e",
+      sources: [{ key: "a", name: "A", url: "https://a.test/feed", scope: "national", enabled: true }],
+      now: NOW,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolve: publicDns,
+    });
+    expect(summary.failed).toEqual(["a: not a feed"]);
+    expect(states).toMatchObject([{ source_key: "a", failures: 1, last_error: "not a feed" }]);
+  });
+  it("re-publishes held items once publishing is back on", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db, updates } = fakeDb();
+    await collectNews({ db: db as never, electionId: "e", sources: [], now: NOW, resolve: publicDns });
+    expect(updates.filter((u) => u.table === "feed_items" && u.values.status === "published")).toHaveLength(2);
+    updates.length = 0;
+    await collectNews({ db: db as never, electionId: "e", sources: [], now: NOW, resolve: publicDns, publish: false });
+    expect(updates).toHaveLength(0);
   });
 });

@@ -162,6 +162,7 @@ function IntroBlock({
       </div>
       <RichBlock
         text={body}
+        auto={docs ? "neutral" : "archive"}
         className={
           isLead
             ? "font-display text-[22px] leading-[1.4] text-[var(--color-paper)] text-pretty"
@@ -197,6 +198,7 @@ function PollingPanel({ race, className }: { race: Race; className?: string }) {
       ) : (
         <RichBlock
           text={race.intro.polling}
+          auto={race.general ? "neutral" : "archive"}
           className="text-[14px] leading-relaxed text-[var(--color-paper-2)] mb-5 text-pretty"
         />
       )}

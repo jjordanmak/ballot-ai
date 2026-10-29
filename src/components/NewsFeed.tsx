@@ -353,7 +353,7 @@ function NewsCard({
   item: NewsItem;
   fallbackAvatar?: string;
 }) {
-  const meta = TYPE_META[item.type];
+  const meta = TYPE_META[item.type] ?? TYPE_META.news;
   const isSocial = item.type === "social" && item.social;
   // Resolve the click-through URL: explicit on the item OR a fallback to
   // the candidate's profile on the right platform. Every social card is

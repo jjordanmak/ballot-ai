@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ResolutionStatus } from "@/domain/ballot";
 import { STATE_LOOKUP_FALLBACK } from "@/lib/ballot/copy";
 import { resolveBallotForAddress } from "@/lib/ballot/resolveBallot";
+import { logEvent } from "@/lib/observability/log";
 
 export interface AddressFormState {
   status?: Exclude<ResolutionStatus, "SUCCESS" | "PARTIAL">;
@@ -25,7 +26,14 @@ export async function resolveAddressAction(
   formData: FormData,
 ): Promise<AddressFormState> {
   const raw = formData.get("address");
-  const outcome = await resolveBallotForAddress(raw);
+  let outcome: Awaited<ReturnType<typeof resolveBallotForAddress>>;
+  try {
+    outcome = await resolveBallotForAddress(raw);
+  } catch (e) {
+    // Never a bare error page: the form shows the provider-error copy and the official lookup.
+    logEvent("ballot.resolve_crashed", { error: e instanceof Error ? e.name : "unknown" });
+    return { status: "PROVIDER_ERROR", lookup: STATE_LOOKUP_FALLBACK };
+  }
   if (outcome.ok) redirect(`/ballot/${outcome.electionSlug}/${outcome.ballotKey}`);
   const admin = outcome.administration;
   return {

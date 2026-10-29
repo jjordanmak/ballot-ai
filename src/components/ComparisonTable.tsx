@@ -289,6 +289,7 @@ export function ComparisonTable({ race }: Props) {
                           <>
                             <RichText
                               text={pos.stance}
+                              auto={c.general ? "neutral" : "archive"}
                               className="text-[13px] leading-relaxed text-[var(--color-paper)] text-pretty"
                             />
                             {pos.source && (

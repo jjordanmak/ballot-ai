@@ -3,7 +3,7 @@
  *
  * Regenerate after every migration (Supabase MCP `generate_typescript_types`,
  * or `supabase gen types typescript --project-id <ref>`).
- * Last generated: 2026-10-28, after migration 0004_address_first_domain.
+ * Last generated: 2026-10-29, after migration 0008_live_feed.
  */
 export type Json =
   | string
@@ -21,140 +21,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      candidate_links: {
-        Row: {
-          checked_at: string
-          contest_candidate_id: string
-          id: string
-          kind: string
-          url: string
-          verified_from: string
-        }
-        Insert: {
-          checked_at?: string
-          contest_candidate_id: string
-          id?: string
-          kind: string
-          url: string
-          verified_from: string
-        }
-        Update: {
-          checked_at?: string
-          contest_candidate_id?: string
-          id?: string
-          kind?: string
-          url?: string
-          verified_from?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "candidate_links_contest_candidate_id_fkey"
-            columns: ["contest_candidate_id"]
-            isOneToOne: false
-            referencedRelation: "contest_candidates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feed_items: {
-        Row: {
-          candidate_ids: string[]
-          checked_at: string | null
-          contest_ids: string[]
-          election_id: string
-          excerpt: string | null
-          held_reason: string | null
-          id: string
-          image_url: string | null
-          ingested_at: string
-          match: Json
-          payload: Json
-          published_at: string
-          publisher: string
-          source_key: string
-          status: string
-          title: string
-          type: string
-          updated_at: string
-          url: string
-        }
-        Insert: {
-          candidate_ids?: string[]
-          checked_at?: string | null
-          contest_ids?: string[]
-          election_id: string
-          excerpt?: string | null
-          held_reason?: string | null
-          id?: string
-          image_url?: string | null
-          ingested_at?: string
-          match?: Json
-          payload?: Json
-          published_at: string
-          publisher: string
-          source_key: string
-          status?: string
-          title: string
-          type: string
-          updated_at?: string
-          url: string
-        }
-        Update: {
-          candidate_ids?: string[]
-          checked_at?: string | null
-          contest_ids?: string[]
-          election_id?: string
-          excerpt?: string | null
-          held_reason?: string | null
-          id?: string
-          image_url?: string | null
-          ingested_at?: string
-          match?: Json
-          payload?: Json
-          published_at?: string
-          publisher?: string
-          source_key?: string
-          status?: string
-          title?: string
-          type?: string
-          updated_at?: string
-          url?: string
-        }
-        Relationships: []
-      }
-      feed_source_state: {
-        Row: {
-          etag: string | null
-          failures: number
-          items_seen: number
-          last_error: string | null
-          last_fetched_at: string | null
-          last_modified: string | null
-          last_status: number | null
-          source_key: string
-        }
-        Insert: {
-          etag?: string | null
-          failures?: number
-          items_seen?: number
-          last_error?: string | null
-          last_fetched_at?: string | null
-          last_modified?: string | null
-          last_status?: number | null
-          source_key: string
-        }
-        Update: {
-          etag?: string | null
-          failures?: number
-          items_seen?: number
-          last_error?: string | null
-          last_fetched_at?: string | null
-          last_modified?: string | null
-          last_status?: number | null
-          source_key?: string
-        }
-        Relationships: []
-      }
       api_usage: {
         Row: {
           count: number
@@ -213,6 +79,67 @@ export type Database = {
             columns: ["election_id"]
             isOneToOne: false
             referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_link_checks: {
+        Row: {
+          checked_at: string
+          contest_candidate_id: string
+          found: boolean
+        }
+        Insert: {
+          checked_at?: string
+          contest_candidate_id: string
+          found?: boolean
+        }
+        Update: {
+          checked_at?: string
+          contest_candidate_id?: string
+          found?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_link_checks_contest_candidate_id_fkey"
+            columns: ["contest_candidate_id"]
+            isOneToOne: true
+            referencedRelation: "contest_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_links: {
+        Row: {
+          checked_at: string
+          contest_candidate_id: string
+          id: string
+          kind: string
+          url: string
+          verified_from: string
+        }
+        Insert: {
+          checked_at?: string
+          contest_candidate_id: string
+          id?: string
+          kind: string
+          url: string
+          verified_from: string
+        }
+        Update: {
+          checked_at?: string
+          contest_candidate_id?: string
+          id?: string
+          kind?: string
+          url?: string
+          verified_from?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_links_contest_candidate_id_fkey"
+            columns: ["contest_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "contest_candidates"
             referencedColumns: ["id"]
           },
         ]
@@ -314,12 +241,12 @@ export type Database = {
       }
       contest_candidates: {
         Row: {
-          display_name: string | null
           ballot_name: string
           campaign_url: string | null
           contest_id: string
           created_at: string
           designation: string | null
+          display_name: string | null
           id: string
           incumbent: boolean | null
           legacy_candidate_id: string | null
@@ -330,12 +257,12 @@ export type Database = {
           source_id: string | null
         }
         Insert: {
-          display_name?: string | null
           ballot_name: string
           campaign_url?: string | null
           contest_id: string
           created_at?: string
           designation?: string | null
+          display_name?: string | null
           id?: string
           incumbent?: boolean | null
           legacy_candidate_id?: string | null
@@ -346,12 +273,12 @@ export type Database = {
           source_id?: string | null
         }
         Update: {
-          display_name?: string | null
           ballot_name?: string
           campaign_url?: string | null
           contest_id?: string
           created_at?: string
           designation?: string | null
+          display_name?: string | null
           id?: string
           incumbent?: boolean | null
           legacy_candidate_id?: string | null
@@ -617,6 +544,136 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feed_item_checks: {
+        Row: {
+          checked_at: string
+          item_id: string
+          last_status: number | null
+        }
+        Insert: {
+          checked_at?: string
+          item_id: string
+          last_status?: number | null
+        }
+        Update: {
+          checked_at?: string
+          item_id?: string
+          last_status?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_item_checks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "feed_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_items: {
+        Row: {
+          candidate_ids: string[]
+          contest_ids: string[]
+          election_id: string
+          excerpt: string | null
+          held_reason: string | null
+          id: string
+          image_url: string | null
+          ingested_at: string
+          match: Json
+          payload: Json
+          published_at: string
+          publisher: string
+          source_key: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          candidate_ids?: string[]
+          contest_ids?: string[]
+          election_id: string
+          excerpt?: string | null
+          held_reason?: string | null
+          id?: string
+          image_url?: string | null
+          ingested_at?: string
+          match?: Json
+          payload?: Json
+          published_at: string
+          publisher: string
+          source_key: string
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          candidate_ids?: string[]
+          contest_ids?: string[]
+          election_id?: string
+          excerpt?: string | null
+          held_reason?: string | null
+          id?: string
+          image_url?: string | null
+          ingested_at?: string
+          match?: Json
+          payload?: Json
+          published_at?: string
+          publisher?: string
+          source_key?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_items_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_source_state: {
+        Row: {
+          etag: string | null
+          failures: number
+          items_seen: number
+          last_error: string | null
+          last_fetched_at: string | null
+          last_modified: string | null
+          last_status: number | null
+          source_key: string
+        }
+        Insert: {
+          etag?: string | null
+          failures?: number
+          items_seen?: number
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_modified?: string | null
+          last_status?: number | null
+          source_key: string
+        }
+        Update: {
+          etag?: string | null
+          failures?: number
+          items_seen?: number
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_modified?: string | null
+          last_status?: number | null
+          source_key?: string
+        }
+        Relationships: []
       }
       jurisdictions: {
         Row: {
@@ -1266,6 +1323,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ballot_feed: {
+        Args: {
+          p_contest_ids: string[]
+          p_election_id: string
+          p_per_contest?: number
+        }
+        Returns: {
+          candidate_ids: string[]
+          contest_ids: string[]
+          excerpt: string
+          id: string
+          ingested_at: string
+          payload: Json
+          published_at: string
+          publisher: string
+          status: string
+          title: string
+          type: string
+          url: string
+        }[]
+      }
       consume_api_quota: {
         Args: { p_limit: number; p_metric: string; p_period: string }
         Returns: boolean

@@ -10,6 +10,10 @@ describe("findXProfile", () => {
     const html = '<a href="https://twitter.com/intent/tweet?text=hi"></a><a href="https://x.com/share?url=a"></a><a href="https://x.com/RealHandle/">';
     expect(findXProfile(html)).toBe("https://x.com/RealHandle");
   });
+  it("refuses pages that link more than one profile", () => {
+    expect(findXProfile('<a href="https://x.com/JaneForCA">me</a><a href="https://x.com/CAParty">party</a>')).toBeUndefined();
+    expect(findXProfile('<a href="https://x.com/JaneForCA">a</a><a href="https://twitter.com/janeforca">b</a>')).toBe("https://x.com/JaneForCA");
+  });
   it("finds nothing without a profile link", () => {
     expect(findXProfile('<a href="https://facebook.com/jane">')).toBeUndefined();
     expect(findXProfile("Follow us on X @jane")).toBeUndefined();

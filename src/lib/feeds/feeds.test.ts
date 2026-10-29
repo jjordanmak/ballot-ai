@@ -10,6 +10,7 @@ const CONTESTS: TrackedContest[] = [
     title: "Governor",
     divisionName: "California",
     state: "CA",
+    stateLevel: true,
     candidates: [
       { id: "becerra", names: ["Xavier Becerra", "XAVIER BECERRA"] },
       { id: "hilton", names: ["Steve Hilton", "STEVE HILTON"] },
@@ -21,6 +22,7 @@ const CONTESTS: TrackedContest[] = [
     title: "Secretary of State",
     divisionName: "California",
     state: "CA",
+    stateLevel: true,
     candidates: [
       { id: "weber", names: ["Shirley N. Weber"] },
       { id: "wagner", names: ["Donald P. (Don) Wagner"] },
@@ -32,13 +34,26 @@ const CONTESTS: TrackedContest[] = [
     title: "Insurance Commissioner",
     divisionName: "California",
     state: "CA",
+    stateLevel: true,
     candidates: [
       { id: "allen", names: ["Ben Allen"] },
       { id: "kim", names: ["Jane Kim"] },
     ],
   },
-  { id: "prop1", kind: "measure", title: "Proposition 1", divisionName: "California", state: "CA", candidates: [] },
+  { id: "prop1", kind: "measure", title: "Proposition 1", divisionName: "California", state: "CA", stateLevel: true, candidates: [] },
   { id: "measm", kind: "measure", title: "Measure M", divisionName: "Jefferson Union High School District", state: "CA", candidates: [] },
+  { id: "measa", kind: "measure", title: "Measure A", divisionName: "County of San Mateo", state: "CA", candidates: [] },
+  {
+    id: "council",
+    kind: "candidate",
+    title: "City Council Member",
+    divisionName: "City of Daly City",
+    state: "CA",
+    candidates: [
+      { id: "johnson", names: ["Michael Johnson"] },
+      { id: "lee", names: ["Ann Lee"] },
+    ],
+  },
 ];
 
 const match = buildMatcher(CONTESTS);
@@ -85,8 +100,19 @@ describe("feed matcher", () => {
   it("counts the outlet's state as context for state outlets", () => {
     const ca = { scope: "state" as const, state: "CA" };
     expect(match("Rob Bonta files suit", "The attorney general…", ca)).toBeNull(); // not tracked
-    expect(match("Becerra outlines plan", "Xavier Becerra released…", ca)?.candidateIds).toEqual(["becerra"]);
+    expect(match("Becerra outlines plan", "Xavier Becerra released…", ca)).toBeNull(); // implied context never stands alone
+    expect(match("Becerra outlines plan", "The candidate Xavier Becerra released…", ca)?.candidateIds).toEqual(["becerra"]);
     expect(match("Prop 1 explained", "What the housing bond would do", ca)?.contestIds).toEqual(["prop1"]);
+  });
+
+  it("doesn't let a state outlet's own state satisfy local contests", () => {
+    const ca = { scope: "state" as const, state: "CA" };
+    expect(match("Measure A passes", "Los Angeles voters approved the sales tax", ca)).toBeNull(); // someone else's Measure A
+    expect(match("Measure A debate", "San Mateo County supervisors weigh the tax", ca)?.contestIds).toEqual(["measa"]);
+    expect(match("Michael Johnson wins award", "The candidate Michael Johnson of Fresno…", ca)).toBeNull(); // local: needs its own place
+    expect(match("Michael Johnson, Ann Lee spar", "Daly City council candidates Michael Johnson and Ann Lee…", ca)?.candidateIds).toEqual(
+      expect.arrayContaining(["johnson", "lee"]),
+    );
   });
 
   it("never matches another state's contests from a state or local outlet", () => {

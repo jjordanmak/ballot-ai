@@ -22,7 +22,17 @@ export interface TrackedContest {
   divisionName: string;
   /** USPS code, e.g. "CA". */
   state?: string;
+  /** Statewide, federal, legislative or appellate: a state outlet's own state counts as context for it. */
+  stateLevel?: boolean;
   candidates: TrackedCandidate[];
+}
+
+/** Whether a division is state-level (statewide, congressional, legislative, appellate) rather than local. */
+export function isStateLevelDivision(key: string, scope: string | null | undefined, name: string | null | undefined): boolean {
+  if (/^ocd-division\/country:us(\/(state:[a-z]{2}|district:dc))?(\/(cd|sldl|sldu):[^/]+)?$/.test(key)) return true;
+  if (/^(statewide|congressional|stateupper|statelower|national)$/i.test(scope ?? "")) return true;
+  if (/^[a-z]{2}:court:/.test(key)) return true;
+  return /\b(congressional|assembly|state senate|senate district|house district|legislative) district\b|\bcongressional district\b/i.test(name ?? "");
 }
 
 export interface SourceContext {
@@ -84,7 +94,8 @@ export function nameVariants(name: string): string[] {
   const nick = /\(([^)]+)\)/.exec(name)?.[1];
   const base = normalizeForMatch(name.replace(/\([^)]*\)/g, " "));
   const toks = base.split(" ").filter(Boolean);
-  if (toks.length < 2) return base ? [base] : [];
+  // A one-word name is too common to match on its own.
+  if (toks.length < 2) return [];
   let lastIdx = toks.length - 1;
   if (SUFFIXES.has(toks[lastIdx]) && lastIdx > 1) lastIdx--;
   const first = toks[0];
@@ -116,6 +127,9 @@ interface CompiledCandidate {
   id: string;
   contestId: string;
   state?: string;
+  stateLevel: boolean;
+  /** Local contests: the article must name the place or an opponent (many people share a name). */
+  anchors: string[];
   variants: string[];
   context: string[];
   needed: number;
@@ -139,7 +153,9 @@ export function buildMatcher(contests: TrackedContest[]) {
     const place = placeTerm(c.divisionName);
     const stateName = c.state ? STATE_NAMES[c.state] : undefined;
     if (c.kind === "measure") {
-      measures.push({ contestId: c.id, state: c.state, ids: measureIds(c.title), places: [place, stateName].filter((x): x is string => !!x) });
+      // A local measure needs its own place; only a statewide one is satisfied by the state's name.
+      const places = c.stateLevel ? [stateName ?? place] : [place];
+      measures.push({ contestId: c.id, state: c.state, ids: measureIds(c.title), places: places.filter((x): x is string => !!x) });
       continue;
     }
     for (const k of c.candidates) {
@@ -154,6 +170,8 @@ export function buildMatcher(contests: TrackedContest[]) {
         id: k.id,
         contestId: c.id,
         state: c.state,
+        stateLevel: !!c.stateLevel,
+        anchors: c.stateLevel ? [] : [place, ...opponents].filter(Boolean),
         variants,
         context: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...ELECTION_TERMS, ...opponents].filter(Boolean))],
         needed: shared || shortest <= 9 ? 2 : 1,
@@ -170,6 +188,7 @@ export function buildMatcher(contests: TrackedContest[]) {
       ...(!national && source.state && STATE_NAMES[source.state] ? [STATE_NAMES[source.state]] : []),
       ...(source.jurisdictions ?? []).map((j) => normalizeForMatch(j)),
     ];
+    const impliedState = !national && source.state ? STATE_NAMES[source.state] : undefined;
     const inContext = (term: string) => has(text, term) || implied.includes(term);
     const contestIds = new Set<string>();
     const candidateIds = new Set<string>();
@@ -179,8 +198,13 @@ export function buildMatcher(contests: TrackedContest[]) {
       if (!inScope(k.state)) continue;
       const name = k.variants.find((v) => has(text, v));
       if (!name) continue;
-      const ctx = k.context.filter(inContext);
+      // The outlet's own state is implied context only for state-level contests,
+      // and implied context never stands alone: the article must say something.
+      const explicit = k.context.filter((t) => has(text, t));
+      if (!explicit.length) continue;
+      const ctx = k.context.filter((t) => has(text, t) || (implied.includes(t) && (t !== impliedState || k.stateLevel)));
       if (ctx.length < k.needed) continue;
+      if (k.anchors.length && !k.anchors.some((a) => ctx.includes(a))) continue;
       candidateIds.add(k.id);
       contestIds.add(k.contestId);
       terms.add(name);

@@ -12,13 +12,15 @@ import { logEvent } from "@/lib/observability/log";
 import type { Database } from "@/lib/supabase/types";
 import { canonicalUrl } from "./canonical";
 import { checkEntry } from "./checks";
-import { buildMatcher, type TrackedContest } from "./match";
-import { parseFeed } from "./parse";
+import { buildMatcher, isStateLevelDivision, type TrackedContest } from "./match";
+import { looksLikeFeed, parseFeed } from "./parse";
+import { safeFetch, type Resolver } from "./safeFetch";
 import type { NewsSource } from "./sources";
 
 type Db = SupabaseClient<Database>;
 type FeedInsert = Database["public"]["Tables"]["feed_items"]["Insert"];
 type SourceState = Database["public"]["Tables"]["feed_source_state"]["Row"];
+type SourceStateInsert = Database["public"]["Tables"]["feed_source_state"]["Insert"];
 
 const FETCH_TIMEOUT_MS = 10_000;
 const CONCURRENCY = 16;
@@ -51,28 +53,40 @@ export interface CollectSummary {
   matched: number;
   published: number;
   held: number;
+  /** Held items published this run because their reason no longer applies. */
+  released: number;
 }
 
+const PAGE = 1000;
+
+/** Every tracked contest for the election, paged past PostgREST's row cap. */
 export async function loadTracked(db: Db, electionId: string): Promise<TrackedContest[]> {
-  const { data, error } = await db
-    .from("contests")
-    .select("id, kind, title, divisions(name, state), contest_candidates(id, ballot_name, display_name)")
-    .eq("election_id", electionId);
-  if (error) throw new Error(`tracked contests: ${error.message}`);
-  return (data ?? []).map((c) => {
-    const div = (Array.isArray(c.divisions) ? c.divisions[0] : c.divisions) as { name: string; state: string | null } | null;
-    return {
-      id: c.id,
-      kind: c.kind === "measure" ? "measure" : "candidate",
-      title: c.title,
-      divisionName: div?.name ?? "",
-      state: div?.state ?? undefined,
-      candidates: (c.contest_candidates ?? []).map((k) => ({
-        id: k.id,
-        names: [k.display_name, k.ballot_name].filter((n): n is string => !!n),
-      })),
-    };
-  });
+  const out: TrackedContest[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db
+      .from("contests")
+      .select("id, kind, title, division_key, divisions(name, state, scope), contest_candidates(id, ballot_name, display_name)")
+      .eq("election_id", electionId)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`tracked contests: ${error.message}`);
+    for (const c of data ?? []) {
+      const div = (Array.isArray(c.divisions) ? c.divisions[0] : c.divisions) as { name: string; state: string | null; scope: string | null } | null;
+      out.push({
+        id: c.id,
+        kind: c.kind === "measure" ? "measure" : "candidate",
+        title: c.title,
+        divisionName: div?.name ?? "",
+        state: div?.state ?? undefined,
+        stateLevel: isStateLevelDivision(c.division_key, div?.scope, div?.name),
+        candidates: (c.contest_candidates ?? []).map((k) => ({
+          id: k.id,
+          names: [k.display_name, k.ballot_name].filter((n): n is string => !!n),
+        })),
+      });
+    }
+    if ((data ?? []).length < PAGE) return out;
+  }
 }
 
 async function mapLimit<T>(items: T[], limit: number, fn: (t: T) => Promise<void>, until = Infinity) {
@@ -83,23 +97,53 @@ async function mapLimit<T>(items: T[], limit: number, fn: (t: T) => Promise<void
   return queue.length;
 }
 
+/**
+ * Held items that no longer fail a check: everything paused while
+ * publishing was switched off, and items dated in the future once that time
+ * has come. Returns how many were published.
+ */
+async function releaseHeld(db: Db, electionId: string, now: Date, publish: boolean): Promise<number> {
+  if (!publish) return 0;
+  let released = 0;
+  const paused = await db
+    .from("feed_items")
+    .update({ status: "published", held_reason: null })
+    .eq("election_id", electionId)
+    .eq("status", "held")
+    .eq("held_reason", "publishing paused")
+    .select("id");
+  released += paused.data?.length ?? 0;
+  const due = await db
+    .from("feed_items")
+    .update({ status: "published", held_reason: null })
+    .eq("election_id", electionId)
+    .eq("status", "held")
+    .eq("held_reason", "publish date in the future")
+    .lte("published_at", now.toISOString())
+    .select("id");
+  released += due.data?.length ?? 0;
+  return released;
+}
+
 export async function collectNews(opts: {
   db: Db;
   electionId: string;
   sources: NewsSource[];
   now?: Date;
   fetchImpl?: typeof fetch;
+  /** DNS lookup for the private-address check (tests inject one). */
+  resolve?: Resolver;
   publish?: boolean;
   budgetMs?: number;
 }): Promise<CollectSummary> {
   const { db, electionId } = opts;
   const now = opts.now ?? new Date();
-  const fetchImpl = opts.fetchImpl ?? fetch;
   const publish = opts.publish ?? true;
   const sources = opts.sources.filter((s) => s.enabled);
   const until = Date.now() + (opts.budgetMs ?? DEFAULT_BUDGET_MS);
-  const summary: CollectSummary = { sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], entries: 0, matched: 0, published: 0, held: 0 };
+  const summary: CollectSummary = { sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], entries: 0, matched: 0, published: 0, held: 0, released: 0 };
 
+  summary.released = await releaseHeld(db, electionId, now, publish);
   const tracked = await loadTracked(db, electionId);
   if (!tracked.length) return summary;
   const match = buildMatcher(tracked);
@@ -114,6 +158,9 @@ export async function collectNews(opts: {
     .map((d) => d.src);
   summary.due = due.length;
   const rows = new Map<string, FeedInsert>();
+  // Source state is written only after the items are stored: a 304 next run
+  // must never hide articles this run failed to save.
+  const nextStates: SourceStateInsert[] = [];
 
   summary.deferred = await mapLimit(due, CONCURRENCY, async (src) => {
     const prev = stateByKey.get(src.key);
@@ -122,26 +169,38 @@ export async function collectNews(opts: {
     if (prev?.last_modified) headers["if-modified-since"] = prev.last_modified;
     let status = 0;
     let error: string | null = null;
-    let seen = 0;
     try {
-      const res = await fetchImpl(src.url, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: "no-store", redirect: "follow" });
+      const res = await safeFetch(
+        src.url,
+        { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: "no-store" },
+        { fetchImpl: opts.fetchImpl, resolve: opts.resolve },
+      );
       status = res.status;
       if (res.status === 304) {
         summary.notModified++;
       } else if (!res.ok) {
         error = `HTTP ${res.status}`;
+      } else if (!looksLikeFeed(res.text ?? "")) {
+        // A 200 that isn't RSS/Atom (moved feed, HTML page) is a failure, so it backs off and shows up.
+        error = "not a feed";
       } else {
         summary.fetched++;
-        const entries = parseFeed(await res.text());
-        seen = entries.length;
+        const entries = parseFeed(res.text ?? "");
         summary.entries += entries.length;
         for (const e of entries) {
           const url = canonicalUrl(e.link);
-          if (!url || rows.has(url)) continue;
+          if (!url) continue;
           const verdict = checkEntry(e, now);
           if (verdict.status === "skip") continue;
           const m = match(e.title, e.summary, src);
           if (!m) continue;
+          const existing = rows.get(url);
+          if (existing) {
+            // Same article from another source: keep every contest either one matched.
+            existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), ...m.contestIds])];
+            existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...m.candidateIds])];
+            continue;
+          }
           summary.matched++;
           const held = verdict.status === "held" ? verdict.reason : !publish ? "publishing paused" : null;
           rows.set(url, {
@@ -152,7 +211,7 @@ export async function collectNews(opts: {
             title: e.title.slice(0, 300),
             excerpt: e.summary ? e.summary.slice(0, 280) : null,
             url,
-            image_url: e.image ?? null,
+            image_url: e.image && /^https:\/\//.test(e.image) ? e.image : null,
             published_at: (e.published ?? now).toISOString(),
             status: held ? "held" : "published",
             held_reason: held,
@@ -161,25 +220,23 @@ export async function collectNews(opts: {
             match: { terms: m.terms },
           });
         }
-        await db
-          .from("feed_source_state")
-          .upsert({
-            source_key: src.key,
-            etag: res.headers.get("etag"),
-            last_modified: res.headers.get("last-modified"),
-            last_fetched_at: now.toISOString(),
-            last_status: status,
-            last_error: null,
-            failures: 0,
-            items_seen: seen,
-          });
+        nextStates.push({
+          source_key: src.key,
+          etag: res.headers.get("etag"),
+          last_modified: res.headers.get("last-modified"),
+          last_fetched_at: now.toISOString(),
+          last_status: status,
+          last_error: null,
+          failures: 0,
+          items_seen: entries.length,
+        });
         return;
       }
     } catch (e) {
       error = e instanceof Error ? e.name : "fetch failed";
     }
     if (error) summary.failed.push(`${src.key}: ${error}`);
-    await db.from("feed_source_state").upsert({
+    nextStates.push({
       source_key: src.key,
       etag: prev?.etag ?? null,
       last_modified: prev?.last_modified ?? null,
@@ -193,8 +250,9 @@ export async function collectNews(opts: {
 
   // Skip URLs already stored, then insert the rest.
   const urls = [...rows.keys()];
-  for (let i = 0; i < urls.length; i += 100) {
-    const { data } = await db.from("feed_items").select("url").in("url", urls.slice(i, i + 100));
+  for (let i = 0; i < urls.length; i += 50) {
+    const { data, error } = await db.from("feed_items").select("url").in("url", urls.slice(i, i + 50));
+    if (error) throw new Error(`feed_items lookup: ${error.message}`);
     for (const r of data ?? []) rows.delete(r.url);
   }
   const fresh = [...rows.values()];
@@ -202,6 +260,7 @@ export async function collectNews(opts: {
     const { error } = await db.from("feed_items").upsert(fresh, { onConflict: "url", ignoreDuplicates: true });
     if (error) throw new Error(`feed_items insert: ${error.message}`);
   }
+  if (nextStates.length) await db.from("feed_source_state").upsert(nextStates);
   summary.published = fresh.filter((r) => r.status === "published").length;
   summary.held = fresh.length - summary.published;
   logEvent("feeds.news", { ...summary, failed: summary.failed.join("; ") });
@@ -209,31 +268,50 @@ export async function collectNews(opts: {
 }
 
 /**
- * Daily retraction check: a published article whose URL now returns 404/410
- * is marked `removed`, and open pages drop it via Realtime.
+ * Daily retraction check, oldest checks first and within a time budget: a
+ * published article whose URL now returns 404/410 is marked `removed`, and
+ * open pages drop it. Check times live in `feed_item_checks`, so checking
+ * never notifies pages.
  */
-export async function recheckPublished(db: Db, opts: { now?: Date; fetchImpl?: typeof fetch; limit?: number } = {}) {
+export async function recheckPublished(
+  db: Db,
+  opts: { now?: Date; fetchImpl?: typeof fetch; resolve?: Resolver; limit?: number; budgetMs?: number } = {},
+) {
   const now = opts.now ?? new Date();
-  const fetchImpl = opts.fetchImpl ?? fetch;
+  const until = Date.now() + (opts.budgetMs ?? 120_000);
   const dayAgo = new Date(now.getTime() - 86_400_000).toISOString();
-  const { data } = await db
-    .from("feed_items")
-    .select("id, url")
-    .eq("status", "published")
-    .or(`checked_at.is.null,checked_at.lt.${dayAgo}`)
-    .limit(opts.limit ?? 200);
+  const limit = opts.limit ?? 1500;
+  // Never-checked items first, then the stalest.
+  const { data: published } = await db.from("feed_items").select("id, url, feed_item_checks(checked_at)").eq("status", "published").limit(5000);
+  const queue = (published ?? [])
+    .map((r) => {
+      const chk = (Array.isArray(r.feed_item_checks) ? r.feed_item_checks[0] : r.feed_item_checks) as { checked_at: string } | null;
+      return { id: r.id, url: r.url, checkedAt: chk?.checked_at ?? "" };
+    })
+    .filter((r) => !r.checkedAt || r.checkedAt < dayAgo)
+    .sort((a, b) => a.checkedAt.localeCompare(b.checkedAt))
+    .slice(0, limit);
   let removed = 0;
-  await mapLimit(data ?? [], CONCURRENCY, async (item) => {
-    let gone = false;
+  let checked = 0;
+  await mapLimit(queue, CONCURRENCY, async (item) => {
+    let status: number | null = null;
     try {
-      const res = await fetchImpl(item.url, { method: "HEAD", headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), redirect: "follow" });
-      gone = res.status === 404 || res.status === 410;
+      const res = await safeFetch(
+        item.url,
+        { method: "HEAD", headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
+        { fetchImpl: opts.fetchImpl, resolve: opts.resolve },
+      );
+      status = res.status;
     } catch {
       // Network trouble isn't a retraction; try again tomorrow.
     }
-    if (gone) removed++;
-    await db.from("feed_items").update(gone ? { status: "removed", checked_at: now.toISOString() } : { checked_at: now.toISOString() }).eq("id", item.id);
-  });
-  logEvent("feeds.recheck", { checked: data?.length ?? 0, removed });
-  return { checked: data?.length ?? 0, removed };
+    checked++;
+    if (status === 404 || status === 410) {
+      removed++;
+      await db.from("feed_items").update({ status: "removed" }).eq("id", item.id);
+    }
+    await db.from("feed_item_checks").upsert({ item_id: item.id, checked_at: now.toISOString(), last_status: status });
+  }, until);
+  logEvent("feeds.recheck", { due: queue.length, checked, removed });
+  return { due: queue.length, checked, removed };
 }

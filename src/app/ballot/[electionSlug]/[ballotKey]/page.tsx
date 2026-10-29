@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import type { ReactNode } from "react";
-import { Columns3, ExternalLink, Info, ListChecks, Mail } from "lucide-react";
+import { Columns3, ExternalLink, Info, ListChecks, Mail, MapPin } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -14,9 +15,9 @@ import { MeasureCard } from "@/components/ballot/MeasureCard";
 import { Researching } from "@/components/ballot/Citations";
 import type { Race } from "@/data/types";
 import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
-import { formatElectionDate, locationLabel, locationLine, STATUS_COPY } from "@/lib/ballot/copy";
+import { formatElectionDate, locationLabel, locationLine, STATE_LOOKUP_FALLBACK, STATUS_COPY } from "@/lib/ballot/copy";
 import { getEnrichment } from "@/lib/ballot/enrichment";
-import { loadBallot } from "@/lib/ballot/loadBallot";
+import { loadBallot as loadStoredBallot } from "@/lib/ballot/loadBallot";
 import { statewideMeasuresHeading, toRaces, type MeasureView } from "@/lib/ballot/toRaces";
 import { discoveredLinks, initialFeed, type DiscoveredLink } from "@/lib/feeds/read";
 import { districtsFrom } from "@/domain/districts";
@@ -27,6 +28,9 @@ export const dynamic = "force-dynamic";
 type Params = Promise<{ electionSlug: string; ballotKey: string }>;
 
 /** Measures are listed in the nav as two pseudo races (statewide / local), one row per measure. */
+/** Metadata and the page read the same stored ballot once per request. */
+const loadBallot = cache(loadStoredBallot);
+
 const MEASURE_GROUPS = [
   { id: "measures-state", statewide: true, title: "Statewide measures", eyebrow: "Statewide" },
   { id: "measures-local", statewide: false, title: "Local measures", eyebrow: "County, city and district" },
@@ -46,7 +50,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function BallotPage({ params }: { params: Params }) {
   const { electionSlug, ballotKey } = await params;
   const result = await loadBallot(electionSlug, ballotKey);
-  if (result.state !== "ok") return <ExpiredBallot />;
+  if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} />;
 
   const ballot = result.ballot;
   const { races, measures } = toRaces(ballot, getEnrichment(electionSlug));
@@ -72,7 +76,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
-    <LiveFeedProvider electionId={electionId} contestIds={contestIds} initial={feed}>
+    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} initial={feed}>
       <div className="flex flex-col lg:flex-row">
         <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
         <Sidebar
@@ -291,10 +295,16 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?: string }) {
   const admin = ballot.administration;
+  // Official polling-place finder first; the state's voter lookup also lists polling places.
+  const whereToVote = admin?.votingLocationFinderUrl
+    ? { url: admin.votingLocationFinderUrl, label: "find your polling place or vote center" }
+    : admin?.voterLookupUrl
+      ? { url: admin.voterLookupUrl, label: `${admin.regionName ?? "your state's"} official voter lookup` }
+      : { url: STATE_LOOKUP_FALLBACK.url, label: STATE_LOOKUP_FALLBACK.label };
   return (
     <div className="mt-10 flex flex-col gap-3 max-w-3xl">
       {ballot.status === "PARTIAL" && (
-        <div role="status" className="rounded-lg border border-[var(--color-accent-soft)] bg-[var(--color-ink-1)] px-4 py-3">
+        <div role="status" className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3">
           <p className="flex items-center gap-2 text-[14px] text-[var(--color-paper)] font-medium">
             <Info size={14} className="text-[var(--color-accent)]" aria-hidden /> {STATUS_COPY.PARTIAL.title}
           </p>
@@ -305,6 +315,20 @@ function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?
         <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3 flex items-center gap-2 text-[13px] text-[var(--color-paper-2)]">
           <Mail size={14} className="text-[var(--color-accent)]" aria-hidden /> Voters at this location vote by mail.
         </div>
+      )}
+      {whereToVote && (
+        <a
+          href={whereToVote.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3 flex items-center gap-2 text-[14px] text-[var(--color-paper)] hover:border-[var(--color-paper-4)]"
+        >
+          <MapPin size={14} className="text-[var(--color-accent)]" aria-hidden />
+          <span>
+            Where to vote: <span className="underline group-hover:text-[var(--color-accent)]">{whereToVote.label}</span>
+          </span>
+          <ExternalLink size={11} aria-hidden className="text-[var(--color-paper-3)]" />
+        </a>
       )}
       <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3 text-[13px] leading-[1.55] text-[var(--color-paper-2)]">
         Compare with your <span className="text-[var(--color-paper)]">official sample ballot</span>
@@ -323,15 +347,16 @@ function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?
   );
 }
 
-function ExpiredBallot() {
+function ExpiredBallot({ unavailable = false }: { unavailable?: boolean }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
       <h1 className="font-display text-[44px] leading-none tracking-[-0.02em]">
         ballot<span className="text-[var(--color-paper-3)]">.ai</span>
       </h1>
       <p className="mt-8 max-w-md text-center text-[15px] leading-[1.6] text-[var(--color-paper-2)]">
-        This ballot link has expired. To keep ballot information fresh and your address private, we only keep a looked-up
-        ballot for a short time. Enter your address to see your current ballot.
+        {unavailable
+          ? "We couldn't load this ballot right now. This is a problem on our end. Enter your address to look it up again, or check with your local election office."
+          : "This ballot link has expired. To keep ballot information fresh and your address private, we only keep a looked-up ballot for a short time. Enter your address to see your current ballot."}
       </p>
       <div className="mt-10 w-full flex justify-center">
         <AddressForm autoFocus />

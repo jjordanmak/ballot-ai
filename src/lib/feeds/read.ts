@@ -3,20 +3,17 @@ import type { FeedRow } from "@/components/ballot/LiveFeed";
 import { logEvent } from "@/lib/observability/log";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
-/** Published feed items for a ballot's contests (public read; RLS hides held items). */
-export async function initialFeed(electionId: string, contestIds: string[]): Promise<FeedRow[]> {
+/** Published feed items for a ballot's contests: the newest per contest (public read; RLS hides held items). */
+export async function initialFeed(electionId: string, contestIds: string[], perContest = 12): Promise<FeedRow[]> {
   if (!contestIds.length) return [];
   try {
-    const { data, error } = await getSupabaseServer()
-      .from("feed_items")
-      .select("id, type, publisher, title, excerpt, url, published_at, ingested_at, status, contest_ids, candidate_ids")
-      .eq("election_id", electionId)
-      .eq("status", "published")
-      .overlaps("contest_ids", contestIds)
-      .order("published_at", { ascending: false })
-      .limit(300);
+    const { data, error } = await getSupabaseServer().rpc("ballot_feed", {
+      p_election_id: electionId,
+      p_contest_ids: contestIds,
+      p_per_contest: perContest,
+    });
     if (error) throw new Error(error.message);
-    return (data ?? []) as FeedRow[];
+    return ((data ?? []) as FeedRow[]).sort((a, b) => b.published_at.localeCompare(a.published_at));
   } catch (e) {
     // The ballot still renders; news just starts empty.
     logEvent("feeds.read_failed", { error: e instanceof Error ? e.message : "unknown" });

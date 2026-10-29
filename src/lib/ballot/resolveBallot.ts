@@ -78,6 +78,12 @@ export async function resolveBallotForAddress(
   const ballotKey = computeBallotKey(election.id, ballot.districtDescriptors ?? ballot.contests.map((c) => c.division.key));
   ballot.ballotKey = ballotKey;
   await runtime.durable.register(ballot, getEnrichment(election.slug));
-  await runtime.store.save(ballotKey, ballot);
+  try {
+    await runtime.store.save(ballotKey, ballot);
+  } catch (e) {
+    // Can't keep the ballot for its page: report a provider-side failure, not a crash.
+    logEvent("ballot.save_failed", { error: e instanceof Error ? e.message : "unknown" });
+    return { ok: false, status: "PROVIDER_ERROR", administration: ballot.administration };
+  }
   return { ok: true, status: ballot.status, electionSlug: election.slug, ballotKey };
 }

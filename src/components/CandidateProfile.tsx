@@ -32,7 +32,7 @@ import { normalizeForMatch } from "@/domain/text";
 import type { Candidate, EndorsementCategory } from "@/data/types";
 import { ENDORSEMENT_ORDER } from "@/data/types";
 import { partyClass, partyDot, partyLabel, StatusPill } from "./PartyTag";
-import { RichText, RichBlock } from "./Highlight";
+import { RichText, RichBlock, type HighlightMode } from "./Highlight";
 import { Cite, Researching, SourceList } from "./ballot/Citations";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
 
@@ -441,7 +441,13 @@ function parseYear(s: string): number {
   return m ? parseInt(m[0], 10) : NaN;
 }
 
-function TimelineSection({ items }: { items: { year: string; event: string; suffix?: React.ReactNode }[] }) {
+function TimelineSection({
+  items,
+  auto = "archive",
+}: {
+  items: { year: string; event: string; suffix?: React.ReactNode }[];
+  auto?: HighlightMode;
+}) {
   // Reverse order so the most recent event renders on the LEFT. Anything
   // older than the last 2 years (relative to the newest event) is faded
   // since it predates the current election cycle.
@@ -571,7 +577,7 @@ function TimelineSection({ items }: { items: { year: string; event: string; suff
                   {item.year}
                 </div>
                 <span className="mt-1.5 text-[12px] leading-[1.5] text-[var(--color-paper-2)]">
-                  <RichText text={item.event} />
+                  <RichText text={item.event} auto={auto} />
                   {item.suffix}
                 </span>
               </div>
@@ -848,7 +854,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
             <div className="space-y-3">
               {g.background.map((b, i) => (
                 <p key={i} className="text-[15px] leading-[1.7] text-[var(--color-paper-2)] text-pretty">
-                  <RichText text={b.text} />
+                  <RichText text={b.text} auto="neutral" />
                   <Cite ids={b.sources} docs={docs} />
                 </p>
               ))}
@@ -907,6 +913,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
 
       {g.timeline?.length ? (
         <TimelineSection
+          auto="neutral"
           items={g.timeline.map((t) => ({ year: t.year, event: t.event, suffix: <Cite ids={t.sources} docs={docs} /> }))}
         />
       ) : (
@@ -1034,7 +1041,7 @@ function CitedList({
                 : "text-[14px] leading-[1.6] text-[var(--color-paper-2)] text-pretty"
             }
           >
-            <RichText text={it.text} />
+            <RichText text={it.text} auto="neutral" />
             <Cite ids={it.sources} docs={docs} />
           </span>
         </li>
@@ -1068,7 +1075,7 @@ function CitedPillar({
             <li key={i} className="flex gap-2.5">
               <span className={`mt-1.5 w-1 h-1 shrink-0 rounded-full ${tint.bg}`} />
               <span className="text-[13px] leading-[1.55] text-[var(--color-paper)] text-pretty">
-                <RichText text={item.text} />
+                <RichText text={item.text} auto="neutral" />
                 <Cite ids={item.sources} docs={docs} />
               </span>
             </li>

@@ -21,7 +21,8 @@ export async function GET(req: Request) {
 
   // Track the reference ballot's contests (all CA statewide + Daly City local) even before anyone looks one up.
   const { count } = await db.from("contests").select("id", { count: "exact", head: true }).eq("election_id", election.id);
-  if (!count) {
+  // Only for the reference ballot's own election; never relabeled onto another one.
+  if (!count && election.slug === daly.election?.slug) {
     const seed = structuredClone(daly) as unknown as ResolvedBallot;
     seed.election = election;
     await new SupabaseDurableRegistry().register(seed, getEnrichment(election.slug));

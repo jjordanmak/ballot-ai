@@ -1,7 +1,11 @@
 import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
 
-/** Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; anything else is refused. */
+const digest = (s: string) => createHash("sha256").update(s).digest();
+
+/** Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; anything else is refused (timing-safe). */
 export function cronAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  return !!secret && req.headers.get("authorization") === `Bearer ${secret}`;
+  if (!secret) return false;
+  return timingSafeEqual(digest(req.headers.get("authorization") ?? ""), digest(`Bearer ${secret}`));
 }
