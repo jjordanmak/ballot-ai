@@ -230,7 +230,8 @@ describe("runJob", () => {
     expect(s.rpcCalls.find((c) => c.name === "add_api_spend")?.args.p_amount).toBeGreaterThan(0);
     // Polite: robots.txt was read and the site's slot reserved before the page.
     expect(s.tables.fetch_hosts[0]).toMatchObject({ host: "voterguide.sos.ca.gov" });
-    expect(s.rpcCalls.some((c) => c.name === "reserve_host_slot")).toBe(true);
+    // The job says how long it will wait, so the database never reserves a slot it won't use (0013).
+    expect(s.rpcCalls.filter((c) => c.name === "reserve_host_slot").every((c) => c.args.p_max_wait_ms === 25_000)).toBe(true);
     const state = s.tables.research_state.find((x) => x.key === KEY)!;
     expect(state).toMatchObject({ last_outcome: "published", locked_until: null });
     expect(Date.parse(state.next_check_at as string)).toBeGreaterThanOrEqual(Date.parse("2026-10-29T13:00:00Z"));
