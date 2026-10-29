@@ -17,6 +17,7 @@ import type { Race } from "@/data/types";
 import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
 import { formatElectionDate, locationLabel, locationLine, STATE_LOOKUP_FALLBACK, STATUS_COPY } from "@/lib/ballot/copy";
 import { getEnrichment } from "@/lib/ballot/enrichment";
+import { electionChoices, type ElectionChoice } from "@/lib/ballot/electionChoices";
 import { loadBallot as loadStoredBallot } from "@/lib/ballot/loadBallot";
 import { statewideMeasuresHeading, toRaces, type MeasureView } from "@/lib/ballot/toRaces";
 import { discoveredLinks, initialFeed, type DiscoveredLink } from "@/lib/feeds/read";
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function BallotPage({ params }: { params: Params }) {
   const { electionSlug, ballotKey } = await params;
   const result = await loadBallot(electionSlug, ballotKey);
-  if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} />;
+  if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} elections={await electionChoices()} />;
 
   const ballot = result.ballot;
   const { races, measures } = toRaces(ballot, getEnrichment(electionSlug));
@@ -347,7 +348,7 @@ function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?
   );
 }
 
-function ExpiredBallot({ unavailable = false }: { unavailable?: boolean }) {
+function ExpiredBallot({ unavailable = false, elections }: { unavailable?: boolean; elections: ElectionChoice[] }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
       <h1 className="font-display text-[44px] leading-none tracking-[-0.02em]">
@@ -359,7 +360,7 @@ function ExpiredBallot({ unavailable = false }: { unavailable?: boolean }) {
           : "This ballot link has expired. To keep ballot information fresh and your address private, we only keep a looked-up ballot for a short time. Enter your address to see your current ballot."}
       </p>
       <div className="mt-10 w-full flex justify-center">
-        <AddressForm autoFocus />
+        <AddressForm autoFocus elections={elections} />
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ArrowRight, ExternalLink, MapPin, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, ChevronDown, ExternalLink, MapPin, ShieldCheck, TriangleAlert } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
 import { INCOMPLETE_ADDRESS_COPY, NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
 import { hasLocality } from "@/lib/providers/address";
 import { readyToSuggest } from "@/lib/providers/google-places/ready";
+import type { ElectionChoice } from "@/lib/ballot/electionChoices";
 
 interface Suggestion {
   placeId: string;
@@ -20,14 +21,19 @@ const DEBOUNCE_MS = 300;
  * determine a ballot. As the visitor types, matching street addresses are
  * suggested (Google Places via our server); picking one fills in the full
  * address with ZIP. Typing the whole address by hand always works too.
+ *
+ * Once the address is complete, the election picker appears with the next
+ * election already selected; the button waits for both. (Only upcoming
+ * elections are offered; past ones will live in a future archive.)
  */
-export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
+export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?: boolean; elections?: ElectionChoice[] }) {
   const [state, formAction, pending] = useActionState<AddressFormState, FormData>(resolveAddressAction, {});
   const [address, setAddress] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [filling, setFilling] = useState(false);
+  const [electionSlug, setElectionSlug] = useState(elections[0]?.slug ?? "");
   const session = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const inflight = useRef<AbortController | null>(null);
@@ -45,6 +51,8 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
   // Only once a street is under way ("123 Mai"), so the hint doesn't nag on the first keystrokes.
   const missingLocality = !complete && readyToSuggest(address);
   const showLookup = !!state.lookup && (handoff || state.status === "NO_COVERAGE");
+  // No list (couldn't be read): the server picks the next election itself.
+  const electionReady = elections.length === 0 || !!electionSlug;
 
   useEffect(() => () => {
     clearTimeout(timer.current);
@@ -200,9 +208,33 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
         className={`-mt-1 text-[12px] leading-[1.5] ${missingLocality ? "text-[var(--color-paper)]" : "text-[var(--color-paper-3)]"}`}
       >
         {missingLocality
-          ? "Add the city and state, or the ZIP code (for example: 123 Main St, Daly City, CA 94015), or pick your address from the suggestions."
+          ? "Add the city and state, or the ZIP code (for example: 123 Main St, Springfield, IL 62701), or pick your address from the suggestions."
           : "Your home street address. No apartment or unit number needed: everyone at the same address has the same ballot."}
       </p>
+
+      {complete && elections.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="electionSlug" className="font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.18em]">
+            Election
+          </label>
+          <div className="relative">
+            <select
+              id="electionSlug"
+              name="electionSlug"
+              value={electionSlug}
+              onChange={(e) => setElectionSlug(e.target.value)}
+              className="w-full appearance-none bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg pl-4 pr-10 py-3 text-[15px] text-[var(--color-paper)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+            >
+              {elections.map((e) => (
+                <option key={e.slug} value={e.slug}>
+                  {e.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} aria-hidden className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-paper-3)] pointer-events-none" />
+          </div>
+        </div>
+      )}
 
       <div aria-live="polite" id="address-error">
         {error && (
@@ -228,7 +260,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
 
       <button
         type="submit"
-        disabled={pending || filling || !complete}
+        disabled={pending || filling || !complete || !electionReady}
         className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
       >
         {pending ? "Finding your ballot…" : "View my ballot"}

@@ -27,9 +27,11 @@ export async function resolveAddressAction(
   formData: FormData,
 ): Promise<AddressFormState> {
   const raw = formData.get("address");
+  const picked = formData.get("electionSlug");
+  const electionSlug = typeof picked === "string" && /^[a-z0-9-]{1,64}$/.test(picked) ? picked : undefined;
   let outcome: Awaited<ReturnType<typeof resolveBallotForAddress>>;
   try {
-    outcome = await resolveBallotForAddress(raw);
+    outcome = await resolveBallotForAddress(raw, undefined, electionSlug);
   } catch (e) {
     // Never a bare error page: the form shows the provider-error copy and the official lookup.
     logEvent("ballot.resolve_crashed", { error: e instanceof Error ? e.name : "unknown" });

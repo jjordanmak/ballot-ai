@@ -50,7 +50,7 @@ export const NO_STREET_NUMBER_COPY = {
 /** Typed address without a ZIP or a city and state (checked before asking the provider). */
 export const INCOMPLETE_ADDRESS_COPY = {
   title: "Enter your full address",
-  body: "Include the city, state, and ZIP code (for example, 123 Main St, Daly City, CA 94015), or pick your address from the suggestions as you type.",
+  body: "Include the city, state, and ZIP code (for example, 123 Main St, Springfield, IL 62701), or pick your address from the suggestions as you type.",
 };
 
 /** National fallback when the provider didn't name a state election office (NASS "Can I Vote"). */

@@ -226,7 +226,6 @@ function SuspendedBlock({ candidate, raceId }: { candidate: Candidate; raceId: s
         <NewsFeed
           items={candidate.news}
           fallbackAvatar={candidate.headshot}
-          candidateDbId={`${raceId}__${candidate.id}`}
         />
       )}
     </div>
@@ -305,7 +304,6 @@ function FullBody({ candidate, raceId }: { candidate: Candidate; raceId: string 
       <NewsFeed
         items={candidate.news}
         fallbackAvatar={candidate.headshot}
-        candidateDbId={`${raceId}__${candidate.id}`}
       />
 
       {/* You should vote for X if — sits between News and Bottom Line as a
@@ -1009,7 +1007,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
       {candidate.feed ? (
         <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} feed={candidate.feed} />
       ) : (
-        <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} candidateDbId={`${raceId}__${candidate.id}`} />
+        <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} />
       )}
 
       <SourceList docs={docs} />

@@ -3,10 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async redirects() {
     return [
-      // Legacy ZIP-first ballot URLs → archived June 2026 primary prototype.
+      // Legacy ZIP-first ballot URLs: the landing page in production (the June
+      // prototype is internal-only); the frozen prototype on previews.
       {
         source: "/ballot/:zip(\\d{5})/:electionId",
-        destination: "/archive/:electionId/:zip",
+        destination: process.env.VERCEL_ENV === "production" ? "/" : "/archive/:electionId/:zip",
         permanent: false,
       },
     ];

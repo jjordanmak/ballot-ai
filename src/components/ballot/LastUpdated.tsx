@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatLastUpdate } from "@/components/UpdateBar";
 import { useLatestUpdate } from "./LiveFeed";
 
 /**
@@ -27,4 +26,30 @@ export function LastUpdated({ fallback }: { fallback: string }) {
       </div>
     </div>
   );
+}
+
+/** "Oct 29, 2026 · 4:25:12 AM · 1s ago" */
+export function formatLastUpdate(lastUpdate: Date | null, now: Date | null) {
+  if (!lastUpdate) return "—";
+  const time = lastUpdate.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  const date = lastUpdate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const diffSec = now
+    ? Math.max(0, Math.floor((now.getTime() - lastUpdate.getTime()) / 1000))
+    : 0;
+  const ago =
+    diffSec < 60
+      ? `${diffSec}s ago`
+      : diffSec < 3600
+      ? `${Math.floor(diffSec / 60)}m ago`
+      : `${Math.floor(diffSec / 3600)}h ago`;
+  return `${date} · ${time} · ${ago}`;
 }

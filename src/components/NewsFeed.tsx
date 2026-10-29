@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
 import { useFeedItems } from "./ballot/LiveFeed";
-import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 const TYPE_META: Record<
   NewsItemType,
@@ -133,16 +132,11 @@ function fallbackSocialUrl(platform: SocialPlatform, handle: string): string {
 export function NewsFeed({
   items,
   fallbackAvatar,
-  raceId,
-  candidateDbId,
   feed,
   hideWhenEmpty,
 }: {
   items: NewsItem[] | undefined;
   fallbackAvatar?: string;
-  /** Archive: subscribe to news_items for this race / candidate. */
-  raceId?: string;
-  candidateDbId?: string;
   /** Address-first ballot: read live feed_items from the page's LiveFeedProvider. */
   feed?: FeedTarget;
   hideWhenEmpty?: boolean;
@@ -157,46 +151,6 @@ export function NewsFeed({
   useEffect(() => {
     setLiveItems(items ?? []);
   }, [items]);
-
-  useEffect(() => {
-    if (feed) return; // the page's LiveFeedProvider owns the subscription
-    const filter = candidateDbId
-      ? `candidate_id=eq.${candidateDbId}`
-      : raceId
-      ? `race_id=eq.${raceId}`
-      : null;
-    if (!filter) return;
-
-    const sb = getSupabaseBrowser();
-    const channel = sb
-      .channel(`news-feed-${candidateDbId ?? raceId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "news_items", filter },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            const oldRow = payload.old as Partial<RealtimeNewsRow>;
-            if (!oldRow.id) return;
-            setLiveItems((prev) => prev.filter((item) => item.id !== oldRow.id));
-            return;
-          }
-
-          const next = mapRealtimeNewsItem(payload.new as RealtimeNewsRow);
-          setLiveItems((prev) => {
-            const existing = prev.findIndex((item) => item.id === next.id);
-            if (existing === -1) return [next, ...prev];
-            const copy = prev.slice();
-            copy[existing] = next;
-            return copy;
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      sb.removeChannel(channel);
-    };
-  }, [candidateDbId, raceId, feed]);
 
   const updateAffordance = () => {
     const el = scrollRef.current;
@@ -310,29 +264,6 @@ export function NewsFeed({
   );
 }
 
-interface RealtimeNewsRow {
-  id: string;
-  type: string;
-  source: string;
-  title: string;
-  excerpt: string | null;
-  url: string | null;
-  published_at: string;
-  social: unknown;
-}
-
-function mapRealtimeNewsItem(row: RealtimeNewsRow): NewsItem {
-  return {
-    id: row.id,
-    type: row.type as NewsItem["type"],
-    source: row.source,
-    title: row.title,
-    excerpt: row.excerpt ?? undefined,
-    url: row.url ?? undefined,
-    date: row.published_at,
-    social: (row.social ?? undefined) as NewsItem["social"],
-  };
-}
 
 function LivePill() {
   return (

@@ -29,6 +29,8 @@ export type ResolveOutcome =
 export async function resolveBallotForAddress(
   rawAddress: unknown,
   runtime: BallotRuntime = getBallotRuntime(),
+  /** The election picked on the form; the next upcoming one when absent. */
+  electionSlug?: string,
 ): Promise<ResolveOutcome> {
   const started = Date.now();
   const address = AddressInput.parse(rawAddress);
@@ -36,7 +38,7 @@ export async function resolveBallotForAddress(
   // The provider guesses a location for partial addresses ("1 Main St" → Dallas); never risk the wrong ballot.
   if (!address.hasLocality()) return { ok: false, status: "INVALID_ADDRESS", incomplete: true };
 
-  const lookup = await runtime.elections.current();
+  const lookup = electionSlug ? await runtime.elections.lookup(electionSlug) : await runtime.elections.current();
   if (!lookup.ok) {
     logEvent("ballot.election_unavailable", { status: lookup.status, detail: lookup.detail });
     await runtime.store.recordEvent({

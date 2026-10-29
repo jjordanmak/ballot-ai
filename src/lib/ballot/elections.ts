@@ -20,9 +20,20 @@ export type ElectionLookup =
   | { ok: false; status: ResolutionStatus; detail: string };
 
 export interface ElectionSource {
+  /** The next selectable election (soonest first). */
   current(): Promise<ElectionLookup>;
   bySlug(slug: string): Promise<ElectionRef | null>;
+  /**
+   * Elections a voter can look up now: not deprecated (internal-only) or
+   * archived, and not over yet (Hawaii date). Soonest first.
+   */
+  selectable(): Promise<ElectionRef[]>;
+  /** A selectable election by slug, with provider ids resolved; else ELECTION_NOT_FOUND. */
+  lookup(slug: string): Promise<ElectionLookup>;
 }
+
+/** Statuses a voter never sees in the picker or resolves against. */
+const HIDDEN_STATUSES = "(archived,deprecated)";
 
 interface ElectionRow {
   id: string;
@@ -58,7 +69,7 @@ export class SupabaseElectionSource implements ElectionSource {
     const { data, error } = await supabaseServer
       .from("elections")
       .select("id, slug, name, date, external_ids")
-      .neq("status", "archived")
+      .not("status", "in", HIDDEN_STATUSES)
       .gte("date", this.today())
       .order("date", { ascending: true })
       .limit(1)
@@ -83,6 +94,25 @@ export class SupabaseElectionSource implements ElectionSource {
     return data ? toRef(data) : null;
   }
 
+  async selectable(): Promise<ElectionRef[]> {
+    const { data, error } = await supabaseServer
+      .from("elections")
+      .select("id, slug, name, date, external_ids")
+      .not("status", "in", HIDDEN_STATUSES)
+      .gte("date", this.today())
+      .order("date", { ascending: true });
+    if (error) throw new Error(`elections read: ${error.message}`);
+    return (data ?? []).map(toRef);
+  }
+
+  async lookup(slug: string): Promise<ElectionLookup> {
+    const all = await this.selectable().catch(() => null);
+    if (!all) return { ok: false, status: "PROVIDER_ERROR", detail: "elections read failed" };
+    const election = all.find((e) => e.slug === slug);
+    if (!election) return { ok: false, status: "ELECTION_NOT_FOUND", detail: `not selectable: ${slug}` };
+    return this.withCivicId(election);
+  }
+
   private async withCivicId(election: ElectionRef): Promise<ElectionLookup> {
     if (election.externalIds["google-civic"]) return { ok: true, election };
     const res = await this.civic.getElections();
@@ -101,5 +131,13 @@ export class FixtureElectionSource implements ElectionSource {
   }
   async bySlug(slug: string) {
     return slug === FIXTURE_ELECTION.slug ? FIXTURE_ELECTION : null;
+  }
+  async selectable() {
+    return [FIXTURE_ELECTION];
+  }
+  async lookup(slug: string): Promise<ElectionLookup> {
+    return slug === FIXTURE_ELECTION.slug
+      ? { ok: true, election: FIXTURE_ELECTION }
+      : { ok: false, status: "ELECTION_NOT_FOUND", detail: `not selectable: ${slug}` };
   }
 }
