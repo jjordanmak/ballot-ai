@@ -1,5 +1,7 @@
 import { getBallotRuntime } from "@/lib/ballot/runtime";
 import { aiConfig } from "@/lib/ai/config";
+import { logEvent } from "@/lib/observability/log";
+import { jobRequest } from "@/lib/research/remote";
 import { dispatch, runJob } from "@/lib/research/run";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { cronAuthorized } from "../_auth";
@@ -26,18 +28,22 @@ export async function GET(req: Request) {
 
   const lookup = await getBallotRuntime().elections.current();
   if (!lookup.ok) return Response.json({ skipped: lookup.status });
-  const origin = new URL(req.url).origin;
   const auth = req.headers.get("authorization") ?? "";
   const summary = await dispatch({
     db,
     electionId: lookup.election.id,
     electionSlug: lookup.election.slug ?? undefined,
     config: cfg,
-    runRemote: (key) =>
-      fetch(`${origin}/api/cron/research?job=${encodeURIComponent(key)}`, {
-        headers: { authorization: auth },
-        signal: AbortSignal.timeout(290_000),
-      }).catch(() => undefined),
+    runRemote: async (key) => {
+      const { url, headers } = jobRequest(req.url, key, auth);
+      try {
+        const res = await fetch(url, { headers, signal: AbortSignal.timeout(290_000) });
+        // A job that never ran stays locked until its lock expires; say why.
+        if (!res.ok) logEvent("research.remote_failed", { status: res.status });
+      } catch (e) {
+        logEvent("research.remote_failed", { error: e instanceof Error ? e.name : "error" });
+      }
+    },
   });
   return Response.json(summary);
 }
