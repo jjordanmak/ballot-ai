@@ -8,6 +8,8 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd } from "@/lib/ai/config";
+import { siteOf } from "@/lib/feeds/discover";
+import { NEWS_SOURCES } from "@/lib/feeds/sources";
 import { searchTask } from "@/lib/ai/prompts";
 
 export type SearchKind = "person" | "office" | "measure";
@@ -18,12 +20,36 @@ export interface SearchResult {
   problem?: string;
 }
 
-const isGov = (h: string) => /(^|\.)gov$/i.test(h) || /(^|\.)(ca|ny|tx)\.us$/i.test(h);
-const isBallotpedia = (h: string) => /(^|\.)ballotpedia\.org$/i.test(h);
+export const isGov = (h: string) => /(^|\.)gov$/i.test(h) || /(^|\.)(ca|ny|tx)\.us$/i.test(h);
+export const isBallotpedia = (h: string) => /(^|\.)ballotpedia\.org$/i.test(h);
+export const isWikipedia = (h: string) => /(^|\.)wikipedia\.org$/i.test(h);
 
-/** Which result URLs we may use, best first. Exported for tests. */
+/**
+ * News outlets ballot.ai already vets for "In the news" (src/data/sources/news.json),
+ * by their own domain. Outlets turned off only for lacking a feed still count;
+ * outlets that block automated readers don't.
+ */
+const NEWS_SITES = new Set(
+  NEWS_SOURCES.filter((s) => s.enabled !== false || !/403|block/i.test(s.disabledReason ?? "")).map((s) => {
+    try {
+      return siteOf(new URL(s.url).hostname);
+    } catch {
+      return "";
+    }
+  }),
+);
+NEWS_SITES.delete("");
+export const isVettedNews = (h: string) => NEWS_SITES.has(siteOf(h)) && !isGov(h) && !isBallotpedia(h) && !isWikipedia(h);
+
+/**
+ * Which result URLs we may use, best first. Measures and offices: .gov only.
+ * People (owner, 2026-10-29): .gov, their own Ballotpedia page, articles from
+ * vetted news outlets, and their Wikipedia page as a finder only (its
+ * references are followed; Wikipedia itself is never cited). Exported for tests.
+ */
 export function keepUrls(kind: SearchKind, results: { url: string; title: string }[], mustMention: string[] = []): string[] {
   const out: string[] = [];
+  const names = (title: string) => !mustMention.length || mustMention.every((m) => title.toLowerCase().includes(m.toLowerCase()));
   for (const r of results) {
     let u: URL;
     try {
@@ -32,17 +58,22 @@ export function keepUrls(kind: SearchKind, results: { url: string; title: string
       continue;
     }
     if (u.protocol !== "https:" && u.protocol !== "http:") continue;
-    const allowed = isGov(u.hostname) || (kind === "person" && isBallotpedia(u.hostname));
+    const h = u.hostname;
+    const person = kind === "person";
+    const allowed = isGov(h) || (person && (isBallotpedia(h) || isWikipedia(h) || isVettedNews(h)));
     if (!allowed) continue;
-    // A Ballotpedia result must be the person's own page, not a list or another person.
-    if (isBallotpedia(u.hostname) && mustMention.length && !mustMention.every((m) => r.title.toLowerCase().includes(m.toLowerCase()))) continue;
+    // Ballotpedia, Wikipedia and news results must be about this person, not a list or someone else.
+    if (!isGov(h) && !names(r.title)) continue;
     u.hash = "";
     if (!out.includes(u.toString())) out.push(u.toString());
   }
-  // At most one Ballotpedia page and three .gov pages.
-  const bp = out.filter((x) => isBallotpedia(new URL(x).hostname)).slice(0, 1);
-  const gov = out.filter((x) => isGov(new URL(x).hostname)).slice(0, 3);
-  return [...bp, ...gov];
+  const host = (x: string) => new URL(x).hostname;
+  return [
+    ...out.filter((x) => isBallotpedia(host(x))).slice(0, 1),
+    ...out.filter((x) => isGov(host(x))).slice(0, 3),
+    ...out.filter((x) => isVettedNews(host(x))).slice(0, 3),
+    ...out.filter((x) => isWikipedia(host(x))).slice(0, 1),
+  ];
 }
 
 let client: Anthropic | null = null;

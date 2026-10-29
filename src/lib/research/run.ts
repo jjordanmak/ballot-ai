@@ -26,17 +26,19 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { Database, Json } from "@/lib/supabase/types";
 import { aiConfig, settingId, type AiConfig, type Setting } from "@/lib/ai/config";
 import { checkSupport, extract, PROMPT_VERSION, type CallResult, type Doc } from "@/lib/ai/extract";
-import { MeasureResearch, OfficeResearch, PersonResearch } from "@/lib/ai/schemas";
+import { MeasureResearch, OfficeResearch, PersonBio, PersonFacts } from "@/lib/ai/schemas";
+import { BIO_SYSTEM, bioTask } from "@/lib/ai/prompts";
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { billingPeriod } from "@/lib/usage/quota";
 import type { Resolver } from "@/lib/feeds/safeFetch";
 import { logEvent } from "@/lib/observability/log";
 import compareSet from "@/data/research/compare-set.json";
 import { focusText, getDocument, REREAD_AFTER_MS, type Fetched, type FetchDeps } from "./fetch";
-import { ballotpediaCampaignSite, searchUrls } from "./search";
+import { ballotpediaCampaignSite, isBallotpedia, isGov, isVettedNews, isWikipedia, searchUrls } from "./search";
 import { buildTargets, pdfHostOk, taskFor, type ContestRow, type Target, type TargetPage } from "./targets";
 import { findLinkEntries } from "./text";
-import { buildPayload, payloadIsEmpty, screenMeasure, screenOffice, screenPerson, type FetchedDoc, type Payload, type Pending } from "./verify";
+import { checkBio, factList, screenFacts, TIER_RANK, usedSources, type PersonPayloadV2, type StoredBioSentence } from "./person";
+import { buildPayload, payloadIsEmpty, screenMeasure, screenOffice, type FetchedDoc, type Payload, type Pending, type Rejection, type SourceTier } from "./verify";
 
 type Db = SupabaseClient<Database>;
 
@@ -165,6 +167,8 @@ interface SearchCache {
   followed?: string[];
   /** When the search ran (kept a week). */
   searchedAt?: string;
+  /** Pages Wikipedia's references pointed to (Wikipedia is a finder only). */
+  refs?: string[];
   /** When the document set was last gathered (shared while the stored pages are fresh). */
   at: string;
 }
@@ -209,7 +213,37 @@ async function releaseShared(db: Db, t: Target, now: Date, cache: SearchCache | 
 }
 
 const isGovHost = (u: string) => /(^|\.)gov$/i.test(new URL(u).hostname);
-const isBallotpedia = (u: string) => /(^|\.)ballotpedia\.org$/i.test(new URL(u).hostname);
+
+/** A document's place in the trust order (owner, 2026-10-29). */
+function tierFor(url: string, official: boolean): SourceTier {
+  const h = new URL(url).hostname;
+  if (official || isGov(h)) return "official";
+  if (isBallotpedia(h)) return "ballotpedia";
+  if (isVettedNews(h)) return "news";
+  return "campaign";
+}
+
+/** Wikipedia is a finder only: the official, Ballotpedia or vetted-news pages its references cite. */
+function wikipediaReferences(html: string, mustMention: string[]): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/<a\b[^>]*class="[^"]*\bexternal\b[^"]*"[^>]*href="(https?:\/\/[^"]+)"/gi)) {
+    try {
+      const u = new URL(m[1].replace(/&amp;/g, "&"));
+      const h = u.hostname;
+      if (isWikipedia(h) || !(isGov(h) || isVettedNews(h) || (isBallotpedia(h) && mustMention.every((n) => u.pathname.toLowerCase().includes(n.toLowerCase()))))) continue;
+      u.hash = "";
+      if (!out.includes(u.toString())) out.push(u.toString());
+    } catch {
+      // ignore malformed links
+    }
+  }
+  return out.slice(0, 3);
+}
+
+export interface Tried {
+  url: string;
+  outcome: string;
+}
 
 /** Every document for a target, politely fetched; long ones narrowed to the passages about it. */
 async function gatherDocuments(
@@ -217,28 +251,33 @@ async function gatherDocuments(
   t: Target,
   cache: SearchCache | null,
   owner = true,
-): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; busy: number }> {
+): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; refs: string[]; busy: number; tried: Tried[] }> {
   const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
   const got: { f: Fetched; page: TargetPage }[] = [];
   const seen = new Set<string>();
+  const tried: Tried[] = [];
   let campaign = cache?.campaign ?? null;
   const followed: string[] = [];
+  let refs: string[] = cache?.refs ?? [];
   let busy = 0;
-  const read = async (page: TargetPage, needHtml = false) => {
+  const read = async (page: TargetPage, needHtml = false, finder = false) => {
     if (seen.has(page.url)) return null;
     seen.add(page.url);
+    const tier = tierFor(page.url, page.official);
     const r = await getDocument(
       fdeps,
       page.url,
-      { official: page.official, publisher: page.publisher, allowPdf: page.allowPdf, sourceType: page.official ? "official" : isBallotpedia(page.url) ? "civic" : "campaign" },
+      { official: page.official, publisher: page.publisher, allowPdf: page.allowPdf, sourceType: finder ? "finder" : tier === "ballotpedia" ? "civic" : tier },
       needHtml ? 0 : undefined,
       { needHtml },
     );
     if ("skipped" in r) {
       if (r.skipped === "busy") busy++;
+      tried.push({ url: page.url, outcome: r.skipped });
       return null;
     }
-    got.push({ f: r, page });
+    tried.push({ url: page.url, outcome: finder ? "read (finder only)" : "read" });
+    if (!finder) got.push({ f: r, page });
     return r;
   };
 
@@ -260,18 +299,29 @@ async function gatherDocuments(
   if (!follow.length) for (const u of cache?.followed ?? []) follow.push({ url: u, official: t.pages[0]?.official ?? true, publisher: t.pages[0]?.publisher, allowPdf: pdfHostOk(t.state, u) });
   for (const f of follow.slice(0, MAX_FOLLOW)) if (await read(f)) followed.push(f.url);
 
-  // 2. Search results: .gov pages (and, for people, their Ballotpedia page).
+  // 2. Search results: .gov pages; for people, also their Ballotpedia page, vetted news, and Wikipedia's references.
   for (const u of cache?.urls ?? []) {
-    const r = await read({ url: u, official: isGovHost(u), publisher: new URL(u).hostname, allowPdf: pdfHostOk(t.state, u) });
+    const h = new URL(u).hostname;
+    if (isWikipedia(h)) {
+      if (refs.length) continue;
+      const w = await read({ url: u, official: false, publisher: "Wikipedia" }, owner, true);
+      if (w?.html) refs = wikipediaReferences(w.html, t.search?.mustMention ?? []);
+      continue;
+    }
+    const r = await read({ url: u, official: isGovHost(u), publisher: h, allowPdf: pdfHostOk(t.state, u) });
     // Ballotpedia names the campaign website; that's the only way a searched campaign site is used.
-    if (r?.html && isBallotpedia(u)) campaign = ballotpediaCampaignSite(r.html) ?? campaign;
+    if (r?.html && isBallotpedia(h)) campaign = ballotpediaCampaignSite(r.html) ?? campaign;
   }
+  for (const u of refs) await read({ url: u, official: isGovHost(u), publisher: new URL(u).hostname });
   if (campaign && t.kind === "candidate") await read({ url: campaign, official: false });
 
-  // Official first, then the rest; long documents narrowed to this target.
+  // Most trusted first; long documents narrowed to this target.
   let total = 0;
   const docs: FetchedDoc[] = [];
-  for (const { f, page } of [...got.filter((g) => g.page.official), ...got.filter((g) => !g.page.official)]) {
+  const ranked = got
+    .map((g) => ({ ...g, tier: tierFor(g.f.url, g.page.official) }))
+    .sort((x, y) => TIER_RANK[x.tier] - TIER_RANK[y.tier]);
+  for (const { f, page, tier } of ranked) {
     if (total >= MAX_TOTAL_CHARS) break;
     const text = focusText(f.text, t.focus, Math.min(MAX_DOC_CHARS, MAX_TOTAL_CHARS - total));
     total += text.length;
@@ -279,10 +329,10 @@ async function gatherDocuments(
       id: `D${docs.length + 1}`,
       sourceId: f.sourceId,
       text,
-      meta: { url: f.url, title: f.title, publisher: page.publisher ?? new URL(f.url).hostname, official: page.official, fetchedAt: f.fetchedAt },
+      meta: { url: f.url, title: f.title, publisher: page.publisher ?? new URL(f.url).hostname, official: tier === "official", fetchedAt: f.fetchedAt, tier },
     });
   }
-  return { docs, campaign, followed, busy };
+  return { docs, campaign, followed, refs, busy, tried };
 }
 
 function inputHash(t: Target, setting: Setting, docs: FetchedDoc[]): string {
@@ -332,7 +382,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
     await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000, failures: state.failures });
     return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
   }
-  const { docs, campaign, followed, busy } = await gatherDocuments(d, t, shared.cache, shared.owner);
+  const { docs, campaign, followed, refs, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner);
   await recordSpend(db, now, shared.cost);
   // A site was too busy to read right now: wait and try again rather than run on fewer documents
   // (after a few tries, run with what's there).
@@ -348,6 +398,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
       urls: shared.cache?.urls ?? [],
       campaign,
       followed: followed.length ? followed : shared.cache?.followed ?? [],
+      refs,
       searchedAt: shared.cache?.searchedAt ?? shared.cache?.at,
       at: now.toISOString(),
     });
@@ -366,7 +417,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
     return { key: stateKey, outcome: "budget", spentMicroUsd: spent };
   }
 
-  const r = await researchOne(d, cfg, stored, setting, docs, hash);
+  const r = await researchOne(d, cfg, stored, setting, docs, hash, tried);
   spent += r.spent;
   if (r.outcome === "failed" && transient(r.problem)) {
     await finishState(db, stateKey, now, { outcome: "rate limited", afterMs: 2 * 60_000, failures: state.failures });
@@ -389,6 +440,7 @@ async function researchOne(
   setting: Setting,
   docs: FetchedDoc[],
   hash: string,
+  tried: Tried[],
 ): Promise<{ outcome: "published" | "held" | "compared" | "failed"; spent: number; problem?: string }> {
   const { db, now } = deps;
   const field = t.compare ? `${t.field}@${settingId(setting)}` : t.field;
@@ -414,13 +466,16 @@ async function researchOne(
 
   const modelDocs: Doc[] = docs.map((d) => ({ id: d.id, title: d.meta.title, url: d.meta.url, text: d.text }));
   const call = { model: setting.model, effort: setting.effort, task: taskFor(t), docs: modelDocs, client: deps.client };
+  const person = t.kind === "candidate" || t.kind === "retention";
   const first: CallResult<unknown> =
     t.kind === "measure"
       ? await extract({ ...call, schema: MeasureResearch })
       : t.kind === "office"
         ? await extract({ ...call, schema: OfficeResearch })
-        : await extract({ ...call, schema: PersonResearch });
+        : await extract({ ...call, schema: PersonFacts });
   let spent = first.costMicroUsd;
+  let bioRaw: unknown = null;
+  const usage: unknown[] = [first.usage ?? null];
 
   const finish = async (status: "succeeded" | "failed", extra: Record<string, unknown>, error?: string) => {
     await recordSpend(db, now, spent);
@@ -431,7 +486,18 @@ async function researchOne(
           status,
           error: error ?? null,
           completed_at: new Date().toISOString(),
-          metadata: { setting, compare: t.compare, costMicroUsd: spent, seconds: Math.round((Date.now() - started) / 100) / 10, usage: first.usage ?? null, raw: first.data ?? null, ...extra } as unknown as Json,
+          metadata: {
+            setting,
+            compare: t.compare,
+            costMicroUsd: spent,
+            seconds: Math.round((Date.now() - started) / 100) / 10,
+            usage: sumUsage(usage),
+            raw: first.data ?? null,
+            bioRaw,
+            documents: docs.map((d) => ({ id: d.id, url: d.meta.url, tier: d.meta.tier ?? null })),
+            tried,
+            ...extra,
+          } as unknown as Json,
         })
         .eq("id", runId);
     }
@@ -442,20 +508,71 @@ async function researchOne(
     return { outcome: "failed", spent, problem: first.problem };
   }
 
-  const kind = t.kind === "measure" ? "measure" : t.kind === "office" ? "office" : "person";
-  const screened =
-    kind === "measure"
-      ? screenMeasure(first.data as MeasureResearch, docs)
-      : kind === "office"
-        ? screenOffice(first.data as OfficeResearch, docs)
-        : screenPerson(first.data as PersonResearch, docs);
-  // The checker is the same for every setting, so only the extraction differs between columns.
-  const support = await checkSupport({ model: cfg.checkModel, claims: screened.pending.map((p: Pending) => ({ text: p.text, quote: p.quote })), client: deps.client });
-  spent += support.costMicroUsd;
-  const built = buildPayload(kind, screened.pending, support.supported, docs, kind === "person" ? (first.data as PersonResearch).pastPositions : []);
-  const rejected = [...screened.rejected, ...built.rejected];
-  const empty = payloadIsEmpty(built.payload);
-  const payload: Payload = { ...built.payload, ...(t.state ? { scope: { election: t.election, state: t.state } } : {}) };
+  // Prose claims (measure and office answers, a candidate's platform) still get the AI support check;
+  // in compare mode the other checker settings judge the same claims, for calibration.
+  const checkClaims = async (pending: Pending[]) => {
+    const claims = pending.map((p) => ({ text: p.text, quote: p.quote }));
+    const support = await checkSupport({ model: cfg.checkModel, effort: cfg.checkEffort, claims, client: deps.client });
+    spent += support.costMicroUsd;
+    const calibration: Record<string, boolean[]> = {};
+    if (t.compare && claims.length) {
+      for (const c of cfg.checkCompare) {
+        const r = await checkSupport({ model: c.model, effort: c.effort, claims, client: deps.client });
+        spent += r.costMicroUsd;
+        calibration[settingId(c)] = r.supported;
+      }
+    }
+    return { support, calibration };
+  };
+
+  let payloadCore: Payload;
+  let sourceIds: string[];
+  let rejected: Rejection[];
+  let extra: Record<string, unknown> = {};
+
+  if (person) {
+    const facts = first.data as PersonFacts;
+    const screened = screenFacts(facts, docs, { local: !!t.local, judge: t.kind === "retention", now });
+    const { support, calibration } = await checkClaims(screened.platform);
+    const platform = screened.platform.filter((_, i) => support.supported[i]).map((p) => ({ text: p.text, quote: p.quote, source: p.source }));
+    rejected = [...screened.rejected, ...screened.platform.filter((_, i) => !support.supported[i]).map((p) => ({ field: p.field, reason: "unsupported" as const }))];
+    const strip = <T extends { tier?: unknown }>(x: T) => {
+      const { tier: _tier, ...rest } = x;
+      return rest;
+    };
+    const verified = { education: screened.education.map(strip), positions: screened.positions.map(strip), platform, residence: screened.residence };
+    const list = factList(verified);
+    let bio: StoredBioSentence[] = [];
+    if (list.length) {
+      // Compare mode: each column writes its own bio. Publish mode: the bio setting the owner chose.
+      const writer = t.compare ? setting : cfg.bio;
+      const b = await extract({ model: writer.model, effort: writer.effort, schema: PersonBio, system: BIO_SYSTEM, task: bioTask(t.personName ?? t.label, list, !!t.local), docs: [], client: deps.client });
+      spent += b.costMicroUsd;
+      usage.push(b.usage ?? null);
+      bioRaw = b.data ?? { problem: b.problem };
+      if (b.data) {
+        const checked = checkBio(b.data as PersonBio, list, t.personName ?? "");
+        bio = checked.kept;
+        rejected.push(...checked.rejected);
+      }
+    }
+    const used = [...verified.education, ...verified.positions, ...platform, ...(verified.residence ? [verified.residence] : [])].map((x) => x.source);
+    payloadCore = { kind: "person", v: 2, ...verified, bio, sources: usedSources(docs, used) } as PersonPayloadV2;
+    sourceIds = [...new Set(used)];
+    extra = { leftOut: t.compare ? (facts.leftOut ?? []).slice(0, 10) : undefined, conflicts: screened.conflicts, supportProblem: support.problem ?? null, calibration };
+  } else {
+    const kind = t.kind === "measure" ? "measure" : "office";
+    const screened = kind === "measure" ? screenMeasure(first.data as MeasureResearch, docs) : screenOffice(first.data as OfficeResearch, docs);
+    const { support, calibration } = await checkClaims(screened.pending);
+    const built = buildPayload(kind, screened.pending, support.supported, docs);
+    payloadCore = built.payload;
+    sourceIds = built.sourceIds;
+    rejected = [...screened.rejected, ...built.rejected];
+    extra = { supportProblem: support.problem ?? null, calibration, claims: t.compare ? screened.pending.map((p) => ({ field: p.field, text: p.text, quote: p.quote })) : undefined };
+  }
+
+  const empty = payloadIsEmpty(payloadCore);
+  const payload: Payload = { ...payloadCore, ...(t.state ? { scope: { election: t.election, state: t.state } } : {}) };
   const status = t.compare || empty ? "held" : "published";
   const heldReason = t.compare
     ? "model comparison"
@@ -474,11 +591,21 @@ async function researchOne(
     field_name: field,
     content,
     payload: payload as unknown as Json,
-    source_ids: built.sourceIds,
+    source_ids: sourceIds,
     is_current: true,
     status,
     held_reason: heldReason,
   });
-  await finish("succeeded", { rejected, supportProblem: support.problem ?? null, output_hash: sha(content) });
+  await finish("succeeded", { rejected, ...extra, output_hash: sha(content) });
   return { outcome: t.compare ? "compared" : status, spent };
+}
+
+/** Token counts across the calls of one run. */
+function sumUsage(list: unknown[]): Record<string, number> | null {
+  const out: Record<string, number> = {};
+  for (const u of list) {
+    if (!u || typeof u !== "object") continue;
+    for (const [k, v] of Object.entries(u as Record<string, unknown>)) if (typeof v === "number") out[k] = (out[k] ?? 0) + v;
+  }
+  return Object.keys(out).length ? out : null;
 }

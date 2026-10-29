@@ -46,8 +46,13 @@ export interface AiConfig {
   compare: Setting[];
   /** Publish mode: the setting per kind of item. */
   publish: Record<ResearchKindKey, Setting>;
-  /** Model for the second "does this quote support this sentence?" pass. */
+  /** Publish mode: the setting that writes the short bio from a person's checked facts (`ANTHROPIC_MODEL_BIO`, default: the profile setting). */
+  bio: Setting;
+  /** Model for the second "does this quote support this sentence?" pass (prose claims only). */
   checkModel: string;
+  checkEffort: Effort;
+  /** Compare mode: other checker settings that judge the same claims, for calibration (`AI_CHECK_COMPARE`). */
+  checkCompare: Setting[];
   /** Monthly budget in USD; runs stop when the month's spend reaches it. */
   monthlyBudgetUsd: number;
   /** Most research jobs running at once across workers. */
@@ -80,7 +85,17 @@ export function aiConfig(env: Record<string, string | undefined> = process.env):
       profile: parseSetting(env.ANTHROPIC_MODEL_PROFILE, base),
       office: parseSetting(env.ANTHROPIC_MODEL_OFFICE, base),
     },
-    checkModel: env.ANTHROPIC_MODEL_CHECK?.trim() || env.ANTHROPIC_EXTRACTION_MODEL?.trim() || DEFAULT_MODEL,
+    bio: parseSetting(env.ANTHROPIC_MODEL_BIO || env.ANTHROPIC_MODEL_PROFILE, base),
+    ...(() => {
+      // Haiku at low effort rejected plainly supported claims in the first comparison (2026-10-29): medium by default.
+      const check = parseSetting(env.ANTHROPIC_MODEL_CHECK?.trim() || env.ANTHROPIC_EXTRACTION_MODEL?.trim() || DEFAULT_MODEL, { model: DEFAULT_MODEL, effort: "medium" });
+      return { checkModel: check.model, checkEffort: check.effort };
+    })(),
+    checkCompare: (env.AI_CHECK_COMPARE ?? "claude-haiku-5-5:high,claude-sonnet-5-5:low")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((x) => parseSetting(x, base)),
     monthlyBudgetUsd: Number.isFinite(budget) && budget >= 0 ? budget : 40,
     maxInflight: Number.isInteger(inflight) && inflight > 0 ? Math.min(inflight, 40) : 12,
     model: base.model,

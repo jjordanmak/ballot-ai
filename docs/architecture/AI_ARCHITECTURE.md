@@ -66,6 +66,24 @@ The research pipeline exists, runs in the app (never in a Claude Code session), 
 - **Other settings** wait for that, then read the same stored copies, so every comparison column sees byte-identical documents.
 - **Busy site:** if the site is too busy to read, the job waits 1–2 minutes and retries rather than running on fewer documents. After 10 waits it runs with what it has.
 
+**People: facts first, then a bio (owner, 2026-10-29).**
+- **Stage 1 (`PersonFacts`):** the model returns fields only, each with its exact quote. Code (`src/lib/research/person.ts`) checks every institution, title, organization and year against that quote; the AI support checker is not used here. Code also drops "present" from archived or long-outdated pages, merges duplicates (keeping the more trusted source and recording the conflict), and writes every line itself (`src/domain/profileFormat.ts`).
+  - **Education:** degree, field, institution, year.
+  - **Positions:** title, organization, district, years, type, plus committee memberships.
+  - **Platform:** 3–5 items, attributed, and never from news.
+  - **Residence:** local races only.
+- **Stage 2 (`PersonBio`):** the model gets only the checked facts (no documents) and writes 3–5 neutral sentences, each naming the facts it uses. Code rejects any number or capitalized name not in those facts, plus family background, awards and judgment words. In publish mode the writer is `ANTHROPIC_MODEL_BIO`.
+- **Selection rules:** these are in `PERSON_RULES` (`src/lib/ai/prompts.ts`). In compare mode the model also lists what it left out and why.
+- **Sources for people, in trust order:**
+  1. official pages (`.gov`, voter guides, court bios);
+  2. Ballotpedia;
+  3. articles from the vetted outlets in `src/data/sources/news.json`;
+  4. the campaign site (platform only).
+
+  Wikipedia is a finder only: its reference links are followed, and it is never cited. Measures and offices stay official-only.
+- **Diagnostics:** every page tried, and why any was skipped, is in `synthesis_runs.metadata.tried` and shown on `/internal/compare`.
+- **Checker:** Haiku at medium effort by default. Haiku at low effort wrongly rejected supported claims in the first comparison. In compare mode the settings in `AI_CHECK_COMPARE` also judge every prose claim, for calibration.
+
 **Prompts and caching (owner, 2026-10-29).**
 - **One file:** every prompt lives in `src/lib/ai/prompts.ts`, with one `PROMPT_VERSION` and a snapshot test, so wording changes are deliberate.
 - **Already cached:** the frozen research instructions (about 1.2K tokens, over the 512-token minimum on Haiku/Sonnet/Opus 5.5). The run log shows reads on repeat calls, and the review page has an "Input from cache" column.

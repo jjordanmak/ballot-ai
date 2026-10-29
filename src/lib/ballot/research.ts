@@ -7,6 +7,7 @@
  */
 import type { Contest, ResolvedBallot } from "@/domain/ballot";
 import type { CandidateEnrichment, Cited, ContestEnrichment, EnrichmentBundle, MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
+import { educationLine, positionYears } from "@/domain/profileFormat";
 import { officeKeyFor } from "@/lib/research/targets";
 import type { MeasurePayload, OfficePayload, Payload, PersonPayload, StoredAnswer, StoredSource } from "@/lib/research/verify";
 import { candidateKey, contestKey, measureKey } from "./enrichmentKeys";
@@ -22,7 +23,7 @@ function sourceDoc(s: StoredSource): SourceDoc {
   return { title: s.title, publisher: s.publisher, url: s.url, official: s.official, accessed: s.fetchedAt.slice(0, 10) };
 }
 
-const cited = (a: StoredAnswer): Cited => ({ text: a.text, sources: [docId(a.source)] });
+const cited = (a: StoredAnswer): Cited => ({ text: a.text, sources: [docId(a.source)], quotes: [a.quote] });
 
 function isPayload(p: unknown): p is Payload {
   return !!p && typeof p === "object" && ["measure", "person", "office"].includes((p as Payload).kind);
@@ -52,21 +53,45 @@ function mergeMeasure(cur: MeasureEnrichment | undefined, p: MeasurePayload): Me
 function mergePerson(cur: CandidateEnrichment | undefined, p: PersonPayload): CandidateEnrichment {
   const out: CandidateEnrichment = { ...(cur ?? {}) };
   const ai: string[] = [];
-  if (p.currentRole && !out.currentRole) {
-    out.currentRole = cited(p.currentRole);
+  if (p.v !== 2) return out; // superseded shape (first comparison pass); never published
+  const ref = (x: { quote: string; source: string }) => ({ sources: [docId(x.source)], quotes: [x.quote] });
+  const current = p.positions.find((x) => x.endYear === "present");
+  if (current && !out.currentRole) {
+    out.currentRole = { text: [current.title, current.organization].filter(Boolean).join(", "), ...ref(current) };
     ai.push("currentRole");
   }
-  if (p.background.length && !out.background?.length) {
-    out.background = p.background.map(cited);
-    ai.push("background");
+  if (p.bio.length && !out.bio?.length) {
+    // Each sentence cites the facts it was written from.
+    const facts = new Map<string, { quote: string; source: string }>([
+      ...p.positions.map((x, i) => [`P${i}`, x] as const),
+      ...p.education.map((x, i) => [`E${i}`, x] as const),
+      ...p.platform.map((x, i) => [`L${i}`, x] as const),
+      ...(p.residence ? [["R", p.residence] as const] : []),
+    ]);
+    out.bio = p.bio.map((s) => {
+      const refs = s.facts.map((id) => facts.get(id)).filter((x): x is { quote: string; source: string } => !!x);
+      const seen = new Set<string>();
+      const uniq = refs.filter((r) => !seen.has(r.source) && seen.add(r.source));
+      return { text: s.text, sources: uniq.map((r) => docId(r.source)), quotes: uniq.map((r) => r.quote) };
+    });
+    ai.push("bio");
   }
-  if (p.pastPositions.length && !out.pastPositions?.length) {
-    out.pastPositions = p.pastPositions.map((x) => ({ title: x.title, organization: x.organization, years: x.years, sources: [docId(x.source)] }));
+  if (p.education.length && !out.education?.length) {
+    out.education = p.education.map((e) => ({ text: educationLine(e), ...ref(e) }));
+    ai.push("education");
+  }
+  if (p.positions.length && !out.pastPositions?.length) {
+    out.pastPositions = p.positions.map((x) => ({
+      title: [x.title, x.organization && !x.title.toLowerCase().includes(x.organization.toLowerCase()) ? x.organization : null].filter(Boolean).join(", ") + (x.district ? ` (${x.district})` : ""),
+      years: positionYears(x) || undefined,
+      committees: x.committees?.length ? x.committees : undefined,
+      ...ref(x),
+    }));
     ai.push("pastPositions");
   }
-  if (p.priorities.length && !out.priorities?.length) {
-    out.priorities = p.priorities.map(cited);
-    ai.push("priorities");
+  if (p.platform.length && !out.platform?.length) {
+    out.platform = p.platform.map((x) => ({ text: x.text, ...ref(x) }));
+    ai.push("platform");
   }
   if (ai.length) out.aiFields = [...(cur?.aiFields ?? []), ...ai];
   return out;

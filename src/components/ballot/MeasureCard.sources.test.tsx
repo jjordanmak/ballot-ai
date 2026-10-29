@@ -11,12 +11,12 @@ describe("Daly City proposition cards", () => {
   const { measures } = toRaces(ballot, getEnrichment("2026-11-03"));
   const props = measures.filter((m) => m.statewide);
 
-  it("show one Sources block with the ballot data first, and no [1] when one source backs the text", () => {
+  it("show one Sources block with the ballot data first, and a [1] marker even when one source backs the text", () => {
     expect(props.length).toBeGreaterThan(0);
     for (const m of props) {
       const html = renderToString(<MeasureCard contest={m.contest} enrichment={m.enrichment} docs={m.sourceDocs} />).replace(/<!-- -->/g, "");
       expect(html.match(/>Sources</g) ?? []).toHaveLength(1);
-      if (Object.keys(m.sourceDocs).length === 1) expect(html).not.toMatch(/\[1\]/);
+      if (Object.keys(m.sourceDocs).length === 1) expect(html).toMatch(/\[1\]/);
       expect(html).toContain("Ballot data:");
     }
   });

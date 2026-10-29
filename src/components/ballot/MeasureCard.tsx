@@ -69,7 +69,7 @@ export function MeasureCard({
       {e?.summary ? (
         <p className="mt-5 text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty max-w-3xl">
           <RichText text={e.summary.text} auto="neutral" />
-          <Cite ids={e.summary.sources} docs={docs} />
+          <Cite ids={e.summary.sources} docs={docs} quotes={e.summary.quotes} />
         </p>
       ) : m?.brief ? (
         <p className="mt-5 text-[15px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">{m.brief}</p>
@@ -101,7 +101,7 @@ export function MeasureCard({
                   {a.kind === "cited" ? (
                     <>
                       <RichText text={a.item.text} auto="neutral" />
-                      <Cite ids={a.item.sources} docs={docs} />
+                      <Cite ids={a.item.sources} docs={docs} quotes={a.item.quotes} />
                     </>
                   ) : a.kind === "title" ? (
                     <>
@@ -211,7 +211,7 @@ export function Meaning({
   muted,
 }: {
   label: string;
-  item: { text: string; sources: string[] };
+  item: { text: string; sources: string[]; quotes?: (string | undefined)[] };
   docs: Record<string, SourceDoc>;
   muted?: boolean;
 }) {
@@ -220,7 +220,7 @@ export function Meaning({
       <div className="font-mono-cap text-[9px] text-[var(--color-paper-3)] tracking-[0.16em] mb-1.5">{label}</div>
       <p className={`leading-[1.6] ${muted ? "text-[13px] text-[var(--color-paper-2)]" : "text-[14px] text-[var(--color-paper)]"}`}>
         <RichText text={item.text} auto="neutral" />
-        <Cite ids={item.sources} docs={docs} />
+        <Cite ids={item.sources} docs={docs} quotes={item.quotes} />
       </p>
     </div>
   );

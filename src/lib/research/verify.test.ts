@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { MeasureResearch, PersonResearch } from "@/lib/ai/schemas";
-import { buildPayload, payloadIsEmpty, screenMeasure, screenPerson, type FetchedDoc } from "./verify";
+import type { MeasureResearch } from "@/lib/ai/schemas";
+import { buildPayload, payloadIsEmpty, screenMeasure, type FetchedDoc } from "./verify";
 
 const docs: FetchedDoc[] = [
   {
@@ -53,21 +53,5 @@ describe("buildPayload", () => {
     expect(rejected).toEqual([{ field: "currentLaw", reason: "unsupported" }]);
     expect(sourceIds).toEqual(["uuid-1"]);
     expect(payloadIsEmpty(payload)).toBe(false);
-  });
-
-  it("shapes a person, keeping position details from the model's list", () => {
-    const person: PersonResearch = {
-      currentRole: null,
-      background: [{ text: "Was a road engineer.", quote: "sends the money to road repair", sourceId: "D1" }],
-      priorities: [],
-      pastPositions: [{ title: "Engineer", organization: "State DOT", years: "2010–2020", quote: "the state charges a 6% tax on sales", sourceId: "D1" }],
-    };
-    const { pending } = screenPerson(person, docs);
-    const { payload } = buildPayload("person", pending, [true, true], docs, person.pastPositions);
-    expect(payload).toMatchObject({
-      kind: "person",
-      background: [{ text: "Was a road engineer.", source: "uuid-1" }],
-      pastPositions: [{ title: "Engineer", organization: "State DOT", years: "2010–2020", source: "uuid-1" }],
-    });
   });
 });

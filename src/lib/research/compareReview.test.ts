@@ -24,7 +24,7 @@ describe("buildComparison", () => {
     expect(item.cells.map((c) => c.status)).toEqual(["done", "done", "no documents"]);
     // Same words, different marks and punctuation: not a difference.
     expect(item.differing).toEqual([]);
-    expect(item.cells[0].fields.summary[0]).toMatchObject({ quote: "q", source: src });
+    expect(item.cells[0].fields.summary[0]).toMatchObject({ refs: [{ quote: "q", source: src }] });
     expect(item.cells[0].rejected).toEqual([{ field: "taxes", reason: "quote not found" }]);
     expect(summary[0]).toMatchObject({ setting: "claude-haiku-5-5:low", done: 1, costMicroUsd: 3000, avgSeconds: 4, kept: 1, blank: 8, rejectedByReason: { "quote not found": 1 }, cachedShare: 0.25 });
     expect(summary[2]).toMatchObject({ done: 0, costMicroUsd: 0, avgSeconds: null, cachedShare: null });
@@ -36,6 +36,26 @@ describe("buildComparison", () => {
       ["measure:m1:measure@claude-sonnet-5-5:medium", { stateKey: "", payload: measure("Borrows $12 billion.") }],
     ]);
     expect(buildComparison([target], settings, cells).items[0].differing).toEqual(["summary"]);
+  });
+
+  it("shows a person as the ballot would: bio, current role, education, positions with committees, and what was left out", () => {
+    const person: CompareTarget = { key: "candidate:k1:profile", kind: "candidate", label: "Ann Bee", group: "Candidates" };
+    const payload = {
+      kind: "person" as const,
+      v: 2 as const,
+      education: [{ degree: "Juris Doctor", institution: "Stanford Law School", quote: "qe", source: "s1" }],
+      positions: [{ title: "State Senator", organization: "California State Senate", startYear: 2020, endYear: "present" as const, type: "elected" as const, committees: ["Budget"], quote: "qp", source: "s1" }],
+      platform: [{ text: "Says she will expand transit.", quote: "ql", source: "s1" }],
+      bio: [{ text: "Ann Bee is a State Senator.", facts: ["P0"] }],
+      sources: { s1: src },
+    };
+    const cells = new Map<string, CellInput>([["candidate:k1:profile@claude-haiku-5-5:low", { stateKey: "", payload, run: { leftOut: [{ fact: "Son of teachers", reason: "family background" }] } }]]);
+    const cell = buildComparison([person], settings, cells).items[0].cells[0];
+    expect(cell.fields.bio).toEqual([{ text: "Ann Bee is a State Senator.", refs: [{ quote: "qp", source: src }] }]);
+    expect(cell.fields.currentRole[0].text).toBe("State Senator, California State Senate");
+    expect(cell.fields.education[0].text).toBe("J.D., Stanford Law School");
+    expect(cell.fields.pastPositions[0]).toMatchObject({ text: "State Senator, California State Senate · 2020–present", sub: "Committees: Budget" });
+    expect(cell.leftOut).toEqual([{ fact: "Son of teachers", reason: "family background" }]);
   });
 
   it("a cell with nothing yet is pending", () => {

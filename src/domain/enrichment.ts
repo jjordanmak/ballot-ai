@@ -25,6 +25,8 @@ export interface SourceDoc {
 export interface Cited {
   text: string;
   sources: string[];
+  /** The exact supporting sentence from each source (same order as `sources`), shown in the footnote popover. */
+  quotes?: (string | undefined)[];
 }
 
 export interface PollResult {
@@ -81,9 +83,13 @@ export interface CandidateEnrichment {
   /** Official campaign site / X account, each from an official filing (e.g. the SoS voter guide contact block). */
   links?: { kind: "campaign" | "x"; url: string; sources: string[] }[];
   currentRole?: Cited;
+  /** A short neutral bio written from the cited facts below (research job, stage 2). */
+  bio?: Cited[];
+  /** One line per degree, written by code ("J.D., Stanford Law School · 1984"). */
+  education?: Cited[];
   platform?: Cited[];
   background?: Cited[];
-  pastPositions?: { title: string; organization?: string; years?: string; sources: string[] }[];
+  pastPositions?: { title: string; organization?: string; years?: string; committees?: string[]; sources: string[]; quotes?: (string | undefined)[] }[];
   experience?: Cited[];
   trackRecord?: { priority: string; items: Cited[] }[];
   priorities?: Cited[];
