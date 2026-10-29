@@ -28,6 +28,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 ### Color discipline (this is load-bearing)
 - **Yellow accent** (`--color-accent`, golden ~`oklch(80% 0.155 82)`): ONLY for `<mark>` highlights and small UI accents (icons in section eyebrows, hover states, the polling rail). NEVER as a tinted background on cards/tables/profiles.
 - **Red and blue**: reserved EXCLUSIVELY for Republican / Democratic party encoding. Never use them for status, errors, links, or anything else.
+- **Other party colors** (owner, 2026-10-29): a party gets a color only if it's as strongly tied to one as red/blue are to Rep/Dem — today Green (green) and Libertarian (gold `--color-lib`, distinct from the yellow accent). Every other party is neutral gray, and the pill always prints the party exactly as the ballot data names it (`Candidate.partyName`). Party is never shown by color alone.
 - **Trend-down** uses `--color-trend-down` (a muted red, distinct from rep red).
 - **Backgrounds**: chroma is pulled to ~0.003 so cards/tables/profiles read as honest gray, not yellow-tinted. If you reach for a yellow-tinted bg, that's wrong.
 - **Supplementary tints** (orange / green / teal / purple / pink): allowed for data encoding (key-section pillars, endorsement categories) but never as primary surface bg.
@@ -35,6 +36,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 ### Highlights (`<mark>`)
 - Solid-fill bar (no gradient) with rounded corners. Already styled in `globals.css`.
 - Auto-highlight algorithm in `src/components/Highlight.tsx` runs at render. Manual `<mark>` tags pass through. Don't disable it without a reason.
+- Nov 3 ballot surfaces pass `auto="neutral"`: only structural facts (amounts, percentages, counts, vote thresholds, dates, measure numbers) are auto-highlighted — no topical phrases, superlatives, "leading"/"frontrunner". The highlighter escapes all text and re-allows only `mark`/`strong`/`em`/`br`.
 - For AI synthesis (Phase 5): the LLM prompt should wrap 2–3 load-bearing phrases per text field in `<mark>`.
 
 ### Sticky behavior pattern
@@ -62,9 +64,10 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 
 ### Other rules
 - DB column was renamed `current_role` → `current_position` (Postgres reserved word). TS still uses `currentRole`; the mapper in `src/lib/db/getBallot.ts` translates.
-- (Archive view) The Update button is **Realtime-driven**: disabled until a row changes in `candidates`/`races`/`endorsements`/`polls`. Don't make it always-clickable.
-- News updates push via Supabase Realtime separately — don't use the Update button for news.
-- (Nov 3 ballot page) **No Update button.** New feed items appear live through one Realtime channel per page (`src/components/ballot/LiveFeed.tsx`); "Last updated" is when the newest item appeared on this ballot (`ingested_at`), falling back to the ballot's retrieved time. Items auto-publish when they pass the automated checks in `src/lib/feeds/` — there is no manual queue.
+- **Deprecated June 2026 primary** (`/archive/[electionId]/[zip]`): internal reference only. It renders from a frozen snapshot (`src/data/deprecated/`, rebuilt by `scripts/snapshot-deprecated.ts`), never the database; it 404s in production and works locally and on Vercel previews; nothing links to it. A render test (`src/components/deprecated/JunePrimary.test.tsx`) must keep passing when shared components change. A user-facing archive of past elections is a future feature (`elections.status = 'archived'`).
+- (Nov 3 ballot page) **No Update button.** New feed items (news, polls) appear live through one Realtime **Broadcast** channel per page, `feed:{election}:{state}` (`src/components/ballot/LiveFeed.tsx`, trigger in migration 0008); "Last updated" is when the newest item appeared on this ballot (`ingested_at`), falling back to the ballot's retrieved time. Items auto-publish when they pass the automated checks in `src/lib/feeds/` — there is no manual queue.
+- **National by default.** Nothing may assume California: division keys carry the state, districts/chambers/categories come from the provider's division and scope, measure headings use the ballot's own term, copy says "local election office". Add a test for at least one non-CA case with any ballot logic change.
+- **Election day ends in Hawaii.** "Today" for elections is `electionToday()` (`src/domain/electionDay.ts`), never the UTC date.
 - Suspended candidates render with a red status pill, NOT yellow/orange.
 
 ---
@@ -88,22 +91,25 @@ src/
 │   ├── page.tsx                       Landing (address form)
 │   ├── actions.ts                     Server action: address → ballot → redirect
 │   ├── ballot/[electionSlug]/[ballotKey]/page.tsx   Ballot view (address-free key, noindex)
-│   ├── archive/[electionId]/[zip]/page.tsx          June 2026 primary prototype (read-only)
+│   ├── archive/[electionId]/[zip]/page.tsx          Deprecated June 2026 primary (frozen snapshot; previews only)
+│   ├── api/address/*                  Places suggestion proxy (same-site only, monthly cap)
+│   ├── api/cron/*                     Collectors: news (2 min), polls (20 min), news-recheck (daily)
 │   ├── layout.tsx                     Root metadata, fonts
 │   └── globals.css                    Design tokens, mark styles, animations
 ├── components/                        UI components (one per concern); ballot/ = new ballot view
 ├── domain/                            Provider-independent ballot types (the UI's only data contract)
-├── data/                              June-primary seed data (archive only)
+├── data/                              enrichment/ + official/ (Nov 3 researched data), sources/ (news outlets, pollsters), deprecated/ (frozen June snapshot), June TS content
 └── lib/
     ├── ballot/                        Application service: resolve, load, store, validate, copy
     ├── providers/                     BallotResolver/ElectionProvider + google-civic/ + fixture/
+    ├── feeds/                         News + poll collectors, matcher, checks, safe fetch, X-link discovery
+    ├── usage/                         Monthly API quota (Places)
     ├── observability/                 Redacting logger
-    ├── db/                            Archive fetchers (getBallot, getElection, getJurisdiction)
     └── supabase/                      Typed clients (server/browser/admin) + DB types
 supabase/
 └── migrations/                        SQL migrations
 scripts/
-├── seed.ts                            Seeds the archive from TS data files (`npm run seed`)
+├── snapshot-deprecated.ts             Rebuilds the frozen June snapshot from an export of its rows
 ├── validate-ballot.ts                 Validators over fixtures (`npm run validate:ballots`, CI)
 └── qa-resolve.ts                      Live QA from a private env address (`npm run qa:resolve`)
 docs/                                  PRD, architecture, environment, election plans (canonical)
@@ -117,14 +123,13 @@ specs/                                 Historical specs + design system (PRD in 
 └── phase-5-synthesis.md               Perplexity/Claude pipeline, output schema, triggers
 ```
 
-**Before implementing any feature or phase, read the relevant spec in `specs/`.** Specs are the authoritative source for requirements and design decisions — they take precedence over assumptions. If a spec is missing or incomplete for the task at hand, ask before proceeding.
+**Before implementing any feature or phase, read the relevant docs in `docs/` (canonical) and, for visual rules, `specs/design-system.md`.** Other files in `specs/` are historical (they describe the June ZIP-first prototype) and lose to `docs/` and this file where they disagree. If the docs are missing or incomplete for the task at hand, ask before proceeding.
 
 ---
 
 ## Local dev
 - `npm run dev` (port 3000)
 - Or use `preview_start` via the Claude_Preview MCP — config in `.claude/launch.json`
-- `npm run seed` to (re)populate Supabase from the TS data files
 - `npm run build` to typecheck + production build
 - `npm test` (Vitest), `npm run typecheck`, `npm run validate:ballots` — CI runs all of these plus lint and build
 - `BALLOT_PROVIDER=fixture npm run dev` runs the whole address → ballot flow on fictional data with no credentials (use a full address with city and state or ZIP, e.g. `1 Sample Way, Springfield, CA`; addresses containing `invalid`, `ratelimit`, `nocoverage`, `error`, `ambiguous` simulate failure states)
