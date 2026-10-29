@@ -3,6 +3,7 @@ import type { Race } from "@/data/types";
 import { RichBlock, RichText } from "./Highlight";
 import { partyDot } from "./PartyTag";
 import { NewsFeed } from "./NewsFeed";
+import { LivePoll } from "./ballot/LivePoll";
 import { SuspendedList } from "./SuspendedList";
 import { Cite, Researching, SourceList } from "./ballot/Citations";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
@@ -111,7 +112,19 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
         />
 
         {/* Polling */}
-        <PollingPanel race={race} className="md:col-span-5" />
+        {race.general ? (
+          <LivePoll
+            contestId={race.feed?.contestId}
+            className="md:col-span-5"
+            candidates={race.candidates.flatMap((c) =>
+              c.feed?.candidateId ? [{ candidateId: c.feed.candidateId, party: c.party, partyName: c.partyName }] : [],
+            )}
+          >
+            <PollingPanel race={race} className="md:col-span-5" />
+          </LivePoll>
+        ) : (
+          <PollingPanel race={race} className="md:col-span-5" />
+        )}
 
         {/* Suspended campaigns — accordion list, collapsed by default. */}
         <SuspendedList candidates={race.candidates.filter((c) => c.campaignSuspended)} />

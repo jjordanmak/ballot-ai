@@ -1,0 +1,297 @@
+{
+  "_about": "Approved pollsters for live polls (owner review pending, 2026-10-29). Academic, media and independent pollsters with public methodology; firms that mainly poll for parties or campaigns are left out, and any row Wikipedia marks as sponsored or partisan is held regardless. Names and aliases are matched against Wikipedia's 'Poll source' column. Add or remove entries here; nothing else needs to change.",
+  "pollsters": [
+    {
+      "name": "Emerson College",
+      "aliases": [
+        "Emerson College Polling",
+        "Emerson"
+      ]
+    },
+    {
+      "name": "Siena College",
+      "aliases": [
+        "Siena Research Institute",
+        "Siena",
+        "The New York Times/Siena College",
+        "New York Times/Siena"
+      ]
+    },
+    {
+      "name": "Marist College",
+      "aliases": [
+        "Marist Poll",
+        "Marist",
+        "NPR/PBS News/Marist"
+      ]
+    },
+    {
+      "name": "Quinnipiac University",
+      "aliases": [
+        "Quinnipiac"
+      ]
+    },
+    {
+      "name": "Monmouth University",
+      "aliases": [
+        "Monmouth"
+      ]
+    },
+    {
+      "name": "SurveyUSA"
+    },
+    {
+      "name": "Public Policy Institute of California",
+      "aliases": [
+        "PPIC"
+      ]
+    },
+    {
+      "name": "Berkeley IGS",
+      "aliases": [
+        "UC Berkeley IGS",
+        "Berkeley Institute of Governmental Studies"
+      ]
+    },
+    {
+      "name": "Marquette Law School",
+      "aliases": [
+        "Marquette University Law School",
+        "Marquette Law School Poll"
+      ]
+    },
+    {
+      "name": "Suffolk University",
+      "aliases": [
+        "Suffolk"
+      ]
+    },
+    {
+      "name": "University of New Hampshire",
+      "aliases": [
+        "UNH Survey Center",
+        "UNH"
+      ]
+    },
+    {
+      "name": "Saint Anselm College",
+      "aliases": [
+        "Saint Anselm"
+      ]
+    },
+    {
+      "name": "Fox News",
+      "aliases": [
+        "Fox News/Beacon Research/Shaw & Company"
+      ]
+    },
+    {
+      "name": "CNN/SSRS",
+      "aliases": [
+        "SSRS",
+        "CNN"
+      ]
+    },
+    {
+      "name": "ABC News/Washington Post/Ipsos",
+      "aliases": [
+        "ABC News/Ipsos",
+        "Washington Post/Ipsos",
+        "Washington Post-Schar School",
+        "Washington Post"
+      ]
+    },
+    {
+      "name": "Ipsos",
+      "aliases": [
+        "Reuters/Ipsos"
+      ]
+    },
+    {
+      "name": "YouGov",
+      "aliases": [
+        "CBS News/YouGov",
+        "The Economist/YouGov",
+        "YouGov/Yahoo News"
+      ]
+    },
+    {
+      "name": "Gallup"
+    },
+    {
+      "name": "Pew Research Center",
+      "aliases": [
+        "Pew Research"
+      ]
+    },
+    {
+      "name": "AP-NORC",
+      "aliases": [
+        "AP-NORC Center",
+        "Associated Press-NORC"
+      ]
+    },
+    {
+      "name": "NBC News",
+      "aliases": [
+        "NBC News/Hart-POS"
+      ]
+    },
+    {
+      "name": "Morning Consult"
+    },
+    {
+      "name": "Muhlenberg College",
+      "aliases": [
+        "Muhlenberg"
+      ]
+    },
+    {
+      "name": "Franklin & Marshall College",
+      "aliases": [
+        "Franklin and Marshall College",
+        "Franklin & Marshall"
+      ]
+    },
+    {
+      "name": "Roanoke College"
+    },
+    {
+      "name": "Christopher Newport University",
+      "aliases": [
+        "CNU Wason Center"
+      ]
+    },
+    {
+      "name": "Elon University",
+      "aliases": [
+        "Elon"
+      ]
+    },
+    {
+      "name": "High Point University",
+      "aliases": [
+        "High Point"
+      ]
+    },
+    {
+      "name": "Winthrop University",
+      "aliases": [
+        "Winthrop"
+      ]
+    },
+    {
+      "name": "University of North Florida",
+      "aliases": [
+        "UNF Public Opinion Research Lab"
+      ]
+    },
+    {
+      "name": "Florida Atlantic University",
+      "aliases": [
+        "FAU",
+        "FAU/Mainstreet"
+      ]
+    },
+    {
+      "name": "Texas Politics Project",
+      "aliases": [
+        "University of Texas/Texas Politics Project",
+        "UT/Texas Politics Project"
+      ]
+    },
+    {
+      "name": "University of Houston",
+      "aliases": [
+        "UH Hobby School",
+        "Hobby School of Public Affairs"
+      ]
+    },
+    {
+      "name": "Texas Lyceum"
+    },
+    {
+      "name": "Mason-Dixon Polling & Strategy",
+      "aliases": [
+        "Mason-Dixon"
+      ]
+    },
+    {
+      "name": "Selzer & Co.",
+      "aliases": [
+        "Selzer & Company",
+        "Des Moines Register/Mediacom"
+      ]
+    },
+    {
+      "name": "Western New England University"
+    },
+    {
+      "name": "UMass Lowell",
+      "aliases": [
+        "University of Massachusetts Lowell"
+      ]
+    },
+    {
+      "name": "UMass Amherst",
+      "aliases": [
+        "University of Massachusetts Amherst",
+        "YouGov/UMass Amherst"
+      ]
+    },
+    {
+      "name": "Glengariff Group"
+    },
+    {
+      "name": "EPIC-MRA"
+    },
+    {
+      "name": "Noble Predictive Insights",
+      "aliases": [
+        "OH Predictive Insights"
+      ]
+    },
+    {
+      "name": "Ohio Northern University"
+    },
+    {
+      "name": "Baldwin Wallace University",
+      "aliases": [
+        "Baldwin Wallace"
+      ]
+    },
+    {
+      "name": "Susquehanna Polling & Research",
+      "aliases": [
+        "Susquehanna"
+      ]
+    },
+    {
+      "name": "Cal Poly",
+      "aliases": [
+        "California Polytechnic State University"
+      ]
+    },
+    {
+      "name": "Hoover Institution/YouGov",
+      "aliases": [
+        "Hoover/YouGov"
+      ]
+    },
+    {
+      "name": "Field Research",
+      "aliases": [
+        "Field Poll"
+      ]
+    },
+    {
+      "name": "Mitchell Research & Communications",
+      "aliases": [
+        "Mitchell Research"
+      ]
+    },
+    {
+      "name": "Sacred Heart University"
+    }
+  ]
+}

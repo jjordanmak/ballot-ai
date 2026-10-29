@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import { ChevronRight, ArrowUp, MapPin } from "lucide-react";
+import { useLatestPoll } from "./ballot/LivePoll";
 import { partyDot } from "./PartyTag";
 import type { Race } from "@/data/types";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
@@ -230,7 +231,7 @@ function RaceNavItem({
                     >
                       <span className={`w-1 h-1 rounded-full ${partyDot(cand.party)}`} />
                       <span className="truncate flex-1">{cand.name}</span>
-                      <CandidateNavStat candidate={cand} />
+                      <CandidateNavStat candidate={cand} contestId={race.feed?.contestId} />
                     </a>
                   </li>
                 );
@@ -249,7 +250,16 @@ function RaceNavItem({
  *   down → muted red (same as the trending-down arrow)
  *   suspended → "susp." in the existing muted-paper-4
  */
-function CandidateNavStat({ candidate }: { candidate: Race["candidates"][number] }) {
+function CandidateNavStat({ candidate, contestId }: { candidate: Race["candidates"][number]; contestId?: string }) {
+  // Nov 3 ballot: the newest live poll wins over a researched one.
+  const live = useLatestPoll(contestId)?.results.find((r) => r.candidateId === candidate.feed?.candidateId)?.pct;
+  if (live != null) {
+    return (
+      <span className="font-mono race-number text-[10px] tabular-nums text-[var(--color-paper-3)]" aria-label={`Polling ${live} percent`}>
+        {live}%
+      </span>
+    );
+  }
   if (candidate.campaignSuspended) {
     return (
       <span className="font-mono-cap text-[8px] text-[var(--color-paper-4)] tracking-[0.18em]">
