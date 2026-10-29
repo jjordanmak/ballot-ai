@@ -6,6 +6,7 @@ import type { ElectionRef, ResolutionStatus, ResolvedBallot } from "@/domain/bal
 import type { AddressInput } from "../address";
 import type { BallotResolver, ElectionProvider, ProviderElection, ProviderResult } from "../types";
 import { GoogleCivicClient } from "./client";
+import { districtsFrom } from "@/domain/districts";
 import { normalizeVoterInfo } from "./normalize";
 import { clampTtl, decideStatus } from "./status";
 
@@ -68,6 +69,11 @@ export class GoogleCivicBallotResolver implements BallotResolver {
     if (!res.ok) return failed(res.failure, election, retrievedAt, res.reason);
 
     const n = normalizeVoterInfo(res.body, election, retrievedAt);
+    // Districts with no race this year (e.g. State Senate) only come from divisionsByAddress. Best effort.
+    const divisionIds =
+      n.contests.length > 0
+        ? await this.client.divisions(address).then((d) => (d.ok ? Object.keys(d.body.divisions ?? {}) : []))
+        : [];
     const ttl = clampTtl(res.maxAgeSeconds);
     const expiresAt = new Date(Date.parse(retrievedAt) + ttl * 1000).toISOString();
 
@@ -77,6 +83,7 @@ export class GoogleCivicBallotResolver implements BallotResolver {
       election,
       contests: n.contests,
       location: n.location,
+      districts: districtsFrom(divisionIds, n.contests),
       administration: n.administration,
       mailOnly: n.mailOnly,
       retrievedAt,
@@ -85,7 +92,12 @@ export class GoogleCivicBallotResolver implements BallotResolver {
         n.contests.length === 0
           ? [...n.warnings, { code: "ZERO_CONTESTS", severity: "error" }]
           : n.warnings,
-      districtDescriptors: n.districtDescriptors,
+      // Households share a cached ballot only when their contests, districts and ZIP all match.
+      districtDescriptors: [
+        ...n.districtDescriptors,
+        ...divisionIds.map((id) => `ocd:${id}`),
+        ...(n.location.zip ? [`zip:${n.location.zip}`] : []),
+      ],
     };
   }
 }

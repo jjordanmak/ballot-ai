@@ -72,6 +72,12 @@ export function locationLabel(loc: CoarseLocation): string {
   return parts.join(", ");
 }
 
+/** Sidebar / header location line: "Daly City, CA · 94015". Never a street. */
+export function locationLine(loc: CoarseLocation): string {
+  const label = locationLabel(loc);
+  return loc.zip ? `${label} · ${loc.zip}` : label;
+}
+
 /** Date-only strings render in local time without a UTC shift. */
 export function formatElectionDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ElectionRef } from "@/domain/ballot";
+import type { Contest, ElectionRef } from "@/domain/ballot";
 import sample from "../fixture/sample-voterinfo.json";
+import { districtsFrom } from "@/domain/districts";
 import { normalizeVoterInfo, safeUrl } from "./normalize";
 import type { CivicVoterInfoResponse } from "./types";
 
@@ -95,8 +96,8 @@ describe("normalizeVoterInfo", () => {
   it("never copies the street address", () => {
     const json = JSON.stringify(n);
     expect(json).not.toContain("1 Sample Way");
-    expect(json).not.toContain("00000");
-    expect(n.location).toEqual({ city: "Sample City", state: "CA", county: "Sample County" });
+    // ZIP is kept as coarse location (PRIVACY.md §2); the street line never is.
+    expect(n.location).toEqual({ city: "Sample City", state: "CA", county: "Sample County", zip: "00000" });
   });
 
   it("produces stable ids and sorted district descriptors", () => {
@@ -189,6 +190,29 @@ describe("VIP-shaped feeds", () => {
 describe("county from local jurisdiction", () => {
   it("adds 'County' when a contest district confirms the local jurisdiction is a county", () => {
     const v = normalizeVoterInfo(vip as CivicVoterInfoResponse, election, T);
-    expect(v.location).toEqual({ city: "Sample City", state: "CA", county: "Sample County" });
+    expect(v.location).toMatchObject({ city: "Sample City", state: "CA", county: "Sample County" });
+  });
+});
+
+describe("districtsFrom", () => {
+  const contest = (title: string) => ({ title }) as Contest;
+  it("reads congressional and legislative districts from OCD ids and the BOE district from contest titles", () => {
+    const ids = [
+      "ocd-division/country:us/state:ca/cd:15",
+      "ocd-division/country:us/state:ca/sldl:19",
+      "ocd-division/country:us/state:ca/sldu:11",
+      "ocd-division/country:us/state:ca/county:san_mateo",
+    ];
+    const titles = ["Governor", "Member, State Board of Equalization, District 2", "U.S. Representative, District 15"];
+    expect(districtsFrom(ids, titles.map(contest)).map((d) => `${d.kind}:${d.number}`)).toEqual([
+      "congressional:15",
+      "state_lower:19",
+      "state_upper:11",
+      "board_of_equalization:2",
+    ]);
+  });
+  it("falls back to contest titles when there are no division ids", () => {
+    const titles = ["U.S. Representative, District 15", "Member of the State Assembly, District 19"];
+    expect(districtsFrom([], titles.map(contest)).map((d) => `${d.kind}:${d.number}`)).toEqual(["congressional:15", "state_lower:19"]);
   });
 });

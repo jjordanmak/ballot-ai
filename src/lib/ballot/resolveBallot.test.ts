@@ -30,7 +30,8 @@ describe("resolveBallotForAddress", () => {
     expect(stored?.contests.length).toBe(12);
     const serialized = JSON.stringify(stored) + JSON.stringify(rt.store.events);
     expect(serialized).not.toContain("Sample Way");
-    expect(serialized).not.toContain("00000");
+    // The 5-digit ZIP is coarse location (shown on the page); the street never is.
+    expect(stored?.location.zip).toBe("00000");
     expect(rt.store.events[0]).toMatchObject({ status: "PARTIAL", contestCount: 12, state: "CA" });
   });
 

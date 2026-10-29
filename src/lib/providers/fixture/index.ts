@@ -9,6 +9,7 @@
 import type { ElectionRef, ResolutionStatus, ResolvedBallot } from "@/domain/ballot";
 import type { AddressInput } from "../address";
 import type { BallotResolver, ElectionProvider, ProviderElection, ProviderResult } from "../types";
+import { districtsFrom } from "@/domain/districts";
 import { normalizeVoterInfo } from "../google-civic/normalize";
 import { decideStatus } from "../google-civic/status";
 import type { CivicVoterInfoResponse } from "../google-civic/types";
@@ -56,6 +57,7 @@ export class FixtureBallotResolver implements BallotResolver {
       election,
       contests: n.contests,
       location: n.location,
+      districts: districtsFrom([], n.contests),
       administration: n.administration,
       mailOnly: n.mailOnly,
       retrievedAt,

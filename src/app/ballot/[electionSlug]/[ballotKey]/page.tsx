@@ -7,14 +7,16 @@ import { MobileNav } from "@/components/MobileNav";
 import { RaceHeader } from "@/components/RaceHeader";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { CandidatesHeader } from "@/components/CandidatesHeader";
+import { DistrictLine } from "@/components/ballot/DistrictLine";
 import { MeasureCard } from "@/components/ballot/MeasureCard";
 import { Researching } from "@/components/ballot/Citations";
 import type { Race } from "@/data/types";
 import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
-import { formatElectionDate, locationLabel, STATUS_COPY } from "@/lib/ballot/copy";
+import { formatElectionDate, locationLabel, locationLine, STATUS_COPY } from "@/lib/ballot/copy";
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { loadBallot } from "@/lib/ballot/loadBallot";
 import { toRaces, type MeasureView } from "@/lib/ballot/toRaces";
+import { districtsFrom } from "@/domain/districts";
 
 // Reads a short-lived, address-free resolution per request.
 export const dynamic = "force-dynamic";
@@ -45,7 +47,9 @@ export default async function BallotPage({ params }: { params: Params }) {
 
   const ballot = result.ballot;
   const { races, measures } = toRaces(ballot, getEnrichment(electionSlug));
-  const location = locationLabel(ballot.location);
+  // Tab title stays "City, ST"; the sidebar and header add the ZIP.
+  const location = locationLine(ballot.location);
+  const onBallot = new Set(districtsFrom([], ballot.contests).map((d) => d.kind));
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
   const measureGroups = MEASURE_GROUPS.map((g) => ({ ...g, items: measures.filter((m) => m.statewide === g.statewide) })).filter(
@@ -76,6 +80,14 @@ export default async function BallotPage({ params }: { params: Params }) {
           measureCount={measures.length}
           candidateCount={totalCandidates}
           retrievedAt={ballot.retrievedAt}
+          districtLine={
+            <DistrictLine
+              county={ballot.location.county}
+              state={ballot.location.state}
+              districts={ballot.districts ?? []}
+              onBallot={onBallot}
+            />
+          }
         >
           <Notices ballot={ballot} officialUrl={officialUrl} />
         </Cover>
@@ -197,8 +209,10 @@ function Cover({
   measureCount,
   candidateCount,
   retrievedAt,
+  districtLine,
   children,
 }: {
+  districtLine?: ReactNode;
   children?: ReactNode;
   location: string;
   electionName: string;
@@ -222,6 +236,7 @@ function Cover({
         {electionDate && <span className="text-[var(--color-paper-3)]"> · {electionDate}</span>}
       </h2>
       <div className="mt-1.5 font-mono-cap text-[15px] text-[var(--color-paper-2)] tracking-[0.18em]">{location}</div>
+      {districtLine}
       <div className="mt-12 flex flex-wrap items-end gap-x-10 gap-y-6">
         <Stat label="Races on your ballot" value={String(raceCount)} />
         <Stat label="Candidates" value={String(candidateCount)} />

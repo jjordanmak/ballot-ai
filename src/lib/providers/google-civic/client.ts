@@ -9,7 +9,7 @@
 import "server-only";
 import { logEvent } from "@/lib/observability/log";
 import type { AddressInput } from "../address";
-import type { CivicElectionsResponse, CivicVoterInfoResponse, GoogleApiError } from "./types";
+import type { CivicDivisionsByAddressResponse, CivicElectionsResponse, CivicVoterInfoResponse, GoogleApiError } from "./types";
 
 const BASE = "https://www.googleapis.com/civicinfo/v2";
 const TIMEOUT_MS = 8000;
@@ -54,6 +54,11 @@ export class GoogleCivicClient {
       { address: address.reveal(), electionId, returnAllAvailableData: "true" },
       "voterinfo",
     );
+  }
+
+  /** OCD division ids for the address (congressional, legislative, county, city…), with no election data. */
+  divisions(address: AddressInput): Promise<CivicCall<CivicDivisionsByAddressResponse>> {
+    return this.get<CivicDivisionsByAddressResponse>("/divisionsByAddress", { address: address.reveal() }, "divisions");
   }
 
   private async get<T>(path: string, params: Record<string, string>, op: string): Promise<CivicCall<T>> {

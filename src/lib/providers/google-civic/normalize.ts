@@ -405,12 +405,15 @@ function coarseLocation(res: CivicVoterInfoResponse, contests: Contest[] = []): 
     local &&
     !/county/i.test(local) &&
     contests.some((c) => normalizeForMatch(c.division.name) === normalizeForMatch(`County of ${local}`));
+  const zip = /^\d{5}/.exec(res.normalizedInput?.zip ?? "")?.[0];
   return {
     city: res.normalizedInput?.city || undefined,
     state: stateCode(res),
     county: local && /county/i.test(local) ? local : confirmed ? `${local} County` : undefined,
+    zip,
   };
 }
+
 
 /** Local election office first; state election office fills missing links. */
 function administration(res: CivicVoterInfoResponse): ElectionAdministration | undefined {

@@ -80,9 +80,14 @@ describe("GoogleCivicBallotResolver", () => {
   });
 
   it("retries once on network errors", async () => {
-    const f = vi.fn().mockRejectedValueOnce(new TypeError("fetch failed")).mockResolvedValueOnce(jsonResponse(200, sample));
+    const f = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(jsonResponse(200, sample))
+      .mockResolvedValueOnce(jsonResponse(200, { divisions: {} }));
     const r = await resolverWith(f as unknown as typeof fetch).resolveBallot(addr, election);
-    expect(f).toHaveBeenCalledTimes(2);
+    // voterinfo twice (one retry), then divisionsByAddress once.
+    expect(f).toHaveBeenCalledTimes(3);
     expect(r.contests.length).toBeGreaterThan(0);
   });
 

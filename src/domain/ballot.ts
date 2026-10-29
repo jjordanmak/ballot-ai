@@ -175,6 +175,18 @@ export interface CoarseLocation {
   city?: string;
   county?: string;
   state?: string;
+  /** 5-digit ZIP: coarse (tens of thousands of people), never the street. */
+  zip?: string;
+}
+
+/** Legislative districts that place this address, for display (e.g. "CA-15", "AD-19"). */
+export type DistrictKind = "congressional" | "state_lower" | "state_upper" | "board_of_equalization";
+
+export interface DistrictRef {
+  kind: DistrictKind;
+  /** District number as published, e.g. "15". */
+  number: string;
+  ocdId?: string;
 }
 
 export type WarningCode =
@@ -222,6 +234,8 @@ export interface ResolvedBallot {
   election?: ElectionRef;
   contests: Contest[];
   location: CoarseLocation;
+  /** Congressional, state legislative and similar districts, including ones with no race this year. */
+  districts?: DistrictRef[];
   administration?: ElectionAdministration;
   /** True when the provider reports voters here vote by mail only. */
   mailOnly?: boolean;

@@ -99,6 +99,12 @@ export interface CivicAdministrationRegion {
   sources?: CivicSource[];
 }
 
+export interface CivicDivisionsByAddressResponse {
+  normalizedInput?: CivicSimpleAddress;
+  /** Keyed by OCD division id. */
+  divisions?: Record<string, { name?: string }>;
+}
+
 export interface CivicVoterInfoResponse {
   kind?: string;
   election?: CivicElection;
