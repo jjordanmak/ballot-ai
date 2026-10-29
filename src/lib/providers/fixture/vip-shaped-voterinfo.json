@@ -1,0 +1,355 @@
+{
+  "kind": "civicinfo#voterInfoResponse",
+  "election": {
+    "id": "12000",
+    "name": "2026 General Midterm Election (fictional fixture)",
+    "electionDay": "2026-11-03",
+    "ocdDivisionId": "ocd-division/country:us"
+  },
+  "normalizedInput": {
+    "line1": "1 Fixture Ave",
+    "city": "Sample City",
+    "state": "CA",
+    "zip": "00000"
+  },
+  "state": [
+    {
+      "name": "California",
+      "electionAdministrationBody": {
+        "name": "Secretary of State (fictional)",
+        "electionInfoUrl": "https://example.org/sos",
+        "ballotInfoUrl": "https://example.org/sos/ballot"
+      },
+      "local_jurisdiction": {
+        "name": "Sample",
+        "electionAdministrationBody": {
+          "electionInfoUrl": "http://example.org/county"
+        }
+      },
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    }
+  ],
+  "contests": [
+    {
+      "type": "General",
+      "office": "Governor",
+      "district": {
+        "name": "County of Sample"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "1",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "ALEX EXAMPLE",
+          "party": "Democratic"
+        },
+        {
+          "name": "SAM PLACEHOLDER",
+          "party": "Republican"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Superintendent of Public Instruction",
+      "district": {
+        "name": "County of Sample"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "8",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "RIVER TEST"
+        },
+        {
+          "name": "PAT MOCK"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Member, State Board of Equalization, District 2",
+      "district": {
+        "name": "County of Sample"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "9",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "DREW ONE",
+          "party": "Democratic"
+        },
+        {
+          "name": "LEE TWO",
+          "party": "Democratic"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Member, Board of Supervisors, District 5 (Short Term)",
+      "district": {
+        "name": "5th Supervisorial District - 2022",
+        "scope": "countyCouncil"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "10",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "KIM THREE"
+        },
+        {
+          "name": "ASH FOUR"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "City of Sample City Member, City Council",
+      "district": {
+        "name": "City of Sample City"
+      },
+      "numberVotingFor": "3",
+      "ballotPlacement": "11",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "A ONE"
+        },
+        {
+          "name": "B TWO"
+        },
+        {
+          "name": "C THREE"
+        },
+        {
+          "name": "D FOUR"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "County Board of Education Member, Trustee Area 2",
+      "district": {
+        "name": "Sample County Board of Education Trustee A",
+        "scope": "schoolBoard"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "12",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "E FIVE"
+        },
+        {
+          "name": "F SIX"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "U.S. Representative, District 15",
+      "district": {
+        "name": "15th Congressional District - 2025"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "14",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "G SEVEN",
+          "party": "Democratic"
+        },
+        {
+          "name": "H EIGHT",
+          "party": "Republican"
+        }
+      ]
+    },
+    {
+      "type": "General",
+      "office": "Member of the State Assembly, District 19",
+      "district": {
+        "name": "19th Assembly District - 2022",
+        "scope": "stateLower"
+      },
+      "numberVotingFor": "1",
+      "ballotPlacement": "15",
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ],
+      "candidates": [
+        {
+          "name": "I NINE",
+          "party": "Democratic"
+        },
+        {
+          "name": "J TEN",
+          "party": "Republican"
+        }
+      ]
+    },
+    {
+      "type": "ballot-measure",
+      "ballotTitle": "Proposition 1 (Majority Approval Required)",
+      "referendumTitle": "Proposition 1 (Majority Approval Required)",
+      "district": {
+        "name": "County of Sample"
+      },
+      "ballotPlacement": "93",
+      "referendumBallotResponses": [
+        "YES",
+        "NO"
+      ],
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "ballot-measure",
+      "ballotTitle": "Proposition 50 (Majority Approval Required)",
+      "referendumTitle": "Proposition 50 (Majority Approval Required)",
+      "district": {
+        "name": "County of Sample"
+      },
+      "ballotPlacement": "94",
+      "referendumBallotResponses": [
+        "YES",
+        "NO"
+      ],
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "ballot-measure",
+      "ballotTitle": "Sample Union High School District, Measure M (2/3 Approval Required)",
+      "referendumTitle": "Sample Union High School District, Measure M (2/3 Approval Required)",
+      "district": {
+        "name": "Sample Union High School District"
+      },
+      "ballotPlacement": "95",
+      "referendumBallotResponses": [
+        "YES",
+        "NO"
+      ],
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "ballot-measure",
+      "ballotTitle": "County of Sample, Measure AA (Majority Approval Required)",
+      "referendumTitle": "County of Sample, Measure AA (Majority Approval Required)",
+      "district": {
+        "name": "County of Sample"
+      },
+      "ballotPlacement": "96",
+      "referendumBallotResponses": [
+        "YES",
+        "NO"
+      ],
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "ballot-measure",
+      "ballotTitle": "Regional Transit Measure (Majority Approval Required)",
+      "referendumTitle": "Regional Transit Measure (Majority Approval Required)",
+      "district": {
+        "name": "County of Sample"
+      },
+      "ballotPlacement": "97",
+      "referendumBallotResponses": [
+        "YES",
+        "NO"
+      ],
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    },
+    {
+      "type": "ballot-measure",
+      "ballotTitle": "Sample Community College District, Measure V (55 Percent Approval Required)",
+      "referendumTitle": "Sample Community College District, Measure V (55 Percent Approval Required)",
+      "district": {
+        "name": "Sample Community College District",
+        "scope": "schoolBoard"
+      },
+      "ballotPlacement": "98",
+      "referendumBallotResponses": [
+        "YES",
+        "NO"
+      ],
+      "sources": [
+        {
+          "name": "Voting Information Project",
+          "official": true
+        }
+      ]
+    }
+  ]
+}

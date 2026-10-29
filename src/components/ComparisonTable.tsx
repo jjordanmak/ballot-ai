@@ -18,7 +18,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff, RotateCcw, Info } from "lucide-react";
+import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff, RotateCcw, Info, ExternalLink } from "lucide-react";
 import type { Race, Candidate } from "@/data/types";
 import { partyClass, partyDot, partyBorder, partyLabel, StatusPill } from "./PartyTag";
 import { RichText } from "./Highlight";
@@ -119,7 +119,7 @@ export function ComparisonTable({ race }: Props) {
           between header content and toolbar is internal padding (pb-5 on
           the inner header block) — it scrolls with them, never separates
           on scroll, never needs CSS-variable coordination. */}
-      <div className="sticky top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
+      <div className="sticky top-14 lg:top-0 z-[100] bg-[var(--color-ink-0)] pt-8">
         {/* Eyebrow row — eyebrow on the left, Show/Hide/Reset controls on
             the right (mirrors the candidate-profiles section's eyebrow +
             Expand/Collapse pattern). mb-8 below this row matches the
@@ -139,13 +139,13 @@ export function ComparisonTable({ race }: Props) {
                 className="pointer-events-none absolute left-0 top-full mt-2 w-[320px] z-50 opacity-0 group-hover/tip:opacity-100 group-focus/tip:opacity-100 transition-opacity duration-150 rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left"
               >
                 <span className="block text-[11px] text-[var(--color-paper-2)] leading-snug normal-case tracking-normal">
-                  We compare the major candidates in this race
-                  side-by-side on the policy issues that matter most for
-                  this office. Positions are drawn from candidate
-                  statements, debates, voting records, and public
-                  interviews — never inferred. Suspended and withdrawn
-                  candidates are excluded even when they remain on
-                  printed ballots. This race compares{" "}
+                  Candidates in this race side by side, in ballot order,
+                  on the issues researched for this office. Each position
+                  comes from a cited source (candidate statements,
+                  debates, voting records, public interviews) and is never
+                  inferred. Suspended and withdrawn candidates are
+                  excluded even when they remain on printed ballots. This
+                  race compares{" "}
                   {allCandidates.length} candidate
                   {allCandidates.length === 1 ? "" : "s"} across{" "}
                   {race.issues.length} issue
@@ -191,7 +191,7 @@ export function ComparisonTable({ race }: Props) {
             on the RIGHT, vertically centered with the chips. The
             Show/Hide/Reset action group lives in the eyebrow row above
             so the toolbar interior is just chips + their behavior label. */}
-        <div className="px-5 pt-5 pb-4 flex items-center gap-5">
+        <div className="px-5 pt-5 pb-4">
           <DndContext
             id={`compare-${race.id}`}
             sensors={sensors}
@@ -199,7 +199,7 @@ export function ComparisonTable({ race }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-              <div className="flex-1 min-w-0 flex flex-wrap gap-2.5 items-center">
+              <div className="flex flex-wrap gap-2.5 items-center">
                 {order.map((id) => {
                   const c = candidatesById[id];
                   if (!c) return null;
@@ -216,7 +216,7 @@ export function ComparisonTable({ race }: Props) {
             </SortableContext>
           </DndContext>
 
-          <div className="shrink-0 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
+          <div className="mt-3 font-mono-cap text-[10px] text-[var(--color-paper-4)] tracking-[0.16em]">
             Drag to reorder · Click to toggle
           </div>
         </div>
@@ -289,13 +289,22 @@ export function ComparisonTable({ race }: Props) {
                           <>
                             <RichText
                               text={pos.stance}
+                              auto={c.general ? "neutral" : "archive"}
                               className="text-[13px] leading-relaxed text-[var(--color-paper)] text-pretty"
                             />
-                            {pos.source && (
-                              <div className="mt-2 font-mono-cap text-[9px] text-[var(--color-paper-4)]">
-                                {pos.source}
-                              </div>
-                            )}
+                            {pos.source &&
+                              (pos.sourceUrl ? (
+                                <a
+                                  href={pos.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-2 inline-flex items-center gap-1 font-mono-cap text-[9px] text-[var(--color-paper-4)] hover:text-[var(--color-accent)]"
+                                >
+                                  {pos.source} <ExternalLink size={9} aria-hidden />
+                                </a>
+                              ) : (
+                                <div className="mt-2 font-mono-cap text-[9px] text-[var(--color-paper-4)]">{pos.source}</div>
+                              ))}
                           </>
                         ) : (
                           <span className="text-[12px] italic text-[var(--color-paper-4)]">
@@ -398,18 +407,16 @@ function CandidateColHeader({ candidate, raceId }: { candidate: Candidate; raceI
         </a>
       </div>
 
-      {/* Party pill (full name) */}
-      <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+      {/* Party + polling status — single row */}
+      <div className="mt-2.5 flex items-center gap-1.5 flex-nowrap overflow-hidden">
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2 py-0.5 ${partyClass(candidate.party)}`}
+          className={`shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2 py-0.5 ${partyClass(candidate.party)}`}
         >
           <span className={`w-1 h-1 rounded-full ${partyDot(candidate.party)}`} />
-          {partyLabel(candidate.party)}
+          {partyLabel(candidate.party, candidate.partyName)}
         </span>
-      </div>
-
-      {/* Polling status pill — with trend arrow */}
-      <div className="mt-1.5">
+{/* General-election races carry no polling-status labels (PRD §14). */}
+        {(candidate.pollingStatus || candidate.pollingPct != null || isSuspended) && (
         <StatusPill tone={isSuspended ? "warn" : "default"} size="xs">
           <span>
             {candidate.pollingStatus}
@@ -417,6 +424,7 @@ function CandidateColHeader({ candidate, raceId }: { candidate: Candidate; raceI
           </span>
           {!isSuspended && candidate.trend && <TrendArrow trend={candidate.trend} />}
         </StatusPill>
+        )}
       </div>
     </div>
   );

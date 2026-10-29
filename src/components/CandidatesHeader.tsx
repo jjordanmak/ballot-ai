@@ -11,6 +11,8 @@ interface Props {
   suspendedCount: number;
   raceId: string;
   unopposed: boolean;
+  /** Replaces the default coverage explainer (archive wording). */
+  coverageNote?: string;
 }
 
 /**
@@ -24,6 +26,7 @@ export function CandidatesHeader({
   suspendedCount,
   raceId,
   unopposed,
+  coverageNote,
 }: Props) {
   // `forceOpen` is undefined until the user uses one of the all controls.
   // After that, it stays sticky until the user uses the other one. The
@@ -47,7 +50,7 @@ export function CandidatesHeader({
           visual gap between the explainer and the first profile stays
           part of the header's opaque bg while pinned (rather than being
           external margin where body content could leak through). */}
-      <div className="relative sticky top-0 z-[100] pt-8 pb-8">
+      <div className="relative sticky top-14 lg:top-0 z-[100] pt-8 pb-8">
         {/* Background layer — behind the content (z:-10) so the masked
             fade applies ONLY to the bg paint, not to descendants like
             the Info tooltip popup. Putting bg + mask + backdrop-blur
@@ -82,24 +85,28 @@ export function CandidatesHeader({
               <Info size={11} />
               <span
                 role="tooltip"
-                className="pointer-events-none absolute left-0 top-full mt-2 w-[320px] z-50 opacity-0 group-hover/tip:opacity-100 group-focus/tip:opacity-100 transition-opacity duration-150 rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left"
+                className="pointer-events-none absolute left-0 top-full mt-2 w-[min(320px,calc(100vw-14rem))] z-50 opacity-0 group-hover/tip:opacity-100 group-focus/tip:opacity-100 transition-opacity duration-150 rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left"
               >
                 <span className="block text-[11px] text-[var(--color-paper-2)] leading-snug normal-case tracking-normal">
-                  We profile every major qualifying candidate for this
-                  office — including those who have suspended their
-                  campaigns but remain on printed ballots. Long-shot
-                  candidates with no public-source coverage (no debate
-                  qualification, no major polling, and no campaign
-                  filings beyond the candidate statement) are not
-                  profiled in depth, but they still appear on your
-                  ballot. This race profiles {activeCount} active
-                  candidate{activeCount === 1 ? "" : "s"}
-                  {suspendedCount > 0 && (
+                  {coverageNote ?? (
                     <>
-                      {" "}and {suspendedCount} suspended
+                    We profile every major qualifying candidate for this
+                    office — including those who have suspended their
+                    campaigns but remain on printed ballots. Long-shot
+                    candidates with no public-source coverage (no debate
+                    qualification, no major polling, and no campaign
+                    filings beyond the candidate statement) are not
+                    profiled in depth, but they still appear on your
+                    ballot. This race profiles {activeCount} active
+                    candidate{activeCount === 1 ? "" : "s"}
+                    {suspendedCount > 0 && (
+                      <>
+                        {" "}and {suspendedCount} suspended
+                      </>
+                    )}
+                    .
                     </>
                   )}
-                  .
                 </span>
               </span>
             </span>

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronRight, ArrowUp, MapPin } from "lucide-react";
+import { useLatestPoll } from "./ballot/LivePoll";
 import { partyDot } from "./PartyTag";
 import type { Race } from "@/data/types";
+import { useScrollSpy } from "@/hooks/useScrollSpy";
 
 interface SidebarProps {
   races: Race[];
@@ -12,104 +14,26 @@ interface SidebarProps {
    * sidebar header can show the right ZIP / election. Optional so older
    * uses (the static page) keep working with sensible defaults. */
   productName?: string;
-  location?: string;
-  electionName?: string;
-  electionDate?: string;
+  location: string;
+  electionName: string;
+  electionDate: string;
+  /** Footer line; defaults to the race count. */
+  footer?: string;
 }
 
 export function Sidebar({
   races,
   productName = "ballot.ai",
-  location = "Daly City, CA · 94015",
-  electionName = "Statewide Direct Primary",
-  electionDate = "Jun 2, 2026",
+  location,
+  electionName,
+  electionDate,
+  footer,
 }: SidebarProps) {
-  const [activeRaceId, setActiveRaceId] = useState<string>(races[0]?.id ?? "");
   // Hover-driven expansion: which race the cursor is over. Distinct from
   // active (scroll-spy) so the active highlight stays put as the user
   // scrolls but the dropdown only opens when the cursor is on the row.
   const [hoveredRaceId, setHoveredRaceId] = useState<string | null>(null);
-  // Active candidate (scroll-spy across all candidate profile articles).
-  // Highlighted in the sidebar candidate list so the user can see which
-  // profile they're currently reading without needing the profile header
-  // pinned to the viewport.
-  const [activeCandidateId, setActiveCandidateId] = useState<string | null>(null);
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // Scroll-spy: track which race section is currently in view
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    const visible = new Map<string, number>();
-
-    races.forEach((race) => {
-      const el = document.getElementById(`race-${race.id}`);
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              visible.set(race.id, entry.intersectionRatio);
-            } else {
-              visible.delete(race.id);
-            }
-          });
-          if (visible.size > 0) {
-            const top = [...visible.entries()].sort((a, b) => b[1] - a[1])[0][0];
-            setActiveRaceId(top);
-          }
-        },
-        { rootMargin: "-15% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
-
-    return () => observers.forEach((o) => o.disconnect());
-  }, [races]);
-
-  // Candidate scroll-spy — one observer for all `<article id="candidate-*">`.
-  // Whichever article has the largest visible ratio is the "current" one.
-  // We scope detection to the middle of the viewport (rootMargin) so we
-  // don't flicker as a cards' edge crosses in/out near the section header.
-  useEffect(() => {
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const id = entry.target.id;
-          if (entry.isIntersecting) {
-            visible.set(id, entry.intersectionRatio);
-          } else {
-            visible.delete(id);
-          }
-        });
-        if (visible.size > 0) {
-          const top = [...visible.entries()].sort((a, b) => b[1] - a[1])[0][0];
-          setActiveCandidateId(top);
-        } else {
-          setActiveCandidateId(null);
-        }
-      },
-      { rootMargin: "-25% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
-
-    races.forEach((race) => {
-      race.candidates.forEach((cand) => {
-        const el = document.getElementById(`candidate-${race.id}-${cand.id}`);
-        if (el) observer.observe(el);
-      });
-    });
-
-    return () => observer.disconnect();
-  }, [races]);
-
-  // Show "Back to top" once user scrolls past one viewport.
-  useEffect(() => {
-    const onScroll = () => setShowBackToTop(window.scrollY > window.innerHeight * 0.6);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const { activeRaceId, activeCandidateId, showBackToTop } = useScrollSpy(races);
 
   return (
     <aside className="hidden lg:flex sticky top-0 left-0 h-screen w-[300px] xl:w-[340px] flex-col border-r border-[var(--color-ink-3)] bg-[var(--color-ink-0)]">
@@ -179,8 +103,9 @@ export function Sidebar({
       <nav className="flex-1 overflow-y-auto p-3 pr-2">
         <ol className="flex flex-col gap-0.5">
           {races.map((race, i) => (
+            <Fragment key={race.id}>
+            {startsGroup(races, i) && <NavGroupHeading label={race.group!} first={i === 0} />}
             <RaceNavItem
-              key={race.id}
               race={race}
               index={i + 1}
               // Expand when EITHER the cursor is over the row OR the
@@ -194,15 +119,33 @@ export function Sidebar({
                 setHoveredRaceId((prev) => (prev === race.id ? null : prev))
               }
             />
+            </Fragment>
           ))}
         </ol>
       </nav>
 
       {/* Footer */}
       <div className="p-4 border-t border-[var(--color-ink-3)] text-[11px] text-[var(--color-paper-3)] font-mono-cap tracking-[0.16em]">
-        Live data · {races.length} races
+        {footer ?? `Live data · ${races.length} races`}
       </div>
     </aside>
+  );
+}
+
+/** True when race `i` opens a new jurisdiction group (races are pre-sorted by group). */
+export function startsGroup(races: Race[], i: number): boolean {
+  return !!races[i].group && races[i].group !== races[i - 1]?.group;
+}
+
+/** Jurisdiction heading (Federal, Statewide, …) above a run of races in the nav. */
+export function NavGroupHeading({ label, first }: { label: string; first: boolean }) {
+  return (
+    <li
+      role="presentation"
+      className={`px-3 pb-1 font-mono-cap text-[9px] tracking-[0.18em] text-[var(--color-paper-4)] ${first ? "pt-1" : "pt-4"}`}
+    >
+      {label}
+    </li>
   );
 }
 
@@ -252,7 +195,7 @@ function RaceNavItem({
             {race.office}
           </span>
           <span className="block text-[10px] font-mono-cap text-[var(--color-paper-3)] mt-1 tracking-[0.14em]">
-            {race.unopposed ? "Unopposed" : `${activeCount} active`}
+            {race.navLabel ?? (race.unopposed ? "Unopposed" : `${activeCount} active`)}
           </span>
         </span>
         <ChevronRight
@@ -288,7 +231,7 @@ function RaceNavItem({
                     >
                       <span className={`w-1 h-1 rounded-full ${partyDot(cand.party)}`} />
                       <span className="truncate flex-1">{cand.name}</span>
-                      <CandidateNavStat candidate={cand} />
+                      <CandidateNavStat candidate={cand} contestId={race.feed?.contestId} />
                     </a>
                   </li>
                 );
@@ -307,7 +250,16 @@ function RaceNavItem({
  *   down → muted red (same as the trending-down arrow)
  *   suspended → "susp." in the existing muted-paper-4
  */
-function CandidateNavStat({ candidate }: { candidate: Race["candidates"][number] }) {
+function CandidateNavStat({ candidate, contestId }: { candidate: Race["candidates"][number]; contestId?: string }) {
+  // Nov 3 ballot: the newest live poll wins over a researched one.
+  const live = useLatestPoll(contestId)?.results.find((r) => r.candidateId === candidate.feed?.candidateId)?.pct;
+  if (live != null) {
+    return (
+      <span className="font-mono race-number text-[10px] tabular-nums text-[var(--color-paper-3)]" aria-label={`Polling ${live} percent`}>
+        {live}%
+      </span>
+    );
+  }
   if (candidate.campaignSuspended) {
     return (
       <span className="font-mono-cap text-[8px] text-[var(--color-paper-4)] tracking-[0.18em]">

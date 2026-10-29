@@ -1,0 +1,217 @@
+{
+  "election": "2026-11-03",
+  "sources": {
+    "sos-cert-list-2026-general": {
+      "title": "Certified List of Candidates for the November 3, 2026, General Election (Aug 27, 2026)",
+      "publisher": "California Secretary of State",
+      "url": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "official": true,
+      "accessed": "2026-10-28"
+    }
+  },
+  "candidates": {
+    "california|governor::xavier becerra": {
+      "displayName": "Xavier Becerra",
+      "ballotDesignation": {
+        "text": "Voting Rights Attorney",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|governor::steve hilton": {
+      "displayName": "Steve Hilton",
+      "ballotDesignation": {
+        "text": "Small Business Owner",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|lieutenant governor::fiona ma": {
+      "displayName": "Fiona Ma",
+      "ballotDesignation": {
+        "text": "State Treasurer/CPA",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|lieutenant governor::gloria romero": {
+      "displayName": "Gloria Romero",
+      "ballotDesignation": {
+        "text": "Educator/Businesswoman",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|secretary of state::shirley n weber": {
+      "displayName": "Shirley N. Weber",
+      "ballotDesignation": {
+        "text": "California Secretary of State",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      },
+      "incumbent": true
+    },
+    "california|secretary of state::donald p don wagner": {
+      "displayName": "Donald P. (Don) Wagner",
+      "ballotDesignation": {
+        "text": "Orange County Supervisor",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|controller::malia m cohen": {
+      "displayName": "Malia M. Cohen",
+      "ballotDesignation": {
+        "text": "State Controller/Mother",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      },
+      "incumbent": true
+    },
+    "california|controller::herb w morgan": {
+      "displayName": "Herb W Morgan",
+      "ballotDesignation": {
+        "text": "Chief Investment Officer",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|treasurer::eleni kounalakis": {
+      "displayName": "Eleni Kounalakis",
+      "ballotDesignation": {
+        "text": "Lieutenant Governor of California",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|treasurer::jennifer hawks": {
+      "displayName": "Jennifer Hawks",
+      "ballotDesignation": {
+        "text": "Retired Business Executive",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|attorney general::rob bonta": {
+      "displayName": "Rob Bonta",
+      "ballotDesignation": {
+        "text": "California Attorney General",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      },
+      "incumbent": true
+    },
+    "california|attorney general::michael e gates": {
+      "displayName": "Michael E. Gates",
+      "ballotDesignation": {
+        "text": "Deputy United States Attorney",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|insurance commissioner::ben allen": {
+      "displayName": "Ben Allen",
+      "ballotDesignation": {
+        "text": "California State Senator",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|insurance commissioner::jane kim": {
+      "displayName": "Jane Kim",
+      "ballotDesignation": {
+        "text": "Attorney/Consumer Advocate",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|superintendent of public instruction::richard barrera": {
+      "displayName": "Richard Barrera",
+      "ballotDesignation": {
+        "text": "State Superintendent Advisor",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|superintendent of public instruction::sonja shaw": {
+      "displayName": "Sonja Shaw",
+      "ballotDesignation": {
+        "text": "School District President",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "california|member state board of equalization district 2::sally j lieber": {
+      "displayName": "Sally J. Lieber",
+      "ballotDesignation": {
+        "text": "Incumbent",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      },
+      "incumbent": true
+    },
+    "california|member state board of equalization district 2::john pimentel": {
+      "displayName": "John Pimentel",
+      "ballotDesignation": {
+        "text": "Member, Board of Trustees, San Mateo County Community College District",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "15th congressional district 2025|u s representative district 15::kevin mullin": {
+      "displayName": "Kevin Mullin",
+      "ballotDesignation": {
+        "text": "U.S. Representative",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "15th congressional district 2025|u s representative district 15::charles hoelter": {
+      "displayName": "Charles Hoelter",
+      "ballotDesignation": {
+        "text": "Retired Training Supervisor",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    },
+    "19th assembly district 2022|member of the state assembly district 19::catherine stefani": {
+      "displayName": "Catherine Stefani",
+      "ballotDesignation": {
+        "text": "Assemblymember",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      },
+      "incumbent": true
+    },
+    "19th assembly district 2022|member of the state assembly district 19::philip louis wing": {
+      "displayName": "Philip Louis Wing",
+      "ballotDesignation": {
+        "text": "Retired Financial Advisor",
+        "sources": [
+          "sos-cert-list-2026-general"
+        ]
+      }
+    }
+  }
+}

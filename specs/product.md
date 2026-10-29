@@ -1,5 +1,7 @@
 # Product spec
 
+> **Superseded:** the canonical product requirements now live in [`docs/product/PRD.md`](../docs/product/PRD.md) (2026-10-28). This file is kept as the historical June 2026 primary spec.
+
 ## What it is
 A voter guide that shows every race and candidate on a specific voter's ballot — profiled in depth, compared side-by-side, with live news feeds. Content is source-grounded and continuously updated; no hand-authored copy in the final product.
 

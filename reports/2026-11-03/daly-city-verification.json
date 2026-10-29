@@ -1,0 +1,556 @@
+{
+  "generated": "2026-10-28",
+  "summary": {
+    "verified": 49,
+    "discrepancy": 0,
+    "unverified": 0
+  },
+  "rows": [
+    {
+      "contest": "Governor",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Xavier Becerra (Democratic) — ballot designation: Voting Rights Attorney; Steve Hilton (Republican) — ballot designation: Small Business Owner",
+      "official": [
+        {
+          "name": "Xavier Becerra",
+          "party": "Democratic",
+          "designation": "Voting Rights Attorney",
+          "incumbent": false
+        },
+        {
+          "name": "Steve Hilton",
+          "party": "Republican",
+          "designation": "Small Business Owner",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Lieutenant Governor",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Fiona Ma (Democratic) — ballot designation: State Treasurer/CPA; Gloria Romero (Republican) — ballot designation: Educator/Businesswoman",
+      "official": [
+        {
+          "name": "Fiona Ma",
+          "party": "Democratic",
+          "designation": "State Treasurer/CPA",
+          "incumbent": false
+        },
+        {
+          "name": "Gloria Romero",
+          "party": "Republican",
+          "designation": "Educator/Businesswoman",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Secretary of State",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Shirley N. Weber (Democratic, incumbent) — ballot designation: California Secretary of State; Donald P. (Don) Wagner (Republican) — ballot designation: Orange County Supervisor",
+      "official": [
+        {
+          "name": "Shirley N. Weber",
+          "party": "Democratic",
+          "designation": "California Secretary of State",
+          "incumbent": true
+        },
+        {
+          "name": "Donald P. (Don) Wagner",
+          "party": "Republican",
+          "designation": "Orange County Supervisor",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Controller",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Malia M. Cohen (Democratic, incumbent) — ballot designation: State Controller/Mother; Herb W Morgan (Republican) — ballot designation: Chief Investment Officer",
+      "official": [
+        {
+          "name": "Malia M. Cohen",
+          "party": "Democratic",
+          "designation": "State Controller/Mother",
+          "incumbent": true
+        },
+        {
+          "name": "Herb W Morgan",
+          "party": "Republican",
+          "designation": "Chief Investment Officer",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Treasurer",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Eleni Kounalakis (Democratic) — ballot designation: Lieutenant Governor of California; Jennifer Hawks (Republican) — ballot designation: Retired Business Executive",
+      "official": [
+        {
+          "name": "Eleni Kounalakis",
+          "party": "Democratic",
+          "designation": "Lieutenant Governor of California",
+          "incumbent": false
+        },
+        {
+          "name": "Jennifer Hawks",
+          "party": "Republican",
+          "designation": "Retired Business Executive",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Attorney General",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Rob Bonta (Democratic, incumbent) — ballot designation: California Attorney General; Michael E. Gates (Republican) — ballot designation: Deputy United States Attorney",
+      "official": [
+        {
+          "name": "Rob Bonta",
+          "party": "Democratic",
+          "designation": "California Attorney General",
+          "incumbent": true
+        },
+        {
+          "name": "Michael E. Gates",
+          "party": "Republican",
+          "designation": "Deputy United States Attorney",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Insurance Commissioner",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Ben Allen (Democratic) — ballot designation: California State Senator; Jane Kim (Democratic) — ballot designation: Attorney/Consumer Advocate",
+      "official": [
+        {
+          "name": "Ben Allen",
+          "party": "Democratic",
+          "designation": "California State Senator",
+          "incumbent": false
+        },
+        {
+          "name": "Jane Kim",
+          "party": "Democratic",
+          "designation": "Attorney/Consumer Advocate",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Superintendent of Public Instruction",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Richard Barrera (Non-Partisan) — ballot designation: State Superintendent Advisor; Sonja Shaw (Non-Partisan) — ballot designation: School District President",
+      "official": [
+        {
+          "name": "Richard Barrera",
+          "party": "Non-Partisan",
+          "designation": "State Superintendent Advisor",
+          "incumbent": false
+        },
+        {
+          "name": "Sonja Shaw",
+          "party": "Non-Partisan",
+          "designation": "School District President",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Member, State Board of Equalization, District 2",
+      "kind": "candidate",
+      "category": "statewide",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Sally J. Lieber (Democratic, incumbent) — ballot designation: Incumbent; John Pimentel (Democratic) — ballot designation: Member, Board of Trustees, San Mateo County Community College District",
+      "official": [
+        {
+          "name": "Sally J. Lieber",
+          "party": "Democratic",
+          "designation": "Incumbent",
+          "incumbent": true
+        },
+        {
+          "name": "John Pimentel",
+          "party": "Democratic",
+          "designation": "Member, Board of Trustees, San Mateo County Community College District",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Associate Justice of the Supreme Court",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice of the Supreme Court",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division One",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division One",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division One",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Presiding Justice, Court of Appeal, First District, Division Two",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division Two",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division Three",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division Three",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Presiding Justice, Court of Appeal, First District, Division Four",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division Five",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division Five",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Associate Justice, Court of Appeal, First District, Division Five",
+      "kind": "candidate",
+      "category": "judicial",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Added from the certified list (missing from provider data)"
+    },
+    {
+      "contest": "Member, Board of Supervisors, District 5 (Short Term)",
+      "kind": "candidate",
+      "category": "county",
+      "status": "verified",
+      "source": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "note": "County roster (Sept 3): MARK NAGALES, JUSLYN CABRERA MANALO; vote for 1; on ballot: yes"
+    },
+    {
+      "contest": "City of Daly City Member, City Council",
+      "kind": "candidate",
+      "category": "city",
+      "status": "verified",
+      "source": "https://www.dalycity.org/1325/2026-Municipal-Election",
+      "note": "City Clerk list of nominees (updated 8/8/26): Tony Bayudan, Rod Daus-Magbual, Pamela DiGiovanni, Thomas A. Nuris, Teresa Proaño, Barry Rodriguez, Asia Su; 3 seats"
+    },
+    {
+      "contest": "County Board of Education Member, Trustee Area 2",
+      "kind": "candidate",
+      "category": "education",
+      "status": "verified",
+      "source": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "note": "County roster (Sept 3): BEVERLY GERARD, DANA JOHNSON; vote for 1; on ballot: yes"
+    },
+    {
+      "contest": "San Mateo County Community College District Member, Governing Board, Trustee Area 2",
+      "kind": "candidate",
+      "category": "education",
+      "status": "verified",
+      "source": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "note": "County roster (Sept 3): MIKE GUINGONA, JASON HOLT; vote for 1; on ballot: yes"
+    },
+    {
+      "contest": "U.S. Representative, District 15",
+      "kind": "candidate",
+      "category": "federal",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Kevin Mullin (Democratic) — ballot designation: U.S. Representative; Charles Hoelter (Republican) — ballot designation: Retired Training Supervisor",
+      "official": [
+        {
+          "name": "Kevin Mullin",
+          "party": "Democratic",
+          "designation": "U.S. Representative",
+          "incumbent": false
+        },
+        {
+          "name": "Charles Hoelter",
+          "party": "Republican",
+          "designation": "Retired Training Supervisor",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Member of the State Assembly, District 19",
+      "kind": "candidate",
+      "category": "state_legislature",
+      "status": "verified",
+      "source": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+      "note": "Catherine Stefani (Democratic, incumbent) — ballot designation: Assemblymember; Philip Louis Wing (Republican) — ballot designation: Retired Financial Advisor",
+      "official": [
+        {
+          "name": "Catherine Stefani",
+          "party": "Democratic",
+          "designation": "Assemblymember",
+          "incumbent": true
+        },
+        {
+          "name": "Philip Louis Wing",
+          "party": "Republican",
+          "designation": "Retired Financial Advisor",
+          "incumbent": false
+        }
+      ]
+    },
+    {
+      "contest": "Proposition 1",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 1: Authorizes Bonds for Housing Affordability Programs. Legislative Statute."
+    },
+    {
+      "contest": "Proposition 2",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 2: Increases State’s Rainy Day Fund. Legislative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 3",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 3: Provides Permanent Funding for Schools and Health Care by Extending Existing Tax on High Incomes. Initiative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 4",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 4: Repeals Prohibition Against Public Funding of Election Campaigns. Legislative Statute."
+    },
+    {
+      "contest": "Proposition 5",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 5: Changes Recall Election Process for Statewide Officers. Legislative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 37",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 37: Creates Loan Program for Middle-Income Buyers of Qualified New Homes. Initiative Statute."
+    },
+    {
+      "contest": "Proposition 38",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 38: Authorizes Bonds for Immunology Medical Research. Initiative Statute."
+    },
+    {
+      "contest": "Proposition 39",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 39: Prohibits Citizens from Voting Unless They Present Government-Issued Identification. Initiative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 40",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 40: Imposes One-Time Tax on Certain Taxpayers. Initiative Constitutional Amendment and Statute."
+    },
+    {
+      "contest": "Proposition 41",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 41: Prohibits New State Taxes That Exclude Revenues from State Spending Limit. Requires Audits for New State Special Taxes. Initiative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 42",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 42: Prohibits New State Personal Property Taxes and Certain Retroactive State Taxes. Initiative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 43",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 43: Limits Voters’ Ability to Raise Revenues for Local Government Services. Legislative Constitutional Amendment."
+    },
+    {
+      "contest": "Proposition 44",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 44: Requires Community Health Clinics Spend 90% Of Revenue on Program Services. Initiative Statute."
+    },
+    {
+      "contest": "Proposition 45",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://www.sos.ca.gov/elections/ballot-measures/qualified-ballot-measures",
+      "note": "Listed as Proposition 45: Modifies Environmental Review for Certain Projects. Initiative Statute."
+    },
+    {
+      "contest": "Measure M",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure M – Jefferson Union High School District: Parcel Tax Measure"
+    },
+    {
+      "contest": "Measure AA",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure AA – San Mateo County Charter Amendment Measure – Affirmation of Rights"
+    },
+    {
+      "contest": "Measure J",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure J – San Mateo County Charter Amendment Measure – Extension to Call a Special Election or Appoint"
+    },
+    {
+      "contest": "Measure U",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure U – San Mateo County Charter Amendment Measure – Reapportionment of Supervisorial Districts"
+    },
+    {
+      "contest": "Regional Transit Measure",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Regional Transit Measure – Public Transit Revenue Measure District: Transactions and Use Tax Measure"
+    },
+    {
+      "contest": "Measure L",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure L – San Mateo County Charter Amendment Measure – Extreme Weather Events"
+    },
+    {
+      "contest": "Measure V",
+      "kind": "measure",
+      "category": "measures",
+      "status": "verified",
+      "source": "https://smcacre.gov/elections/current-election",
+      "note": "Listed by San Mateo County Elections: Measure V – San Mateo County Community College District: Bond Measure"
+    }
+  ]
+}

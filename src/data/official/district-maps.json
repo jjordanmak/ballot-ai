@@ -1,0 +1,30 @@
+{
+  "_note": "Which district map a provider's year label refers to. Every entry is cited; add a row per state and map, never a guess. lastElection only when the law sets one.",
+  "sources": {
+    "ballotpedia-ca-2021-legislative": {
+      "name": "Ballotpedia News: California Citizens Redistricting Commission enacts new legislative maps",
+      "url": "https://news.ballotpedia.org/2022/01/04/california-citizens-redistricting-commission-enacts-new-legislative-maps/"
+    },
+    "sos-vig-prop-50": {
+      "name": "California Secretary of State: Proposition 50 (Official Voter Information Guide)",
+      "url": "https://voterguide.sos.ca.gov/proposition/50"
+    }
+  },
+  "maps": [
+    {
+      "state": "CA",
+      "kinds": ["state_lower", "state_upper", "board_of_equalization"],
+      "year": "2022",
+      "text": "District lines drawn by the California Citizens Redistricting Commission after the 2020 census and delivered to the Secretary of State on December 27, 2021. First used in the June 2022 primary.",
+      "source": "ballotpedia-ca-2021-legislative"
+    },
+    {
+      "state": "CA",
+      "kinds": ["congressional"],
+      "year": "2025",
+      "text": "District lines from Proposition 50, drawn by the Legislature and approved by voters on November 4, 2025, replacing the commission's 2021 congressional map. First used in 2026; the Citizens Redistricting Commission draws the map again starting in 2031.",
+      "lastElection": "2030",
+      "source": "sos-vig-prop-50"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Newspaper,
   AtSign,
@@ -17,8 +17,8 @@ import {
   Instagram,
   Facebook,
 } from "lucide-react";
-import type { NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
-import { getSupabaseBrowser } from "@/lib/supabase/browser";
+import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
+import { useFeedItems } from "./ballot/LiveFeed";
 
 const TYPE_META: Record<
   NewsItemType,
@@ -132,68 +132,38 @@ function fallbackSocialUrl(platform: SocialPlatform, handle: string): string {
 export function NewsFeed({
   items,
   fallbackAvatar,
-  raceId,
-  candidateDbId,
+  feed,
+  hideWhenEmpty,
 }: {
   items: NewsItem[] | undefined;
   fallbackAvatar?: string;
-  raceId?: string;
-  candidateDbId?: string;
+  /** Address-first ballot: read live feed_items from the page's LiveFeedProvider. */
+  feed?: FeedTarget;
+  hideWhenEmpty?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [liveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
+  const fromFeed = useFeedItems(feed);
+  const [archiveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
+  const liveItems = fromFeed ?? archiveItems;
   const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(true);
+  // Off until we've measured: nothing to scroll means both buttons stay disabled.
+  const [canRight, setCanRight] = useState(false);
 
   useEffect(() => {
     setLiveItems(items ?? []);
   }, [items]);
 
-  useEffect(() => {
-    const filter = candidateDbId
-      ? `candidate_id=eq.${candidateDbId}`
-      : raceId
-      ? `race_id=eq.${raceId}`
-      : null;
-    if (!filter) return;
-
-    const sb = getSupabaseBrowser();
-    const channel = sb
-      .channel(`news-feed-${candidateDbId ?? raceId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "news_items", filter },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            const oldRow = payload.old as Partial<RealtimeNewsRow>;
-            if (!oldRow.id) return;
-            setLiveItems((prev) => prev.filter((item) => item.id !== oldRow.id));
-            return;
-          }
-
-          const next = mapRealtimeNewsItem(payload.new as RealtimeNewsRow);
-          setLiveItems((prev) => {
-            const existing = prev.findIndex((item) => item.id === next.id);
-            if (existing === -1) return [next, ...prev];
-            const copy = prev.slice();
-            copy[existing] = next;
-            return copy;
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      sb.removeChannel(channel);
-    };
-  }, [candidateDbId, raceId]);
-
-  const updateAffordance = () => {
+  const empty = liveItems.length === 0;
+  const updateAffordance = useCallback(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || empty) {
+      setCanLeft(false);
+      setCanRight(false);
+      return;
+    }
     setCanLeft(el.scrollLeft > 4);
     setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
+  }, [empty]);
 
   useEffect(() => {
     updateAffordance();
@@ -205,7 +175,7 @@ export function NewsFeed({
       el.removeEventListener("scroll", updateAffordance);
       window.removeEventListener("resize", updateAffordance);
     };
-  }, [liveItems]);
+  }, [liveItems, updateAffordance]);
 
   const scrollBy = (dir: "left" | "right") => {
     const el = scrollRef.current;
@@ -220,6 +190,7 @@ export function NewsFeed({
   const sorted = liveItems
     .slice()
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  if (hideWhenEmpty && !sorted.length) return null;
 
   return (
     <section>
@@ -299,29 +270,6 @@ export function NewsFeed({
   );
 }
 
-interface RealtimeNewsRow {
-  id: string;
-  type: string;
-  source: string;
-  title: string;
-  excerpt: string | null;
-  url: string | null;
-  published_at: string;
-  social: unknown;
-}
-
-function mapRealtimeNewsItem(row: RealtimeNewsRow): NewsItem {
-  return {
-    id: row.id,
-    type: row.type as NewsItem["type"],
-    source: row.source,
-    title: row.title,
-    excerpt: row.excerpt ?? undefined,
-    url: row.url ?? undefined,
-    date: row.published_at,
-    social: (row.social ?? undefined) as NewsItem["social"],
-  };
-}
 
 function LivePill() {
   return (
@@ -342,7 +290,7 @@ function NewsCard({
   item: NewsItem;
   fallbackAvatar?: string;
 }) {
-  const meta = TYPE_META[item.type];
+  const meta = TYPE_META[item.type] ?? TYPE_META.news;
   const isSocial = item.type === "social" && item.social;
   // Resolve the click-through URL: explicit on the item OR a fallback to
   // the candidate's profile on the right platform. Every social card is
@@ -371,7 +319,7 @@ function NewsCard({
         ? { href: resolvedUrl, target: "_blank", rel: "noopener noreferrer" }
         : {})}
       className={`flex flex-col shrink-0 ${
-        widerForMedia ? "w-[340px] sm:w-[380px]" : "w-[320px] sm:w-[360px]"
+        widerForMedia ? "w-[85vw] sm:w-[380px]" : "w-[85vw] sm:w-[360px]"
       } rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 transition-colors ${
         resolvedUrl ? "hover:border-[var(--color-paper-4)]" : ""
       }`}

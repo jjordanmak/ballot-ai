@@ -1,7 +1,8 @@
 /**
  * Renders text that may contain <mark>...</mark> tags.
- * Server-safe; uses dangerouslySetInnerHTML with a tight allowlist
- * (only <mark>, <strong>, <em>, <br>) — content is fully trusted (authored).
+ * Server-safe. All text is HTML-escaped first; only exact <mark>, <strong>,
+ * <em> and <br> tags pass through, so provider or AI text can't inject markup
+ * (a stray "<img onerror=…" without its own ">" stays literal text).
  *
  * AUTO-HIGHLIGHT
  * --------------
@@ -21,6 +22,12 @@
  *
  * The patterns are intentionally conservative; the goal is one or two
  * highlights per sentence, not a sea of yellow.
+ *
+ * NEUTRAL MODE (Nov 3 ballot pages, owner decision 2026-10-29): only
+ * structural facts are highlighted (amounts, percentages, counts, vote
+ * thresholds, dates, measure numbers). No topical phrases, no superlatives,
+ * no "leading"/"frontrunner": emphasis must never editorialize. The archive
+ * keeps the original set.
  */
 
 const ALLOW =
@@ -78,23 +85,37 @@ const AUTO_PATTERNS: RegExp[] = [
   /\b(?:first(?:-ever|-time)?|only|never|always|highest|lowest|largest|biggest|fastest-growing|tied for first|tied for last|leading|leads the field|frontrunner)\s+(?:Latino|Black|woman|female|Asian|Republican|Democratic|Latina|Asian-American|African-American|GOP|major|statewide|elected)\s+\w+/gi,
 ];
 
-/** Combined pattern for a single-pass auto-highlight. */
-const AUTO_PATTERN_COMBINED = new RegExp(
-  AUTO_PATTERNS.map((r) => r.source).join("|"),
-  "gi"
-);
+const MONTHS = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?";
+
+const NEUTRAL_PATTERNS: RegExp[] = [
+  AUTO_PATTERNS[0], // percentages
+  AUTO_PATTERNS[1], // dollar amounts
+  AUTO_PATTERNS[2], // counts
+  AUTO_PATTERNS[3], // measure and bill numbers
+  // Vote thresholds
+  /\b(?:two-thirds|three-fifths|55 percent|simple majority|supermajority|majority vote)\b/gi,
+  // Dates: "Nov. 3, 2026", "November 3"
+  new RegExp(`\\b(?:${MONTHS})\\.?\\s+\\d{1,2}(?:,\\s*\\d{4})?\\b`, "g"),
+];
+
+/** Combined patterns for a single-pass auto-highlight. */
+const COMBINED = {
+  archive: new RegExp(AUTO_PATTERNS.map((r) => r.source).join("|"), "gi"),
+  neutral: new RegExp(NEUTRAL_PATTERNS.map((r) => r.source).join("|"), "gi"),
+};
+export type HighlightMode = keyof typeof COMBINED;
 
 /** Apply auto-highlight to a string of HTML, skipping content inside
  *  existing <mark>...</mark> regions and skipping anything resembling
  *  an HTML tag. */
-function autoHighlight(html: string): string {
+function autoHighlight(html: string, mode: HighlightMode): string {
   // Split by mark tags so we don't double-wrap
   const parts = html.split(/(<mark[\s\S]*?<\/mark>)/);
   return parts
     .map((part) => {
       if (!part) return part;
       if (/^<mark/.test(part)) return part; // already wrapped
-      return part.replace(AUTO_PATTERN_COMBINED, (match) =>
+      return part.replace(COMBINED[mode], (match) =>
         // Don't wrap empty matches or single chars
         match.length > 1 ? `<mark>${match}</mark>` : match
       );
@@ -102,8 +123,15 @@ function autoHighlight(html: string): string {
     .join("");
 }
 
-function sanitize(text: string): string {
-  return text.replace(/<[^>]+>/g, (tag) => (ALLOW.test(tag) ? tag : ""));
+const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ESC[c]);
+
+/** Escape everything, then restore only complete allowlisted tags. */
+export function sanitize(text: string): string {
+  return text
+    .split(/(<[^<>]*>)/)
+    .map((part) => (part.startsWith("<") && part.endsWith(">") ? (ALLOW.test(part) ? part : "") : escapeHtml(part)))
+    .join("");
 }
 
 /**
@@ -111,25 +139,28 @@ function sanitize(text: string): string {
  * is also honored when the rendered element sits inside a `.no-auto-highlight`
  * ancestor (which lets a section-level wrapper disable the algorithm).
  */
-function process(text: string, noAuto?: boolean): string {
+export function process(text: string, noAuto?: boolean, mode: HighlightMode = "archive"): string {
   const cleaned = sanitize(text);
   if (noAuto) return cleaned;
-  return autoHighlight(cleaned);
+  return autoHighlight(cleaned, mode);
 }
 
 export function RichText({
   text,
   className,
   noAuto,
+  auto = "archive",
 }: {
   text: string;
   className?: string;
   noAuto?: boolean;
+  /** Which auto-highlight set: "neutral" on Nov 3 ballot surfaces. */
+  auto?: HighlightMode;
 }) {
   return (
     <span
       className={className}
-      dangerouslySetInnerHTML={{ __html: process(text, noAuto) }}
+      dangerouslySetInnerHTML={{ __html: process(text, noAuto, auto) }}
     />
   );
 }
@@ -141,16 +172,18 @@ export function RichBlock({
   className,
   as: Tag = "p",
   noAuto,
+  auto = "archive",
 }: {
   text: string;
   className?: string;
   as?: BlockTag;
   noAuto?: boolean;
+  auto?: HighlightMode;
 }) {
   return (
     <Tag
       className={className}
-      dangerouslySetInnerHTML={{ __html: process(text, noAuto) }}
+      dangerouslySetInnerHTML={{ __html: process(text, noAuto, auto) }}
     />
   );
 }

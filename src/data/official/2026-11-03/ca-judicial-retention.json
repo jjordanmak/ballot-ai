@@ -1,0 +1,1242 @@
+{
+  "election": "2026-11-03",
+  "source": {
+    "id": "sos-cert-list-2026-general",
+    "title": "Certified List of Candidates for the November 3, 2026, General Election (Aug 27, 2026)",
+    "publisher": "California Secretary of State",
+    "url": "https://elections.cdn.sos.ca.gov/statewide-elections/2026-general/cert-list-candidates.pdf",
+    "official": true,
+    "accessed": "2026-10-28"
+  },
+  "contests": [
+    {
+      "court": "Supreme Court",
+      "office": "Associate Justice of the Supreme Court",
+      "question": "Shall Associate Justice of the Supreme Court KELLI M. EVANS be elected to the office for the term provided by law?",
+      "justice": "KELLI M. EVANS",
+      "appliesTo": {
+        "state": "CA"
+      }
+    },
+    {
+      "court": "Supreme Court",
+      "office": "Associate Justice of the Supreme Court",
+      "question": "Shall Associate Justice of the Supreme Court JOSHUA GROBAN be elected to the office for the term provided by law?",
+      "justice": "JOSHUA GROBAN",
+      "appliesTo": {
+        "state": "CA"
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division One",
+      "question": "Shall Associate Justice CHARLES A. SMILEY be elected to the office for the term provided by law?",
+      "justice": "CHARLES A. SMILEY",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division One",
+      "question": "Shall Associate Justice KATHLEEN M. BANKE be elected to the office for the term provided by law?",
+      "justice": "KATHLEEN M. BANKE",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division One",
+      "question": "Shall Associate Justice MONIQUE LANGHORNE WILSON be elected to the office for the term provided by law?",
+      "justice": "MONIQUE LANGHORNE WILSON",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Presiding Justice, Court of Appeal, First District, Division Two",
+      "question": "Shall Presiding Justice THERESE M. STEWART be elected to the office for the term provided by law?",
+      "justice": "THERESE M. STEWART",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division Two",
+      "question": "Shall Associate Justice TARA M. DESAUTELS be elected to the office for the term provided by law?",
+      "justice": "TARA M. DESAUTELS",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division Three",
+      "question": "Shall Associate Justice IOANA PETROU be elected to the office for the term provided by law?",
+      "justice": "IOANA PETROU",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division Three",
+      "question": "Shall Associate Justice VICTOR A. RODRIGUEZ be elected to the office for the term provided by law?",
+      "justice": "VICTOR A. RODRIGUEZ",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Presiding Justice, Court of Appeal, First District, Division Four",
+      "question": "Shall Presiding Justice TRACIE L. BROWN be elected to the office for the term provided by law?",
+      "justice": "TRACIE L. BROWN",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division Five",
+      "question": "Shall Associate Justice MARK SIMONS be elected to the office for the term provided by law?",
+      "justice": "MARK SIMONS",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division Five",
+      "question": "Shall Associate Justice DANNY Y. CHOU be elected to the office for the term provided by law?",
+      "justice": "DANNY Y. CHOU",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, First Appellate District",
+      "office": "Associate Justice, Court of Appeal, First District, Division Five",
+      "question": "Shall Associate Justice GORDON BURNS be elected to the office for the term provided by law?",
+      "justice": "GORDON BURNS",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alameda",
+          "Contra Costa",
+          "Del Norte",
+          "Humboldt",
+          "Lake",
+          "Marin",
+          "Mendocino",
+          "Napa",
+          "San Francisco",
+          "San Mateo",
+          "Solano",
+          "Sonoma"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division One",
+      "question": "Shall Associate Justice MICHELLE C. KIM be elected to the office for the term provided by law?",
+      "justice": "MICHELLE C. KIM",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division One",
+      "question": "Shall Associate Justice GREGORY J. WEINGART be elected to the office for the term provided by law?",
+      "justice": "GREGORY J. WEINGART",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Two",
+      "question": "Shall Associate Justice STEVE GOORVITCH be elected to the office for the term provided by law?",
+      "justice": "STEVE GOORVITCH",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Two",
+      "question": "Shall Associate Justice ANNE RICHARDSON be elected to the office for the term provided by law?",
+      "justice": "ANNE RICHARDSON",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Presiding Justice, Court of Appeal, Second District, Division Three",
+      "question": "Shall Presiding Justice RASHIDA A. ADAMS be elected to the office for the term provided by law?",
+      "justice": "RASHIDA A. ADAMS",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Three",
+      "question": "Shall Associate Justice MARK HANASONO be elected to the office for the term provided by law?",
+      "justice": "MARK HANASONO",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Presiding Justice, Court of Appeal, Second District, Division Four",
+      "question": "Shall Presiding Justice HELEN ZUKIN be elected to the office for the term provided by law?",
+      "justice": "HELEN ZUKIN",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Four",
+      "question": "Shall Associate Justice AUDRA M. MORI be elected to the office for the term provided by law?",
+      "justice": "AUDRA M. MORI",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Four",
+      "question": "Shall Associate Justice NICHOLAS DAUM be elected to the office for the term provided by law?",
+      "justice": "NICHOLAS DAUM",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Four",
+      "question": "Shall Associate Justice ARMEN TAMZARIAN be elected to the office for the term provided by law?",
+      "justice": "ARMEN TAMZARIAN",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Presiding Justice, Court of Appeal, Second District, Division Five",
+      "question": "Shall Presiding Justice BRIAN M. HOFFSTADT be elected to the office for the term provided by law?",
+      "justice": "BRIAN M. HOFFSTADT",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Presiding Justice, Court of Appeal, Second District, Division Six",
+      "question": "Shall Presiding Justice TARI L. CODY be elected to the office for the term provided by law?",
+      "justice": "TARI L. CODY",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Six",
+      "question": "Shall Associate Justice KENNETH R. YEGAN be elected to the office for the term provided by law?",
+      "justice": "KENNETH R. YEGAN",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Presiding Justice, Court of Appeal, Second District, Division Seven",
+      "question": "Shall Presiding Justice GONZALO C. MARTINEZ be elected to the office for the term provided by law?",
+      "justice": "GONZALO C. MARTINEZ",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Seven",
+      "question": "Shall Associate Justice NATALIE STONE be elected to the office for the term provided by law?",
+      "justice": "NATALIE STONE",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Eight",
+      "question": "Shall Associate Justice JOHN WILEY be elected to the office for the term provided by law?",
+      "justice": "JOHN WILEY",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Eight",
+      "question": "Shall Associate Justice MATTHEW A. SCHERB be elected to the office for the term provided by law?",
+      "justice": "MATTHEW A. SCHERB",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Second Appellate District",
+      "office": "Associate Justice, Court of Appeal, Second District, Division Eight",
+      "question": "Shall Associate Justice VICTOR G. VIRAMONTES be elected to the office for the term provided by law?",
+      "justice": "VICTOR G. VIRAMONTES",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Los Angeles",
+          "San Luis Obispo",
+          "Santa Barbara",
+          "Ventura"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Administrative Presiding Justice, Court of Appeal, Third District",
+      "question": "Shall Administrative Presiding Justice LAURIE EARL be elected to the office for the term provided by law?",
+      "justice": "LAURIE EARL",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Associate Justice, Court of Appeal, Third District",
+      "question": "Shall Associate Justice SHAMA MESIWALA be elected to the office for the term provided by law?",
+      "justice": "SHAMA MESIWALA",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Associate Justice, Court of Appeal, Third District",
+      "question": "Shall DAVID B. SAPP be elected to the office for the term provided by law?",
+      "justice": "DAVID B. SAPP",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Associate Justice, Court of Appeal, Third District",
+      "question": "Shall Associate Justice LAURI DAMRELL be elected to the office for the term provided by law?",
+      "justice": "LAURI DAMRELL",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Associate Justice, Court of Appeal, Third District",
+      "question": "Shall Associate Justice STACY BOULWARE EURIE be elected to the office for the term provided by law?",
+      "justice": "STACY BOULWARE EURIE",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Associate Justice, Court of Appeal, Third District",
+      "question": "Shall Associate Justice AIMEE A. FEINBERG be elected to the office for the term provided by law?",
+      "justice": "AIMEE A. FEINBERG",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Third Appellate District",
+      "office": "Associate Justice, Court of Appeal, Third District",
+      "question": "Shall Associate Justice JONATHAN RENNER be elected to the office for the term provided by law?",
+      "justice": "JONATHAN RENNER",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Alpine",
+          "Amador",
+          "Butte",
+          "Calaveras",
+          "Colusa",
+          "El Dorado",
+          "Glenn",
+          "Lassen",
+          "Modoc",
+          "Mono",
+          "Nevada",
+          "Placer",
+          "Plumas",
+          "Sacramento",
+          "San Joaquin",
+          "Shasta",
+          "Sierra",
+          "Siskiyou",
+          "Sutter",
+          "Tehama",
+          "Trinity",
+          "Yolo",
+          "Yuba"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall Associate Justice ERAN M. BERMUDEZ be elected to the office for the term provided by law?",
+      "justice": "ERAN M. BERMUDEZ",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall Associate Justice JOSE S. CASTILLO be elected to the office for the term provided by law?",
+      "justice": "JOSE S. CASTILLO",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall Associate Justice TRUC T. DO be elected to the office for the term provided by law?",
+      "justice": "TRUC T. DO",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall San Diego County Superior Court Judge LISA RODRIGUEZ be elected to the office for the term provided by law?",
+      "justice": "LISA RODRIGUEZ",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall Associate Justice DAVID M. RUBIN be elected to the office for the term provided by law?",
+      "justice": "DAVID M. RUBIN",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall Associate Justice WILLIAM S. DATO be elected to the office for the term provided by law?",
+      "justice": "WILLIAM S. DATO",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division One",
+      "question": "Shall Associate Justice JULIA C. KELETY be elected to the office for the term provided by law?",
+      "justice": "JULIA C. KELETY",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Two",
+      "question": "Shall Associate Justice COREY G. LEE be elected to the office for the term provided by law?",
+      "justice": "COREY G. LEE",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Two",
+      "question": "Shall Associate Justice MICHAEL J. RAPHAEL be elected to the office for the term provided by law?",
+      "justice": "MICHAEL J. RAPHAEL",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Presiding Justice, Court of Appeal, Fourth District, Division Three",
+      "question": "Shall Presiding Justice JOANNE MOTOIKE be elected to the office for the term provided by law?",
+      "justice": "JOANNE MOTOIKE",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Three",
+      "question": "Shall Associate Justice NATHAN R. SCOTT be elected to the office for the term provided by law?",
+      "justice": "NATHAN R. SCOTT",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Three",
+      "question": "Shall Associate Justice JULIET O. MACAULAY be elected to the office for the term provided by law?",
+      "justice": "JULIET O. MACAULAY",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Three",
+      "question": "Shall Associate Justice MARTHA K. GOODING be elected to the office for the term provided by law?",
+      "justice": "MARTHA K. GOODING",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Three",
+      "question": "Shall Associate Justice THOMAS A. DELANEY be elected to the office for the term provided by law?",
+      "justice": "THOMAS A. DELANEY",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fourth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fourth District, Division Three",
+      "question": "Shall Associate Justice DEBORAH C. SERVINO be elected to the office for the term provided by law?",
+      "justice": "DEBORAH C. SERVINO",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Imperial",
+          "Inyo",
+          "Orange",
+          "Riverside",
+          "San Bernardino",
+          "San Diego"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fifth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fifth District",
+      "question": "Shall Associate Justice ARLAN L. HARRELL be elected to the office for the term provided by law?",
+      "justice": "ARLAN L. HARRELL",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Fresno",
+          "Kern",
+          "Kings",
+          "Madera",
+          "Mariposa",
+          "Merced",
+          "Stanislaus",
+          "Tulare",
+          "Tuolumne"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fifth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fifth District",
+      "question": "Shall Associate Justice SONNY S. SANDHU be elected to the office for the term provided by law?",
+      "justice": "SONNY S. SANDHU",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Fresno",
+          "Kern",
+          "Kings",
+          "Madera",
+          "Mariposa",
+          "Merced",
+          "Stanislaus",
+          "Tulare",
+          "Tuolumne"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fifth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fifth District",
+      "question": "Shall Associate Justice AMY K. GUERRA be elected to the office for the term provided by law?",
+      "justice": "AMY K. GUERRA",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Fresno",
+          "Kern",
+          "Kings",
+          "Madera",
+          "Mariposa",
+          "Merced",
+          "Stanislaus",
+          "Tulare",
+          "Tuolumne"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fifth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fifth District",
+      "question": "Shall Associate Justice KATHLEEN A. MEEHAN be elected to the office for the term provided by law?",
+      "justice": "KATHLEEN A. MEEHAN",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Fresno",
+          "Kern",
+          "Kings",
+          "Madera",
+          "Mariposa",
+          "Merced",
+          "Stanislaus",
+          "Tulare",
+          "Tuolumne"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fifth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fifth District",
+      "question": "Shall Associate Justice MARK W. SNAUFFER be elected to the office for the term provided by law?",
+      "justice": "MARK W. SNAUFFER",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Fresno",
+          "Kern",
+          "Kings",
+          "Madera",
+          "Mariposa",
+          "Merced",
+          "Stanislaus",
+          "Tulare",
+          "Tuolumne"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Fifth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Fifth District",
+      "question": "Shall Associate Justice THOMAS DESANTOS be elected to the office for the term provided by law?",
+      "justice": "THOMAS DESANTOS",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Fresno",
+          "Kern",
+          "Kings",
+          "Madera",
+          "Mariposa",
+          "Merced",
+          "Stanislaus",
+          "Tulare",
+          "Tuolumne"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Sixth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Sixth District",
+      "question": "Shall Associate Justice DANIEL H. BROMBERG be elected to the office for the term provided by law?",
+      "justice": "DANIEL H. BROMBERG",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Monterey",
+          "San Benito",
+          "Santa Clara",
+          "Santa Cruz"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Sixth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Sixth District",
+      "question": "Shall Associate Justice CHARLES E. WILSON II be elected to the office for the term provided by law?",
+      "justice": "CHARLES E. WILSON II",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Monterey",
+          "San Benito",
+          "Santa Clara",
+          "Santa Cruz"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Sixth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Sixth District",
+      "question": "Shall Associate Justice CHARLES F. ADAMS be elected to the office for the term provided by law?",
+      "justice": "CHARLES F. ADAMS",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Monterey",
+          "San Benito",
+          "Santa Clara",
+          "Santa Cruz"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Sixth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Sixth District",
+      "question": "Shall Superior Court Judge FREDERICK S. CHUNG be elected to the office for the term provided by law?",
+      "justice": "FREDERICK S. CHUNG",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Monterey",
+          "San Benito",
+          "Santa Clara",
+          "Santa Cruz"
+        ]
+      }
+    },
+    {
+      "court": "Court of Appeal, Sixth Appellate District",
+      "office": "Associate Justice, Court of Appeal, Sixth District",
+      "question": "Shall Associate Justice ALLISON MARSTON DANNER be elected to the office for the term provided by law?",
+      "justice": "ALLISON MARSTON DANNER",
+      "appliesTo": {
+        "state": "CA",
+        "counties": [
+          "Monterey",
+          "San Benito",
+          "Santa Clara",
+          "Santa Cruz"
+        ]
+      }
+    }
+  ]
+}

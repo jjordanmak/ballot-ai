@@ -42,9 +42,23 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 | `--color-rep` / `--color-rep-soft` | Republican |
 | `--color-grn` / `--color-grn-soft` | Green |
 | `--color-lib` / `--color-lib-soft` | Libertarian |
-| `--color-pf` / `--color-pf-soft` | Peace and Freedom |
-| `--color-aip` / `--color-aip-soft` | American Independent |
-| `--color-np` / `--color-np-soft` | No Party Preference |
+| `--color-lib` amber is hue 60, distinct from the yellow accent (hue 82) | |
+| `--color-np` / `--color-np-soft` | Every other party, independents, no party preference, nonpartisan |
+
+**Standard (owner, 2026-10-29):** a party gets its own color only when it is as strongly tied to one as red and blue are to Republicans and Democrats. Today that is Green (green) and Libertarian (gold). Every other party (Peace and Freedom, American Independent, Constitution, Working Families, Conservative, Forward, Alaskan Independence…) is neutral gray, and the pill always prints the party exactly as the ballot data names it (`Candidate.partyName`). Party is never shown by color alone.
+
+### Citations and sources (Nov 3 ballot)
+- **One Sources block per block that makes claims**: each race header, each measure card, each candidate profile ends with its own Sources block. Inline markers point into that block's list; numbering restarts per block.
+- **Race and measure blocks start with "Ballot data:"** (official source · via conduit · retrieved time), then any rule source ("Vote needed: …"), then the researched sources. Candidate profiles skip the ballot-data line (the race block covers the listing).
+- **One researched source → no inline markers** and one unnumbered line; two or more → numbered `[n]` markers and a numbered list.
+- Side-by-side cells link their source directly.
+
+### Vote needed and measure questions
+- Every race shows what it takes to win on its count line ("Vote for 1 of 2 candidates · Most votes wins"); every measure shows "Passes with …" naming the share **and its base** ("of the votes cast on this measure" / "of all ballots cast in the election"). Unverified rules say so; never guessed (`src/domain/voteNeeded.ts`).
+- Measures carry "What it means for you": the same six questions, same order, on every measure (`src/lib/ballot/measureImpact.ts`), answered only from official nonpartisan analyses, cited; unanswered → "Not addressed in the official analysis". No green/red for Yes/No.
+- Measure card header: title block left, jurisdiction right (wraps under the title on narrow screens). "Passes with …." is a plain sentence in the summary's type style, right after the summary.
+- Judicial retention (Yes/No on one judge) renders as a measure-style card (`RetentionCard`), grouped after the races under "Judges up for retention": official question, "Retained if …", what Yes/No mean, a cited "About the judge", one Sources block. No comparison table or candidate profile.
+- District names drop the provider's map year ("19th Assembly District - 2022" → "19th Assembly District"); an ⓘ tooltip explains which map it is from the cited registry `src/data/official/district-maps.json` (what changed, when, end date only if the law sets one). Unlisted years say only "District lines from the map labeled YYYY in the official ballot data."
 
 ### Supplementary tints
 Used for data encoding (section pillars, news item types) — never as primary surface backgrounds.

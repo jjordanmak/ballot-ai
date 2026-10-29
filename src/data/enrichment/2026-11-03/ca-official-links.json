@@ -1,0 +1,386 @@
+{
+  "election": "2026-11-03",
+  "sources": {
+    "sos-vig-statements-governor": {
+      "title": "Candidate statements: governor (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/governor-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-lt-governor": {
+      "title": "Candidate statements: lt governor (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/lt-governor-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-sos": {
+      "title": "Candidate statements: sos (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/sos-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-controller": {
+      "title": "Candidate statements: controller (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/controller-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-treasurer": {
+      "title": "Candidate statements: treasurer (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/treasurer-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-attorney-general": {
+      "title": "Candidate statements: attorney general (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/attorney-general-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-insurance-commissioner": {
+      "title": "Candidate statements: insurance commissioner (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/insurance-commissioner-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-superintendent": {
+      "title": "Candidate statements: superintendent (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/superintendent-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "sos-vig-statements-boe": {
+      "title": "Candidate statements: boe (Official Voter Information Guide)",
+      "publisher": "California Secretary of State",
+      "url": "https://voterguide.sos.ca.gov/candidates/boe-candidate-statements.htm",
+      "official": true,
+      "accessed": "2026-10-29"
+    },
+    "smc-roster-2026-11": {
+      "title": "Roster of Candidates, November 3, 2026 (Sept 3)",
+      "publisher": "San Mateo County Elections",
+      "url": "https://smcacre.gov/system/files/2026-09/52_candidateroster0903.pdf",
+      "official": true,
+      "accessed": "2026-10-29"
+    }
+  },
+  "candidates": {
+    "california|lieutenant governor::fiona ma": {
+      "links": [
+        {
+          "kind": "x",
+          "url": "https://x.com/FionaMa",
+          "sources": [
+            "sos-vig-statements-lt-governor"
+          ]
+        }
+      ]
+    },
+    "california|lieutenant governor::gloria romero": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://gloriajromero.com",
+          "sources": [
+            "sos-vig-statements-lt-governor"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/Gloriajromero",
+          "sources": [
+            "sos-vig-statements-lt-governor"
+          ]
+        }
+      ]
+    },
+    "california|secretary of state::donald p don wagner": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://wagnerforcalifornia.com",
+          "sources": [
+            "sos-vig-statements-sos"
+          ]
+        }
+      ]
+    },
+    "california|secretary of state::shirley n weber": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.drshirleyweber.com",
+          "sources": [
+            "sos-vig-statements-sos"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/drweber4ca",
+          "sources": [
+            "sos-vig-statements-sos"
+          ]
+        }
+      ]
+    },
+    "california|controller::malia m cohen": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://maliacohenforca.com",
+          "sources": [
+            "sos-vig-statements-controller"
+          ]
+        }
+      ]
+    },
+    "california|controller::herb w morgan": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.herbmorgan.com",
+          "sources": [
+            "sos-vig-statements-controller"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/herb4controller",
+          "sources": [
+            "sos-vig-statements-controller"
+          ]
+        }
+      ]
+    },
+    "california|treasurer::jennifer hawks": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://hawksforus.com",
+          "sources": [
+            "sos-vig-statements-treasurer"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/VoteHawks",
+          "sources": [
+            "sos-vig-statements-treasurer"
+          ]
+        }
+      ]
+    },
+    "california|treasurer::eleni kounalakis": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://eleniforca.com",
+          "sources": [
+            "sos-vig-statements-treasurer"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/eleniforca",
+          "sources": [
+            "sos-vig-statements-treasurer"
+          ]
+        }
+      ]
+    },
+    "california|attorney general::michael e gates": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.gates4ag.com",
+          "sources": [
+            "sos-vig-statements-attorney-general"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/MichaelGatesESQ",
+          "sources": [
+            "sos-vig-statements-attorney-general"
+          ]
+        }
+      ]
+    },
+    "california|insurance commissioner::ben allen": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://benallenca.com",
+          "sources": [
+            "sos-vig-statements-insurance-commissioner"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/BenAllenCA",
+          "sources": [
+            "sos-vig-statements-insurance-commissioner"
+          ]
+        }
+      ]
+    },
+    "california|insurance commissioner::jane kim": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.janekim.org",
+          "sources": [
+            "sos-vig-statements-insurance-commissioner"
+          ]
+        }
+      ]
+    },
+    "california|superintendent of public instruction::richard barrera": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://barreraforedu.com",
+          "sources": [
+            "sos-vig-statements-superintendent"
+          ]
+        }
+      ]
+    },
+    "california|superintendent of public instruction::sonja shaw": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://shawforca.com",
+          "sources": [
+            "sos-vig-statements-superintendent"
+          ]
+        },
+        {
+          "kind": "x",
+          "url": "https://x.com/realSonjaShaw",
+          "sources": [
+            "sos-vig-statements-superintendent"
+          ]
+        }
+      ]
+    },
+    "california|member state board of equalization district 2::sally j lieber": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.sallylieber.org",
+          "sources": [
+            "sos-vig-statements-boe"
+          ]
+        }
+      ]
+    },
+    "california|member state board of equalization district 2::john pimentel": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.johnpimentel.com",
+          "sources": [
+            "sos-vig-statements-boe"
+          ]
+        }
+      ]
+    },
+    "15th congressional district 2025|u s representative district 15::kevin mullin": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://kevinmullinforcongress.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "15th congressional district 2025|u s representative district 15::charles hoelter": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://hoelterforuscongress.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "5th supervisorial district 2022|member board of supervisors district 5 short term::mark nagales": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://marknagales.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "5th supervisorial district 2022|member board of supervisors district 5 short term::juslyn cabrera manalo": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.juslynmanalo.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "city of daly city|city of daly city member city council::thomas a nuris": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://tomnuris.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "city of daly city|city of daly city member city council::teresa proano": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://teresaproano.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "city of daly city|city of daly city member city council::tony bayudan": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://tonybayudan.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    },
+    "city of daly city|city of daly city member city council::rod daus magbual": {
+      "links": [
+        {
+          "kind": "campaign",
+          "url": "https://www.roddausmagbual.com",
+          "sources": [
+            "smc-roster-2026-11"
+          ]
+        }
+      ]
+    }
+  }
+}

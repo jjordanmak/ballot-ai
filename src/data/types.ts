@@ -1,3 +1,7 @@
+import type { CandidateEnrichment, ContestEnrichment, SourceDoc } from "@/domain/enrichment";
+import type { SourceRef } from "@/domain/ballot";
+import type { VoteNeeded } from "@/domain/voteNeeded";
+
 export type Party =
   | "Democratic"
   | "Republican"
@@ -6,9 +10,18 @@ export type Party =
   | "Peace and Freedom"
   | "American Independent"
   | "No Party Preference"
-  | "Independent";
+  | "Independent"
+  /** Any other party; its name comes from `Candidate.partyName`. */
+  | "Other"
+  /** Nonpartisan office: no party appears on the ballot. */
+  | "Nonpartisan";
 
-export type PartyKey = "dem" | "rep" | "grn" | "lib" | "pf" | "aip" | "np";
+/**
+ * Party color keys. A party gets its own color only when it is as strongly
+ * tied to one as red and blue are to Republicans and Democrats (Green,
+ * Libertarian gold). Every other party is neutral gray, named in text.
+ */
+export type PartyKey = "dem" | "rep" | "grn" | "lib" | "np";
 
 export type PollingStatus =
   | "Frontrunner"
@@ -25,6 +38,8 @@ export interface IssuePosition {
   stance: string;
   /** One-word evidence label, e.g. "On record", "Campaign site", "Debate", "Voting record" */
   source?: string;
+  /** Link to the cited source (Nov 3 ballot), so the side-by-side is cited cell by cell. */
+  sourceUrl?: string;
 }
 
 /**
@@ -47,6 +62,8 @@ export interface Candidate {
   id: string;
   name: string;
   party: Party;
+  /** Party exactly as the ballot data prints it; shown instead of the generic label when present. */
+  partyName?: string;
   /** Optional headshot URL (e.g. Wikimedia portrait). Falls back to initials. */
   headshot?: string;
   /** Whether the candidate appears in the comparison table by default. */
@@ -74,6 +91,26 @@ export interface Candidate {
   issues: Record<string, IssuePosition>;
   /** Optional news feed for this candidate (will be live in v2). */
   news?: NewsItem[];
+  /**
+   * Address-first ballot (Nov 2026+): exact official ballot name and the
+   * cited FR-K4 profile. When present, profiles render in "general" mode.
+   */
+  ballotName?: string;
+  general?: GeneralProfile;
+  /** Live feed target (contest_candidates.id) on the address-first ballot. */
+  feed?: FeedTarget;
+}
+
+/** Which live feed items a news carousel shows: a race's or a candidate's. */
+export interface FeedTarget {
+  contestId?: string;
+  candidateId?: string;
+}
+
+/** Cited profile content plus the resolved sources it references. */
+export interface GeneralProfile extends CandidateEnrichment {
+  sourceDocs: Record<string, SourceDoc>;
+  campaignUrl?: string;
 }
 
 export const ENDORSEMENT_ORDER: EndorsementCategory[] = [
@@ -150,12 +187,17 @@ export interface Race {
   office: string;
   /** Subtitle, e.g. "California Statewide" */
   jurisdiction: string;
+  /** Explains a map year split off the jurisdiction ("… District - 2022"). */
+  jurisdictionNote?: { text: string; source?: { name: string; url: string } };
+  /** Judicial retention (Yes/No on one judge): rendered as a measure-style card. */
+  retention?: boolean;
   /** Race format, e.g. "Top-Two Open Primary" */
   format: string;
   /** Brief format explainer */
   formatExplainer: string;
   /** Term length, salary, etc. shown in the header strip */
-  meta: { label: string; value: string }[];
+  /** `wide` items span two columns and never wrap (e.g. the ballot data source). */
+  meta: { label: string; value: string; wide?: boolean }[];
   unopposed: boolean;
   /** Race-level intro sections */
   intro: {
@@ -170,11 +212,35 @@ export interface Race {
     /** Display label for the polling source (e.g. "Emerson · Inside CA Politics · Apr 14–15") */
     pollingSourceLabel?: string;
     suspendedNote?: string;
+    /** e.g. "Undecided 12%" — shown under the poll bars when sourced. */
+    pollingFootnote?: string;
   };
   issues: Issue[];
   candidates: Candidate[];
   /** Optional race-wide news feed (will be live in v2). */
   news?: NewsItem[];
+  /** Overrides the "N active" line under the race in the sidebar/mobile nav. */
+  navLabel?: string;
+  /** Jurisdiction heading the race is listed under in the sidebar/mobile nav (e.g. "Federal"). */
+  group?: string;
+  /** Live feed target (contests.id) on the address-first ballot. */
+  feed?: FeedTarget;
+  /**
+   * Address-first ballot (Nov 2026+): cited race content and its sources.
+   * When present, the race header renders in "general" mode (no hardcoded
+   * polling defaults, "being researched" placeholders, citations).
+   */
+  general?: {
+    enrichment?: ContestEnrichment;
+    sourceDocs: Record<string, SourceDoc>;
+    /** Where the ballot data came from (official source, conduit, retrieved time). */
+    officialSources: SourceRef[];
+    voteFor?: number;
+    numberElected?: number;
+    rankedChoice?: boolean;
+    /** What it takes to win, from data or a cited rule. */
+    voteNeeded?: VoteNeeded;
+  };
 }
 
 export const PARTY_TO_KEY: Record<Party, PartyKey> = {
@@ -182,8 +248,10 @@ export const PARTY_TO_KEY: Record<Party, PartyKey> = {
   Republican: "rep",
   Green: "grn",
   Libertarian: "lib",
-  "Peace and Freedom": "pf",
-  "American Independent": "aip",
+  "Peace and Freedom": "np",
+  "American Independent": "np",
   "No Party Preference": "np",
   Independent: "np",
+  Other: "np",
+  Nonpartisan: "np",
 };
