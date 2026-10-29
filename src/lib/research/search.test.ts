@@ -12,16 +12,32 @@ const results = [
   { url: "https://www.example.com/ann-bee", title: "Ann Bee news" },
   { url: "https://a.gov/1", title: "1" },
   { url: "https://b.gov/2", title: "2" },
+  { url: "https://calmatters.org/politics/2026/10/ann-bee-profile/", title: "Who is Ann Bee?" },
+  { url: "https://www.nytimes.com/2026/10/01/us/politics/ann-bee.html", title: "Ann Bee's long road" },
+  { url: "https://calmatters.org/politics/2026/10/other/", title: "Another candidate" },
+  { url: "https://en.wikipedia.org/wiki/Ann_Bee", title: "Ann Bee - Wikipedia" },
 ];
 
 describe("keepUrls", () => {
-  it("people: .gov and the person's own Ballotpedia page only", () => {
-    expect(keepUrls("person", results, ["Bee"])).toEqual(["https://ballotpedia.org/Ann_Bee", "https://www.assembly.ca.gov/members", "https://smcacre.gov/elections", "https://a.gov/1"]);
+  it("people: .gov, their own Ballotpedia page, vetted news about them, and Wikipedia (as a finder)", () => {
+    expect(keepUrls("person", results, ["Bee"])).toEqual([
+      "https://ballotpedia.org/Ann_Bee",
+      "https://www.assembly.ca.gov/members",
+      "https://smcacre.gov/elections",
+      "https://a.gov/1",
+      "https://calmatters.org/politics/2026/10/ann-bee-profile/",
+      "https://www.nytimes.com/2026/10/01/us/politics/ann-bee.html",
+      "https://en.wikipedia.org/wiki/Ann_Bee",
+    ]);
   });
 
-  it("measures and offices: .gov only, never Ballotpedia", () => {
+  it("never keeps outlets outside the vetted news list", () => {
+    expect(keepUrls("person", [{ url: "https://www.example.com/ann-bee", title: "Ann Bee news" }], ["Bee"])).toEqual([]);
+  });
+
+  it("measures and offices: .gov only, never Ballotpedia, news or Wikipedia", () => {
     const kept = keepUrls("measure", results);
-    expect(kept.some((u) => u.includes("ballotpedia"))).toBe(false);
+    expect(kept.some((u) => /ballotpedia|wikipedia|calmatters|nytimes/.test(u))).toBe(false);
     expect(kept).toHaveLength(3);
     expect(keepUrls("office", results).every((u) => /\.gov\//.test(u))).toBe(true);
   });

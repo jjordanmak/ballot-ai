@@ -29,15 +29,16 @@
 |---|---|---|---|---|---|
 | 1 | Measure summary, YES means, NO means (only where curated text is missing) | | | `ANTHROPIC_MODEL_MEASURE` | |
 | 2 | Measure "What it means for you" (the six answers) | | | same as 1 (one call per measure) | Split from 1 only if they need different models |
-| 3 | Judge bios (current role, background, past positions) | | | `ANTHROPIC_MODEL_PROFILE` | |
-| 4 | Candidate background and past positions | | | same as 3 | |
-| 5 | Candidate stated priorities (attributed) | | | same as 3 | |
-| 6 | Quote-support checker | | low | `ANTHROPIC_MODEL_CHECK` | Fails closed; drops anything its quote doesn't support |
+| 3 | Finding a person's facts (education, positions, platform; judges and candidates) | | | `ANTHROPIC_MODEL_PROFILE` | Fields only; code checks every name and year and writes every line |
+| 4 | Writing the short bio from those facts | | | `ANTHROPIC_MODEL_BIO` | Writing style is where models differ most; it can't add facts |
+| 5 | What gets selected (rules in `PERSON_RULES`) | | | edit the rules, not a model | Use each column's "Left out" list to see each model's judgment |
+| 6 | Quote-support checker (prose claims only) | | medium | `ANTHROPIC_MODEL_CHECK` (`model:effort`) | Calibration: `AI_CHECK_COMPARE` judges the same claims in compare mode |
 | 7 | Effort level per item | | | the `:effort` suffix on 1, 3, 10 (e.g. `claude-haiku-5-5:high`) | |
 | 8 | Monthly budget and how many jobs run at once | | | `AI_MONTHLY_BUDGET_USD` (default 40), `AI_MAX_INFLIGHT` (default 12) | Keep the budget below the Console workspace limit |
 | 9 | Anything to leave off | | | | e.g. priorities, if no setting does them reliably |
 | 10 | "What this office does" (duties, term, seats; salary only if stated) | | | `ANTHROPIC_MODEL_OFFICE` | |
-| 11 | The search step that finds `.gov` / Ballotpedia pages (URLs only; writes nothing) | | | `ANTHROPIC_SEARCH_MODEL` | Default Haiku with the basic web search tool |
+| 11 | The search step that finds `.gov` / Ballotpedia / vetted-news / Wikipedia (finder) pages (URLs only; writes nothing) | | | `ANTHROPIC_SEARCH_MODEL` | Default Haiku with the basic web search tool |
+| 12 | Office descriptions for places whose official site isn't `.gov` (e.g. Daly City's `dalycity.org`) | | | rule change | Today they find no documents |
 
 ## After the decisions
 1. Record them above.

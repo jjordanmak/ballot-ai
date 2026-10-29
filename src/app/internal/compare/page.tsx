@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RichText } from "@/components/Highlight";
+import { Cite, SourceList } from "@/components/ballot/Citations";
+import type { SourceDoc } from "@/domain/enrichment";
 import { deprecatedPagesEnabled } from "@/components/deprecated/JunePrimary";
 import { settingId } from "@/lib/ai/config";
 import { loadComparison } from "@/lib/research/compareLoad";
@@ -175,7 +177,20 @@ const STATUS_COPY: Record<Cell["status"], string> = {
   other: "",
 };
 
+const TIER_LABEL: Record<string, string> = { official: "Official", ballotpedia: "Ballotpedia", news: "News", campaign: "Campaign" };
+
 function CellView({ cell, item }: { cell: Cell; item: Item }) {
+  // Number this cell's sources by first appearance, as the ballot page does.
+  const docs: Record<string, SourceDoc> = {};
+  for (const f of item.fields)
+    for (const l of cell.fields[f.key] ?? [])
+      for (const r of l.refs)
+        if (r.source && !docs[r.source.url])
+          {
+          const tier = TIER_LABEL[r.source.tier ?? ""] ?? (r.source.official ? "Official" : "Source");
+          const publisher = r.source.publisher || new URL(r.source.url).hostname;
+          docs[r.source.url] = { title: r.source.title, publisher: publisher === tier ? tier : `${tier} · ${publisher}`, url: r.source.url, official: r.source.official, accessed: r.source.fetchedAt.slice(0, 10) };
+        }
   return (
     <article className="flex flex-col rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-3 text-sm">
       <h3 className="mb-2 font-mono text-xs text-paper">{settingLabel(cell.setting)}</h3>
@@ -193,12 +208,8 @@ function CellView({ cell, item }: { cell: Cell; item: Item }) {
                 {lines.map((l, n) => (
                   <dd key={n} className="mt-1">
                     <RichText text={l.text} auto="neutral" />
-                    {l.quote && <blockquote className="mt-1 border-l border-[var(--color-ink-4)] pl-2 text-xs text-paper-3">“{l.quote}”</blockquote>}
-                    {l.source && (
-                      <a href={l.source.url} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-xs text-paper-3 underline decoration-[var(--color-ink-4)] hover:text-paper-2">
-                        {`${l.source.official ? "Official · " : ""}${l.source.publisher || new URL(l.source.url).hostname}`}
-                      </a>
-                    )}
+                    <Cite ids={l.refs.map((r) => r.source?.url ?? "")} docs={docs} quotes={l.refs.map((r) => r.quote)} />
+                    {l.sub && <span className="block text-xs text-paper-3">{l.sub}</span>}
                   </dd>
                 ))}
                 {rejected.map((r, n) => (
@@ -210,6 +221,43 @@ function CellView({ cell, item }: { cell: Cell; item: Item }) {
             );
           })}
         </dl>
+      )}
+      {Object.keys(docs).length > 0 && <SourceList docs={docs} />}
+      {cell.leftOut.length > 0 && (
+        <details className="mt-3 text-xs text-paper-3">
+          <summary className="cursor-pointer text-paper-2">Left out ({cell.leftOut.length})</summary>
+          <ul className="mt-1 space-y-1">
+            {cell.leftOut.map((x, i) => (
+              <li key={i}>
+                {x.fact} <span className="text-paper-4">— {x.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {cell.conflicts.length > 0 && (
+        <details className="mt-2 text-xs text-paper-3">
+          <summary className="cursor-pointer text-paper-2">Sources disagreed ({cell.conflicts.length})</summary>
+          <ul className="mt-1 space-y-1">
+            {cell.conflicts.map((x, i) => (
+              <li key={i}>
+                Kept “{x.kept}”, not “{x.dropped}”
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {cell.tried.length > 0 && (
+        <details className="mt-2 text-xs text-paper-3">
+          <summary className="cursor-pointer text-paper-2">Pages tried ({cell.tried.length})</summary>
+          <ul className="mt-1 space-y-1 break-all">
+            {cell.tried.map((x, i) => (
+              <li key={i}>
+                <span className={x.outcome.startsWith("read") ? "text-paper-2" : "text-paper-4"}>{x.outcome}</span> · {x.url}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       <p className="mt-auto pt-3 text-xs text-paper-3">
         {usd(cell.costMicroUsd)}

@@ -184,7 +184,7 @@ function OfficeBlock({
           {office?.duties && (
             <p className="text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty">
               <RichText text={office.duties.text} auto="neutral" />
-              <Cite ids={office.duties.sources} docs={docs} />
+              <Cite ids={office.duties.sources} docs={docs} quotes={office.duties.quotes} />
             </p>
           )}
           {facts.length > 0 && (
@@ -194,7 +194,7 @@ function OfficeBlock({
                   <dt className="font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)] pt-[3px]">{label}</dt>
                   <dd>
                     <RichText text={v.text} auto="neutral" />
-                    <Cite ids={v.sources} docs={docs} />
+                    <Cite ids={v.sources} docs={docs} quotes={v.quotes} />
                   </dd>
                 </div>
               ))}
@@ -248,7 +248,7 @@ function IntroBlock({
             : "text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty"
         }
       />
-      {cited && docs && <Cite ids={cited.sources} docs={docs} />}
+      {cited && docs && <Cite ids={cited.sources} docs={docs} quotes={cited.quotes} />}
     </div>
   );
 }

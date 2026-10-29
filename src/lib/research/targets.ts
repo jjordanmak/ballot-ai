@@ -50,6 +50,8 @@ export interface Target {
   personName?: string;
   office?: string;
   division?: string;
+  /** County, city, school or special-district race (residence is shown only for these). */
+  local?: boolean;
 }
 
 export interface ContestRow {
@@ -229,6 +231,7 @@ export function buildTargets(rows: ContestRow[], bundle?: EnrichmentBundle): Tar
         personName: name,
         office: c.title,
         division: where,
+        local: !retention && !statewide && !LEGISLATIVE.test(c.title),
       });
     }
   }

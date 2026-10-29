@@ -4,7 +4,11 @@
  * lint, and (second pass) the quote must support the text. Pure functions.
  */
 import { cleanText, neutralityProblem, quoteFound } from "@/lib/ai/checks";
-import { CAPS, MEASURE_FIELDS, OFFICE_FIELDS, type Answer, type MeasureResearch, type OfficeResearch, type PersonResearch, type Position } from "@/lib/ai/schemas";
+import { CAPS, MEASURE_FIELDS, OFFICE_FIELDS, type Answer, type MeasureResearch, type OfficeResearch } from "@/lib/ai/schemas";
+import type { PersonPayloadV2 } from "./person";
+
+/** Where a document comes from, in trust order (owner, 2026-10-29). */
+export type SourceTier = "official" | "ballotpedia" | "news" | "campaign";
 
 export interface StoredSource {
   url: string;
@@ -12,19 +16,12 @@ export interface StoredSource {
   publisher: string;
   official: boolean;
   fetchedAt: string;
+  tier?: SourceTier;
 }
 
 /** An answer that passed the checks, citing a stored source by its uuid. */
 export interface StoredAnswer {
   text: string;
-  quote: string;
-  source: string;
-}
-
-export interface StoredPosition {
-  title: string;
-  organization?: string;
-  years?: string;
   quote: string;
   source: string;
 }
@@ -37,14 +34,7 @@ export interface MeasurePayload {
   sources: Record<string, StoredSource>;
 }
 
-export interface PersonPayload {
-  kind: "person";
-  currentRole?: StoredAnswer;
-  background: StoredAnswer[];
-  pastPositions: StoredPosition[];
-  priorities: StoredAnswer[];
-  sources: Record<string, StoredSource>;
-}
+export type PersonPayload = PersonPayloadV2;
 
 export type OfficeField = (typeof OFFICE_FIELDS)[number];
 
@@ -132,35 +122,13 @@ export function screenOffice(data: OfficeResearch, docs: FetchedDoc[]): { pendin
   return { pending, rejected };
 }
 
-export function screenPerson(data: PersonResearch, docs: FetchedDoc[]): { pending: Pending[]; rejected: Rejection[] } {
-  const byId = new Map(docs.map((d) => [d.id, d]));
-  const rejected: Rejection[] = [];
-  const pending: Pending[] = [];
-  const push = (p: Pending | null) => p && pending.push(p);
-  if (data.currentRole) push(accept("currentRole", data.currentRole, byId, rejected));
-  data.background.slice(0, CAPS.background).forEach((a, i) => push(accept(`background.${i}`, a, byId, rejected)));
-  data.priorities.slice(0, CAPS.priorities).forEach((a, i) => push(accept(`priorities.${i}`, a, byId, rejected)));
-  data.pastPositions.slice(0, CAPS.pastPositions).forEach((p: Position, i) =>
-    push(
-      accept(
-        `pastPositions.${i}`,
-        { text: [p.title, p.organization, p.years].filter(Boolean).join(", "), quote: p.quote, sourceId: p.sourceId },
-        byId,
-        rejected,
-      ),
-    ),
-  );
-  return { pending, rejected };
-}
-
-/** Second pass applied: keep only supported claims, in the payload shape. */
+/** Second pass applied (measures and offices; people go through person.ts): keep only supported claims. */
 export function buildPayload(
-  kind: "measure" | "person" | "office",
+  kind: "measure" | "office",
   pending: Pending[],
   supported: boolean[],
   docs: FetchedDoc[],
-  positions: Position[] = [],
-): { payload: Payload; rejected: Rejection[]; sourceIds: string[] } {
+): { payload: MeasurePayload | OfficePayload; rejected: Rejection[]; sourceIds: string[] } {
   const rejected: Rejection[] = [];
   const kept = pending.filter((p, i) => {
     if (supported[i]) return true;
@@ -169,40 +137,15 @@ export function buildPayload(
   });
   const used = new Set(kept.map((k) => k.source));
   const sources = Object.fromEntries(docs.filter((d) => used.has(d.sourceId)).map((d) => [d.sourceId, d.meta]));
-  const answer = (k: Pending): StoredAnswer => ({ text: k.text, quote: k.quote, source: k.source });
-
-  if (kind === "measure") {
-    const answers: MeasurePayload["answers"] = {};
-    for (const k of kept) answers[k.field as MeasureField] = answer(k);
-    return { payload: { kind: "measure", answers, sources }, rejected, sourceIds: [...used] };
-  }
-  if (kind === "office") {
-    const answers: OfficePayload["answers"] = {};
-    for (const k of kept) answers[k.field as OfficeField] = answer(k);
-    return { payload: { kind: "office", answers, sources }, rejected, sourceIds: [...used] };
-  }
-  const person: PersonPayload = { kind: "person", background: [], pastPositions: [], priorities: [], sources };
-  for (const k of kept) {
-    const [group, idx] = k.field.split(".");
-    if (group === "currentRole") person.currentRole = answer(k);
-    else if (group === "background") person.background.push(answer(k));
-    else if (group === "priorities") person.priorities.push(answer(k));
-    else if (group === "pastPositions") {
-      const p = positions[Number(idx)];
-      person.pastPositions.push({
-        title: cleanText(p?.title ?? k.text, 160),
-        organization: p?.organization ? cleanText(p.organization, 160) : undefined,
-        years: p?.years ? cleanText(p.years, 40) : undefined,
-        quote: k.quote,
-        source: k.source,
-      });
-    }
-  }
-  return { payload: person, rejected, sourceIds: [...used] };
+  const answers: Record<string, StoredAnswer> = {};
+  for (const k of kept) answers[k.field] = { text: k.text, quote: k.quote, source: k.source };
+  return kind === "measure"
+    ? { payload: { kind: "measure", answers: answers as MeasurePayload["answers"], sources }, rejected, sourceIds: [...used] }
+    : { payload: { kind: "office", answers: answers as OfficePayload["answers"], sources }, rejected, sourceIds: [...used] };
 }
 
 export function payloadIsEmpty(p: Payload): boolean {
   return p.kind === "person"
-    ? !p.currentRole && !p.background.length && !p.pastPositions.length && !p.priorities.length
+    ? !p.education.length && !p.positions.length && !p.platform.length && !p.bio.length
     : Object.keys(p.answers).length === 0;
 }

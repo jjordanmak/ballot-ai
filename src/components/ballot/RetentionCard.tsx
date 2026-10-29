@@ -20,7 +20,10 @@ export function RetentionCard({ race, anchorId }: { race: Race; anchorId?: strin
   const office = judge ? race.office.replace(new RegExp(`:\\s*${escapeRegExp(judge.name)}$`), "") : race.office;
   const docs: Record<string, SourceDoc> = { ...(g?.sourceDocs ?? {}), ...(p?.sourceDocs ?? {}) };
   const voteNeeded = g?.voteNeeded;
-  const bio: Cited[] = [...(p?.currentRole ? [p.currentRole] : []), ...(p?.background ?? []), ...(p?.experience ?? [])];
+  // The narrative bio (research job) reads as one paragraph; curated background keeps one paragraph per fact.
+  const narrative = p?.bio ?? [];
+  const bio: Cited[] = narrative.length ? [] : [...(p?.currentRole ? [p.currentRole] : []), ...(p?.background ?? []), ...(p?.experience ?? [])];
+  const education = p?.education ?? [];
   const positions = p?.pastPositions ?? [];
 
   return (
@@ -65,20 +68,43 @@ export function RetentionCard({ race, anchorId }: { race: Race; anchorId?: strin
       <section className="mt-7 max-w-3xl" aria-label="About the judge">
         <div className="font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] mb-1">About the judge</div>
         {p?.aiFields?.length ? <AiLabel className="mb-3" /> : <div className="mb-2" />}
-        {bio.length || positions.length ? (
+        {narrative.length || bio.length || education.length || positions.length ? (
           <div className="space-y-2 text-[14px] leading-[1.6] text-[var(--color-paper-2)]">
+            {narrative.length > 0 && (
+              <p>
+                {narrative.map((b, i) => (
+                  <span key={i}>
+                    {i > 0 && " "}
+                    <RichText text={b.text} auto="neutral" />
+                    <Cite ids={b.sources} docs={docs} quotes={b.quotes} />
+                  </span>
+                ))}
+              </p>
+            )}
             {bio.map((b, i) => (
               <p key={i}>
                 <RichText text={b.text} auto="neutral" />
-                <Cite ids={b.sources} docs={docs} />
+                <Cite ids={b.sources} docs={docs} quotes={b.quotes} />
               </p>
             ))}
+            {education.length > 0 && (
+              <ul className="list-disc pl-5 space-y-1">
+                {education.map((e, i) => (
+                  <li key={i}>
+                    {e.text}
+                    <Cite ids={e.sources} docs={docs} quotes={e.quotes} />
+                  </li>
+                ))}
+              </ul>
+            )}
             {positions.length > 0 && (
               <ul className="list-disc pl-5 space-y-1">
                 {positions.map((pos, i) => (
                   <li key={i}>
-                    {[pos.title, pos.organization, pos.years].filter(Boolean).join(", ")}
-                    <Cite ids={pos.sources} docs={docs} />
+                    {[pos.title, pos.organization].filter(Boolean).join(", ")}
+                    {pos.years && <span className="text-[var(--color-paper-3)]"> · {pos.years}</span>}
+                    <Cite ids={pos.sources} docs={docs} quotes={pos.quotes} />
+                    {!!pos.committees?.length && <span className="block text-[12px] text-[var(--color-paper-3)]">Committees: {pos.committees.join(", ")}</span>}
                   </li>
                 ))}
               </ul>

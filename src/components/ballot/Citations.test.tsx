@@ -15,11 +15,19 @@ const provenance: SourceRef[] = [
 ];
 
 describe("citations", () => {
-  it("shows no inline markers and one unnumbered line for a single source", () => {
-    expect(renderToText(<Cite ids={["a"]} docs={one} />)).toBe("");
+  it("marks every cited item, even with a single source, and numbers the list to match", () => {
+    expect(renderToText(<Cite ids={["a"]} docs={one} />)).toContain("[1]");
     const html = renderToText(<SourceList docs={one} />);
-    expect(html).not.toContain("[1]");
+    expect(html).toContain("[1]");
     expect(html).toContain("Proposition 50");
+  });
+  it("opens a card with the exact supporting sentence, the source and a link (never inline)", () => {
+    const html = renderToText(<Cite ids={["b"]} docs={two} quotes={["The measure raises the tax to 7.25%."]} />);
+    expect(html).toContain('role="tooltip"');
+    expect(html).toContain("“The measure raises the tax to 7.25%.”");
+    expect(html).toContain("Legislative Analyst: Analysis");
+    expect(html).toContain('href="https://sos.example/Analysis"');
+    expect(html).toMatch(/<button[^>]*aria-describedby/);
   });
   it("numbers markers and the list when there are several sources", () => {
     expect(renderToText(<Cite ids={["b"]} docs={two} />)).toContain("[2]");

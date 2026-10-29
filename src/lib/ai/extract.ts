@@ -57,6 +57,8 @@ export async function extract<S extends z.ZodType>(opts: {
   schema: S;
   task: string;
   docs: Doc[];
+  /** Instructions; defaults to the research instructions. */
+  system?: string;
   client?: Pick<Anthropic, "messages">;
 }): Promise<CallResult<z.infer<S>>> {
   const c = opts.client ?? anthropic();
@@ -64,8 +66,8 @@ export async function extract<S extends z.ZodType>(opts: {
     const res = await c.messages.parse({
       model: opts.model,
       max_tokens: 16000,
-      system: [{ type: "text", text: RESEARCH_SYSTEM, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: `${documentsBlock(opts.docs)}\n\n${opts.task}` }],
+      system: [{ type: "text", text: opts.system ?? RESEARCH_SYSTEM, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: opts.docs.length ? `${documentsBlock(opts.docs)}\n\n${opts.task}` : opts.task }],
       output_config: { effort: opts.effort ?? "medium", format: zodOutputFormat(opts.schema) },
     });
     const cost = costMicroUsd(opts.model, res.usage);
@@ -90,6 +92,7 @@ export interface Claim {
  */
 export async function checkSupport(opts: {
   model: string;
+  effort?: Effort;
   claims: Claim[];
   client?: Pick<Anthropic, "messages">;
 }): Promise<{ supported: boolean[]; costMicroUsd: number; problem?: string }> {
@@ -107,7 +110,7 @@ export async function checkSupport(opts: {
           content: supportTask(list),
         },
       ],
-      output_config: { effort: "low", format: zodOutputFormat(SupportCheck) },
+      output_config: { effort: opts.effort ?? "low", format: zodOutputFormat(SupportCheck) },
     });
     const cost = costMicroUsd(opts.model, res.usage);
     const out = opts.claims.map(() => false);

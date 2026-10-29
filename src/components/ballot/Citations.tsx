@@ -1,34 +1,28 @@
 import { ArrowUpRight } from "lucide-react";
 import type { SourceRef } from "@/domain/ballot";
 import type { SourceDoc } from "@/domain/enrichment";
+import { CiteMarker } from "./CiteMarker";
 import { ProvenanceLine } from "./SourceLine";
 
 /**
  * Inline citation markers + source list. Numbering follows the order of
  * `docs` (first appearance), so markers and the list always agree.
  *
- * With a single source there are no inline markers: "[1]" after every
- * sentence says nothing the one "Source" line below doesn't. Everything is
- * still cited, at block level. A second source brings the markers back.
+ * Every cited item gets a marker, even when the block has one source
+ * (owner, 2026-10-29): the marker opens the exact sentence that supports
+ * that item, which the block's Sources line can't show.
  */
-export function Cite({ ids, docs }: { ids: string[] | undefined; docs: Record<string, SourceDoc> }) {
+export function Cite({ ids, docs, quotes }: { ids: string[] | undefined; docs: Record<string, SourceDoc>; quotes?: (string | undefined)[] }) {
   const order = Object.keys(docs);
-  if (order.length < 2) return null;
-  const nums = [...new Set(ids ?? [])].map((id) => ({ id, n: order.indexOf(id) + 1 })).filter((x) => x.n > 0);
+  const seen = new Set<string>();
+  const nums = (ids ?? [])
+    .map((id, i) => ({ id, n: order.indexOf(id) + 1, quote: quotes?.[i] }))
+    .filter((x) => x.n > 0 && !seen.has(x.id) && seen.add(x.id));
   if (!nums.length) return null;
   return (
     <sup className="ml-0.5 whitespace-nowrap">
-      {nums.map(({ id, n }) => (
-        <a
-          key={id}
-          href={docs[id].url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={`${docs[id].publisher}: ${docs[id].title}`}
-          className="font-mono text-[9px] text-[var(--color-paper-3)] hover:text-[var(--color-accent)] no-underline px-[1px]"
-        >
-          [{n}]
-        </a>
+      {nums.map(({ id, n, quote }) => (
+        <CiteMarker key={id} n={n} doc={docs[id]} quote={quote} />
       ))}
     </sup>
   );
@@ -49,8 +43,8 @@ function DocLink({ d }: { d: SourceDoc }) {
 
 /**
  * One Sources block: where the ballot data came from (`provenance`, when
- * given), then the researched sources: a single unnumbered line for one
- * source, a numbered list (matching the inline markers) for several.
+ * given), then the researched sources as a numbered list matching the
+ * inline [n] markers (numbered even when there is one).
  */
 export function SourceList({
   docs,
@@ -85,22 +79,15 @@ export function SourceList({
           </a>
         </p>
       ))}
-      {entries.length === 1 ? (
-        <p className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
-          {hasProvenance && <span className="text-[var(--color-paper-4)]">Explanations: </span>}
-          <DocLink d={entries[0][1]} />
-        </p>
-      ) : (
-        entries.length > 1 && (
-          <ol className="space-y-1">
-            {entries.map(([id, d], i) => (
-              <li key={id} className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
-                <span className="font-mono text-[var(--color-paper-4)] mr-1.5">[{i + 1}]</span>
-                <DocLink d={d} />
-              </li>
-            ))}
-          </ol>
-        )
+      {entries.length > 0 && (
+        <ol className="space-y-1">
+          {entries.map(([id, d], i) => (
+            <li key={id} className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
+              <span className="font-mono text-[var(--color-paper-4)] mr-1.5">[{i + 1}]</span>
+              <DocLink d={d} />
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   );

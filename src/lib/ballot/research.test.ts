@@ -33,8 +33,9 @@ describe("withResearch", () => {
       },
     ]);
     const merged = out.measures![measureKey(prop)];
-    expect(merged.summary).toEqual(curated?.summary ?? { text: "AI summary.", sources: ["ai-s1"] });
-    expect(merged.impact?.taxes).toEqual({ text: "Does not change taxes.", sources: ["ai-s1"] });
+    expect(merged.summary).toEqual(curated?.summary ?? { text: "AI summary.", sources: ["ai-s1"], quotes: ["q"] });
+    // The quote travels with the fact, for the [n] popover.
+    expect(merged.impact?.taxes).toEqual({ text: "Does not change taxes.", sources: ["ai-s1"], quotes: ["q"] });
     expect(merged.aiFields).toContain("impact.taxes");
     expect(out.sources["ai-s1"]).toEqual({ title: "Analysis", publisher: "Secretary of State", url: src.url, official: true, accessed: "2026-10-29" });
 
@@ -55,9 +56,32 @@ describe("withResearch", () => {
     } as unknown as Contest;
     const bundle: EnrichmentBundle = { election: "2026-11-03", sources: {} };
     const out = withResearch(bundle, { contests: [c] }, [
-      { target_id: "k-1", payload: { kind: "person", background: [{ text: "Was a teacher.", quote: "q", source: "s2" }], pastPositions: [], priorities: [], sources: { s2: src } } },
+      {
+        target_id: "k-1",
+        payload: {
+          kind: "person",
+          v: 2,
+          education: [{ degree: "Bachelor of Science", institution: "Ohio State University", year: 2001, quote: "q1", source: "s2" }],
+          positions: [
+            { title: "State Representative", organization: "Ohio House of Representatives", startYear: 2021, endYear: "present", type: "elected", committees: ["Finance Committee"], quote: "q2", source: "s2" },
+            { title: "Teacher", organization: "Columbus City Schools", startYear: 2005, endYear: 2020, type: "job", quote: "q3", source: "s2" },
+          ],
+          platform: [],
+          bio: [{ text: "Ann Bee is a State Representative and was a teacher.", facts: ["P0", "P1"] }],
+          sources: { s2: src },
+        },
+      },
     ]);
-    expect(out.candidates![candidateKey(c, c.choices[0])]).toMatchObject({ background: [{ text: "Was a teacher.", sources: ["ai-s2"] }], aiFields: ["background"] });
+    expect(out.candidates![candidateKey(c, c.choices[0])]).toMatchObject({
+      currentRole: { text: "State Representative, Ohio House of Representatives", sources: ["ai-s2"], quotes: ["q2"] },
+      bio: [{ text: "Ann Bee is a State Representative and was a teacher.", sources: ["ai-s2"], quotes: ["q2"] }],
+      education: [{ text: "B.S., Ohio State University · 2001", sources: ["ai-s2"], quotes: ["q1"] }],
+      pastPositions: [
+        { title: "State Representative, Ohio House of Representatives", years: "2021–present", committees: ["Finance Committee"], sources: ["ai-s2"], quotes: ["q2"] },
+        { title: "Teacher, Columbus City Schools", years: "2005–2020" },
+      ],
+      aiFields: ["currentRole", "bio", "education", "pastPositions"],
+    });
     expect(researchTargetIds({ contests: [c] })).toEqual(["k-1", "oh|state representative|ohio"]);
   });
 

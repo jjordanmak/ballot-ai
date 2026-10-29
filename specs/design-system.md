@@ -49,6 +49,15 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 
 ### Citations and sources (Nov 3 ballot)
 - **One Sources block per block that makes claims**: each race header, each measure card, each candidate profile ends with its own Sources block. Inline markers point into that block's list; numbering restarts per block.
+- **[n] footnote popovers** (owner, 2026-10-29): every cited item gets a marker, even when the block has one source.
+  - **Opening:** hover, keyboard focus or a tap opens a card (`src/components/ballot/CiteMarker.tsx`). Escape or tapping elsewhere closes it.
+  - **The card:** the exact supporting sentence in italics (for researched items), "publisher: title" with a link, then "Official source ·" and the accessed date.
+  - **Never inline:** the quote never appears in the text itself.
+  - **Mechanics:** the same hover/focus-within pattern as the district map note (`MapYearInfo`), so the link stays reachable. The trigger's tap area is enlarged to about 24px.
+- **Profiles** (research job): a short neutral bio paragraph, every sentence footnoted. Then:
+  - **Education:** one line per degree, written by code, e.g. "J.D., Stanford Law School · 1984".
+  - **Past positions:** newest first, e.g. "Title, Organization (District) · 1987–1990". A smaller "Committees: …" line goes under a legislative office.
+  - **Platform:** attributed ("Says they will…").
 - **Race header order** (2026-10-29): intro grid ("The office" first, full width, then Context / Why it matters / What's at stake / The big picture), then the race's Sources block, then "In the news". Sources sit above the news so they stay with the claims they back.
 - **"The office"**: same eyebrow shape as the other intro blocks. It shows the duties paragraph, then one row "Term · Seats · Salary" (salary only when an official page states it). Every item is cited and carries the AI label when it came from the research job. Until then it shows "Being researched…", which fills in live without a reload.
 - **Race and measure blocks start with "Ballot data:"** (official source · via conduit · retrieved time), then any rule source ("Vote needed: …"), then the researched sources. Candidate profiles skip the ballot-data line (the race block covers the listing).

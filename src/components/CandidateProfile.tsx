@@ -155,7 +155,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
           <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">
             {candidate.currentRole}
             {candidate.general && (
-              <Cite ids={candidate.general.currentRole?.sources} docs={candidate.general.sourceDocs} />
+              <Cite ids={candidate.general.currentRole?.sources} docs={candidate.general.sourceDocs} quotes={candidate.general.currentRole?.quotes} />
             )}
           </div>
           {candidate.general?.ballotDesignation && (
@@ -822,7 +822,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
   const g = candidate.general!;
   const docs = g.sourceDocs;
   const hasAny =
-    !!g.platform?.length || !!g.background?.length || !!g.pastPositions?.length || !!g.experience?.length ||
+    !!g.platform?.length || !!g.bio?.length || !!g.education?.length || !!g.background?.length || !!g.pastPositions?.length || !!g.experience?.length ||
     !!g.trackRecord?.length || !!g.priorities?.length || !!g.stances?.length || !!g.timeline?.length ||
     !!g.notableFacts?.length || !!g.endorsements?.length || !!g.funding;
 
@@ -849,17 +849,44 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <SectionHeading title="Background" icon={<Compass size={13} />} />
-          {g.background?.length ? (
+          {g.bio?.length ? (
+            // One readable paragraph; every sentence carries its own footnotes.
+            <p className="text-[15px] leading-[1.7] text-[var(--color-paper-2)] text-pretty">
+              {g.bio.map((b, i) => (
+                <span key={i}>
+                  {i > 0 && " "}
+                  <RichText text={b.text} auto="neutral" />
+                  <Cite ids={b.sources} docs={docs} quotes={b.quotes} />
+                </span>
+              ))}
+            </p>
+          ) : g.background?.length ? (
             <div className="space-y-3">
               {g.background.map((b, i) => (
                 <p key={i} className="text-[15px] leading-[1.7] text-[var(--color-paper-2)] text-pretty">
                   <RichText text={b.text} auto="neutral" />
-                  <Cite ids={b.sources} docs={docs} />
+                  <Cite ids={b.sources} docs={docs} quotes={b.quotes} />
                 </p>
               ))}
             </div>
           ) : (
             <Researching what="Background" />
+          )}
+          {!!g.education?.length && (
+            <div className="mt-6">
+              <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] tracking-[0.16em] mb-2">Education</div>
+              <ul className="space-y-1.5">
+                {g.education.map((e, i) => (
+                  <li key={i} className="flex gap-2 text-[13px] leading-[1.5] text-[var(--color-paper-2)]">
+                    <span className="mt-1.5 w-1 h-1 shrink-0 rounded-full bg-[var(--color-paper-3)]" />
+                    <span>
+                      {e.text}
+                      <Cite ids={e.sources} docs={docs} quotes={e.quotes} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
         <div className="rounded-xl bg-[var(--color-ink-2)]/60 border border-[var(--color-ink-3)] p-5">
@@ -873,7 +900,8 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
                     <span className="text-[var(--color-paper)]">{r.title}</span>
                     {r.organization && <>, {r.organization}</>}
                     {r.years && <span className="text-[var(--color-paper-3)]"> · {r.years}</span>}
-                    <Cite ids={r.sources} docs={docs} />
+                    <Cite ids={r.sources} docs={docs} quotes={r.quotes} />
+                    {!!r.committees?.length && <span className="block text-[12px] text-[var(--color-paper-3)]">Committees: {r.committees.join(", ")}</span>}
                   </span>
                 </li>
               ))}
@@ -1041,7 +1069,7 @@ function CitedList({
             }
           >
             <RichText text={it.text} auto="neutral" />
-            <Cite ids={it.sources} docs={docs} />
+            <Cite ids={it.sources} docs={docs} quotes={it.quotes} />
           </span>
         </li>
       ))}
@@ -1075,7 +1103,7 @@ function CitedPillar({
               <span className={`mt-1.5 w-1 h-1 shrink-0 rounded-full ${tint.bg}`} />
               <span className="text-[13px] leading-[1.55] text-[var(--color-paper)] text-pretty">
                 <RichText text={item.text} auto="neutral" />
-                <Cite ids={item.sources} docs={docs} />
+                <Cite ids={item.sources} docs={docs} quotes={item.quotes} />
               </span>
             </li>
           ))}

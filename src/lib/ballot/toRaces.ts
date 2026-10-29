@@ -220,8 +220,10 @@ function candidateSourceIds(ce: CandidateEnrichment | undefined): string[] {
   };
   add(ce.currentRole);
   add(ce.ballotDesignation);
+  add(ce.bio);
   add(ce.platform);
   add(ce.background);
+  add(ce.education);
   add(ce.pastPositions);
   add(ce.experience);
   ce.trackRecord?.forEach((t) => add(t.items));

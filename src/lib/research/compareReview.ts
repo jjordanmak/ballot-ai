@@ -5,6 +5,7 @@
  */
 import type { Setting } from "@/lib/ai/config";
 import { settingId } from "@/lib/ai/config";
+import { educationLine, positionLine } from "@/domain/profileFormat";
 import type { Payload, StoredAnswer, StoredSource } from "./verify";
 
 export interface CompareTarget {
@@ -19,6 +20,12 @@ export interface RunInfo {
   seconds?: number;
   rejected?: { field: string; reason: string; detail?: string }[];
   raw?: unknown;
+  /** Facts the model found but left out under the rules, and why (compare mode, people). */
+  leftOut?: { fact: string; reason: string }[];
+  /** Where two sources disagreed and which one was kept. */
+  conflicts?: { fact: string; kept: string; dropped: string }[];
+  /** Every page the job tried for this item, and what happened. */
+  tried?: { url: string; outcome: string }[];
   usage?: { input_tokens?: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null } | null;
 }
 
@@ -31,10 +38,17 @@ export interface CellInput {
   outcome?: string | null;
 }
 
+/** One supporting quote and where it's from (shown in the [n] popover, never inline). */
+export interface Ref {
+  quote: string;
+  source?: StoredSource;
+}
+
 export interface Line {
   text: string;
-  quote?: string;
-  source?: StoredSource;
+  refs: Ref[];
+  /** A second, smaller line (a legislative office's committees). */
+  sub?: string;
 }
 
 export interface Cell {
@@ -43,6 +57,9 @@ export interface Cell {
   outcome?: string | null;
   fields: Record<string, Line[]>;
   rejected: { field: string; reason: string; detail?: string }[];
+  leftOut: { fact: string; reason: string }[];
+  conflicts: { fact: string; kept: string; dropped: string }[];
+  tried: { url: string; outcome: string }[];
   costMicroUsd: number;
   seconds?: number;
 }
@@ -87,27 +104,40 @@ const FIELDS: Record<CompareTarget["kind"], { key: string; label: string }[]> = 
     { key: "salary", label: "Salary" },
   ],
   retention: [
+    { key: "bio", label: "Bio" },
     { key: "currentRole", label: "Current role" },
-    { key: "background", label: "Background" },
+    { key: "education", label: "Education" },
     { key: "pastPositions", label: "Past positions" },
   ],
   candidate: [
+    { key: "bio", label: "Bio" },
     { key: "currentRole", label: "Current role" },
-    { key: "background", label: "Background" },
+    { key: "education", label: "Education" },
     { key: "pastPositions", label: "Past positions" },
-    { key: "priorities", label: "Stated priorities" },
+    { key: "platform", label: "Platform" },
   ],
 };
 
 function linesFor(p: Payload, field: string): Line[] {
-  const src = (id: string) => p.sources[id];
-  const one = (a?: StoredAnswer) => (a ? [{ text: a.text, quote: a.quote, source: src(a.source) }] : []);
+  const ref = (x: { quote: string; source: string }): Ref => ({ quote: x.quote, source: p.sources[x.source] });
+  const one = (a?: StoredAnswer) => (a ? [{ text: a.text, refs: [ref(a)] }] : []);
   if (p.kind === "measure" || p.kind === "office") return one((p.answers as Record<string, StoredAnswer | undefined>)[field]);
-  if (field === "currentRole") return one(p.currentRole);
-  if (field === "background") return p.background.flatMap((a) => one(a));
-  if (field === "priorities") return p.priorities.flatMap((a) => one(a));
-  if (field === "pastPositions")
-    return p.pastPositions.map((x) => ({ text: [x.title, x.organization, x.years].filter(Boolean).join(", "), quote: x.quote, source: src(x.source) }));
+  if (p.v !== 2) return []; // superseded shape from the first pass
+  if (field === "bio") {
+    const facts = new Map<string, { quote: string; source: string }>([
+      ...p.positions.map((x, i) => [`P${i}`, x] as const),
+      ...p.education.map((x, i) => [`E${i}`, x] as const),
+      ...(p.residence ? [["R", p.residence] as const] : []),
+    ]);
+    return p.bio.map((s) => ({ text: s.text, refs: s.facts.map((id) => facts.get(id)).filter((x): x is { quote: string; source: string } => !!x).map(ref) }));
+  }
+  if (field === "currentRole") {
+    const c = p.positions.find((x) => x.endYear === "present");
+    return c ? [{ text: [c.title, c.organization].filter(Boolean).join(", "), refs: [ref(c)] }] : [];
+  }
+  if (field === "education") return p.education.map((e) => ({ text: educationLine(e), refs: [ref(e)] }));
+  if (field === "pastPositions") return p.positions.map((x) => ({ text: positionLine(x), refs: [ref(x)], sub: x.committees?.length ? `Committees: ${x.committees.join(", ")}` : undefined }));
+  if (field === "platform") return p.platform.map((x) => ({ text: x.text, refs: [ref(x)] }));
   return [];
 }
 
@@ -125,7 +155,7 @@ export function buildComparison(targets: CompareTarget[], settings: Setting[], c
     const row: Cell[] = ids.map((setting) => {
       const input = cells.get(`${target.key}@${setting}`);
       const sum = summary.get(setting)!;
-      const out: Cell = { setting, status: "pending", outcome: input?.outcome ?? null, fields: {}, rejected: [], costMicroUsd: 0 };
+      const out: Cell = { setting, status: "pending", outcome: input?.outcome ?? null, fields: {}, rejected: [], leftOut: [], conflicts: [], tried: [], costMicroUsd: 0 };
       if (input?.payload) {
         out.status = "done";
         sum.done++;
@@ -139,6 +169,9 @@ export function buildComparison(targets: CompareTarget[], settings: Setting[], c
       else if (input?.outcome && !["waiting", "rate limited"].includes(input.outcome)) out.status = "other";
       if (input?.run) {
         out.rejected = input.run.rejected ?? [];
+        out.leftOut = input.run.leftOut ?? [];
+        out.conflicts = input.run.conflicts ?? [];
+        out.tried = input.run.tried ?? [];
         out.costMicroUsd = input.run.costMicroUsd ?? 0;
         out.seconds = input.run.seconds;
         sum.costMicroUsd += out.costMicroUsd;

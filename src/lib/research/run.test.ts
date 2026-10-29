@@ -304,3 +304,115 @@ describe("runJob", () => {
     expect(s.parse).not.toHaveBeenCalled();
   });
 });
+
+describe("runJob: people (facts, then a bio from the facts)", () => {
+  const CAMPAIGN = `<html><body><main><h1>About Ann Bee</h1>
+<p>Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.</p>
+<p>She has served on the Springfield City Council since 2019.</p>
+<p>Before that, she was a public school teacher from 2005 to 2018.</p>
+<p>As mayor, I will expand bus service to every neighborhood.</p>
+<p>Ann is the daughter of two nurses.</p>
+${"<p>More about the campaign, for length.</p>".repeat(8)}</main></body></html>`;
+  const candidateContests = [
+    {
+      id: "c-mayor",
+      election_id: "e1",
+      kind: "candidate",
+      contest_type: "general",
+      title: "Mayor",
+      division_key: "ocd-division/country:us/state:il/place:springfield",
+      divisions: { name: "City of Springfield", state: "IL", scope: "citywide" },
+      contest_candidates: [{ id: "k-bee", ballot_name: "ANN BEE", display_name: "Ann Bee", campaign_url: "https://annbee.example.org/" }],
+    },
+  ];
+  const PKEY = "candidate:k-bee:profile";
+
+  it("checks each fact against its quote, writes the bio only from kept facts, and stores the quotes for the popovers", async () => {
+    let now = new Date("2026-10-29T07:00:00Z");
+    const fake = fakeDb({ contests: candidateContests }, () => now);
+    const usage = { input_tokens: 2000, output_tokens: 300, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
+    const tasks: string[] = [];
+    const parse = vi.fn(async (req: { system: { text: string }[]; messages: { content: string }[] }) => {
+      const content = req.messages[0].content;
+      tasks.push(content.slice(0, 40));
+      if (content.startsWith("For each numbered item")) return { stop_reason: "end_turn", usage, parsed_output: { results: [{ n: 1, supported: true }] } };
+      if (content.startsWith("Write 3 to 5 sentences")) {
+        // The bio writer sees the checked facts only, never the documents.
+        expect(content).not.toContain("<document");
+        expect(content).toContain("P0: Member, Springfield City Council · 2019–present");
+        expect(content).not.toContain("Harvard");
+        return {
+          stop_reason: "end_turn",
+          usage,
+          parsed_output: {
+            sentences: [
+              { text: "Ann Bee has served on the Springfield City Council since 2019.", facts: ["P0"] },
+              { text: "She was a teacher from 2005 to 2018.", facts: ["P1"] },
+              { text: "She is the daughter of two nurses.", facts: ["P1"] },
+            ],
+          },
+        };
+      }
+      expect(content).toContain("Residence: the city or area where they live");
+      expect(content).toContain("Leave out, for everyone: family background");
+      return {
+        stop_reason: "end_turn",
+        usage,
+        parsed_output: {
+          education: [
+            { degree: "Bachelor of Arts", field: "History", institution: "University of Michigan", year: null, quote: "Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.", sourceId: "D1" },
+            { degree: "J.D.", field: null, institution: "Harvard Law School", year: null, quote: "Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.", sourceId: "D1" },
+          ],
+          positions: [
+            { title: "Member", organization: "Springfield City Council", district: null, startYear: 2019, endYear: "present", type: "elected", committees: [], quote: "She has served on the Springfield City Council since 2019.", sourceId: "D1" },
+            { title: "Teacher", organization: "public school", district: null, startYear: 2005, endYear: "2018", type: "job", committees: [], quote: "Before that, she was a public school teacher from 2005 to 2018.", sourceId: "D1" },
+          ],
+          platform: [{ text: "Says she will expand bus service to every neighborhood.", quote: "As mayor, I will expand bus service to every neighborhood.", sourceId: "D1" }],
+          residence: null,
+          leftOut: [{ fact: "Daughter of two nurses", reason: "family background" }],
+        },
+      };
+    });
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
+      if (url.startsWith("https://annbee.example.org/")) return new Response(CAMPAIGN, { status: 200, headers: { "content-type": "text/html" } });
+      return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
+    });
+    const deps = {
+      db: fake.db,
+      electionId: "e1",
+      config: compareCfg,
+      client: { messages: { parse } } as never,
+      fetchImpl: fetchImpl as never,
+      resolve: resolve as never,
+      sleep: async () => {},
+      compareKeys: [PKEY],
+      now,
+    };
+    await dispatch({ ...deps, runRemote: async () => {} });
+    const out = await runJob(deps, `${PKEY}@claude-haiku-5-5:low`);
+    expect(out.outcome).toBe("compared");
+
+    const [v] = fake.tables.synthesized_field_versions as { payload: Record<string, unknown>; status: string }[];
+    expect(v.status).toBe("held");
+    expect(v.payload).toMatchObject({
+      kind: "person",
+      v: 2,
+      education: [{ degree: "Bachelor of Arts", field: "History", institution: "University of Michigan" }],
+      positions: [
+        { title: "Member", organization: "Springfield City Council", startYear: 2019, endYear: "present" },
+        { title: "Teacher", startYear: 2005, endYear: 2018 },
+      ],
+      platform: [{ text: "Says she will expand bus service to every neighborhood." }],
+      bio: [
+        { text: "Ann Bee has served on the Springfield City Council since 2019.", facts: ["P0"] },
+        { text: "She was a teacher from 2005 to 2018.", facts: ["P1"] },
+      ],
+    });
+    const run = (fake.tables.synthesis_runs as { metadata: { rejected: { field: string; detail?: string }[]; leftOut: unknown[]; tried: { outcome: string }[] } }[])[0];
+    expect(run.metadata.rejected).toEqual(expect.arrayContaining([expect.objectContaining({ field: "education.1", detail: "institution not in quote" }), expect.objectContaining({ field: "bio.2", detail: "family background" })]));
+    expect(run.metadata.leftOut).toEqual([{ fact: "Daughter of two nurses", reason: "family background" }]);
+    expect(run.metadata.tried.some((t) => t.outcome === "read")).toBe(true);
+    now = new Date(now.getTime() + 1);
+  });
+});
