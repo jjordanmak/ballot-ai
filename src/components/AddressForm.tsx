@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ArrowRight, ExternalLink, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowRight, ExternalLink, MapPin, ShieldCheck, TriangleAlert } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
 import { INCOMPLETE_ADDRESS_COPY, NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
 import { hasLocality } from "@/lib/providers/address";
@@ -207,7 +207,10 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
       <div aria-live="polite" id="address-error">
         {error && (
           <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3">
-            <p className="text-[14px] text-[var(--color-paper)] font-medium">{error.title}</p>
+            <p className="flex items-center gap-2 text-[14px] text-[var(--color-paper)] font-medium">
+              <TriangleAlert size={14} aria-hidden className="shrink-0 text-[var(--color-accent)]" />
+              {error.title}
+            </p>
             <p className="mt-1 text-[13px] leading-[1.55] text-[var(--color-paper-2)]">{error.body}</p>
             {showLookup && (
               <a
