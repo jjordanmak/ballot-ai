@@ -1,0 +1,24 @@
+{
+  "_note": "Where the research pipeline looks for official documents, per state. Each URL is an official election-authority page; {number} is the measure number from the ballot title. 'follow' lists link texts on that page to read too (same site only). Add a state by adding a row, not code.",
+  "states": {
+    "CA": {
+      "publisher": "California Secretary of State",
+      "statewideMeasure": {
+        "pages": [
+          "https://voterguide.sos.ca.gov/propositions/{number}/",
+          "https://voterguide.sos.ca.gov/quick-reference-guide/{number}.htm"
+        ],
+        "follow": ["analysis by the legislative analyst", "analysis", "official title and summary", "title and summary"]
+      },
+      "retention": [
+        { "match": "supreme court", "url": "https://voterguide.sos.ca.gov/justices/supreme-court-justices/index.htm" },
+        { "match": "first (appellate )?district", "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district1.htm" },
+        { "match": "second (appellate )?district", "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district2.htm" },
+        { "match": "third (appellate )?district", "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district3.htm" },
+        { "match": "fourth (appellate )?district", "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district4.htm" },
+        { "match": "fifth (appellate )?district", "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district5.htm" },
+        { "match": "sixth (appellate )?district", "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district6.htm" }
+      ]
+    }
+  }
+}

@@ -37,7 +37,17 @@ export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { rac
         enrichment: me,
         sourceDocs: pickSources(
           bundle.sources,
-          citedIds(me?.summary, me?.yesMeans, me?.noMeans, me?.fiscalEffect, me?.argumentFor, me?.argumentAgainst, me?.supporters, me?.opponents),
+          citedIds(
+            me?.summary,
+            me?.yesMeans,
+            me?.noMeans,
+            ...Object.values(me?.impact ?? {}),
+            me?.fiscalEffect,
+            me?.argumentFor,
+            me?.argumentAgainst,
+            me?.supporters,
+            me?.opponents,
+          ),
         ),
       });
       continue;

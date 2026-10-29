@@ -1156,6 +1156,7 @@ export type Database = {
         Row: {
           author: string | null
           canonical_url: string | null
+          content_text: string | null
           created_at: string
           excerpt: string | null
           fetched_at: string
@@ -1173,6 +1174,7 @@ export type Database = {
         Insert: {
           author?: string | null
           canonical_url?: string | null
+          content_text?: string | null
           created_at?: string
           excerpt?: string | null
           fetched_at?: string
@@ -1190,6 +1192,7 @@ export type Database = {
         Update: {
           author?: string | null
           canonical_url?: string | null
+          content_text?: string | null
           created_at?: string
           excerpt?: string | null
           fetched_at?: string
@@ -1279,9 +1282,12 @@ export type Database = {
           content: string
           created_at: string
           field_name: string
+          held_reason: string | null
           id: string
           is_current: boolean
+          payload: Json | null
           source_ids: string[]
+          status: string
           synthesis_run_id: string | null
           target_id: string
           target_type: string
@@ -1290,9 +1296,12 @@ export type Database = {
           content: string
           created_at?: string
           field_name: string
+          held_reason?: string | null
           id?: string
           is_current?: boolean
+          payload?: Json | null
           source_ids?: string[]
+          status?: string
           synthesis_run_id?: string | null
           target_id: string
           target_type: string
@@ -1301,9 +1310,12 @@ export type Database = {
           content?: string
           created_at?: string
           field_name?: string
+          held_reason?: string | null
           id?: string
           is_current?: boolean
+          payload?: Json | null
           source_ids?: string[]
+          status?: string
           synthesis_run_id?: string | null
           target_id?: string
           target_type?: string
@@ -1323,6 +1335,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_api_spend: {
+        Args: { p_amount: number; p_metric: string; p_period: string }
+        Returns: number
+      }
       ballot_feed: {
         Args: {
           p_contest_ids: string[]

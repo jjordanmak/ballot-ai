@@ -90,6 +90,8 @@ export interface CandidateEnrichment {
   notableFacts?: Cited[];
   endorsements?: { name: string; category: string; sources: string[] }[];
   funding?: FundingSummary;
+  /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
+  aiFields?: string[];
 }
 
 export interface MeasureEnrichment {
@@ -119,6 +121,8 @@ export interface MeasureEnrichment {
   supporters?: Cited;
   opponents?: Cited;
   officialUrl?: string;
+  /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
+  aiFields?: string[];
 }
 
 export interface EnrichmentBundle {

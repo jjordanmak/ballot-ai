@@ -5,7 +5,7 @@ import { NewsFeed } from "@/components/NewsFeed";
 import { COUNTS_VOTES_CAST, measureVoteNeeded, type VoteNeeded } from "@/domain/voteNeeded";
 import { IMPACT_QUESTIONS, impactAnswers } from "@/lib/ballot/measureImpact";
 import { divisionLabel } from "@/domain/districtMaps";
-import { Cite, SourceList } from "./Citations";
+import { AiLabel, Cite, SourceList } from "./Citations";
 import { MapYearInfo } from "./MapYearInfo";
 
 /**
@@ -63,6 +63,7 @@ export function MeasureCard({
           </p>
         )}
       </header>
+      {!!e?.aiFields?.length && <AiLabel className="mt-3" />}
 
       {e?.summary ? (
         <p className="mt-5 text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty max-w-3xl">

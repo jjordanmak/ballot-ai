@@ -20,6 +20,8 @@ import { formatElectionDate, locationLabel, locationLine, STATE_LOOKUP_FALLBACK,
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { electionChoices, type ElectionChoice } from "@/lib/ballot/electionChoices";
 import { loadBallot as loadStoredBallot } from "@/lib/ballot/loadBallot";
+import { researchTargetIds, withResearch } from "@/lib/ballot/research";
+import { publishedResearch } from "@/lib/ballot/researchRead";
 import { statewideMeasuresHeading, toRaces, type MeasureView } from "@/lib/ballot/toRaces";
 import { discoveredLinks, initialFeed, type DiscoveredLink } from "@/lib/feeds/read";
 import { districtsFrom } from "@/domain/districts";
@@ -55,7 +57,9 @@ export default async function BallotPage({ params }: { params: Params }) {
   if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} elections={await electionChoices()} />;
 
   const ballot = result.ballot;
-  const { races, measures } = toRaces(ballot, getEnrichment(electionSlug));
+  // Research answers (published, quote-checked) fill in under the curated enrichment.
+  const research = await publishedResearch(researchTargetIds(ballot));
+  const { races, measures } = toRaces(ballot, withResearch(getEnrichment(electionSlug), ballot, research));
   // Tab title stays "City, ST"; the sidebar and header add the ZIP.
   const location = locationLine(ballot.location);
   const onBallot = new Set(districtsFrom([], ballot.contests, ballot.location.state).map((d) => d.kind));

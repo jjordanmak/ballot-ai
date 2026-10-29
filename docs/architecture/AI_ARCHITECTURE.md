@@ -13,6 +13,39 @@ There are therefore no deprecated models to migrate. Centralized configuration i
 
 **Claude Code vs. runtime:** Claude Code authentication is separate from ballot.ai's runtime `ANTHROPIC_API_KEY`. Development sessions never need the production key.
 
+## 1a. Built (2026-10-29)
+
+The research pipeline exists, runs in the app (never in a Claude Code session), and is off until the owner sets `ANTHROPIC_API_KEY` and `AI_SYNTHESIS_ENABLED=on` (docs/infrastructure/ENVIRONMENT.md).
+
+| Piece | Where |
+|---|---|
+| Model IDs, kill switch, monthly budget, prices | `src/lib/ai/config.ts` (default `claude-haiku-5-5`, owner decision 2026-10-29) |
+| Structured extraction + quote-support check | `src/lib/ai/extract.ts` (`messages.parse` + zod; standard API, no batching, so updates land within the hour) |
+| Output schemas, caps | `src/lib/ai/schemas.ts` |
+| Quote, neutrality and cleanup checks | `src/lib/ai/checks.ts` |
+| Targets (registry) and where to look | `src/lib/research/targets.ts` + `src/data/sources/official-guides.json` (statewide measures, retention judges: per-state official pages; candidates: their campaign site from the ballot data) |
+| Fetch, hash, run, store | `src/lib/research/run.ts`, run hourly by `/api/cron/research` (`vercel.json`) |
+| Verification into the stored shape | `src/lib/research/verify.ts` |
+| Read path (curated wins; labeled) | `src/lib/ballot/research.ts`, `researchRead.ts`; `AiLabel` in `src/components/ballot/Citations.tsx` |
+| Tables | migrations 0010 (payload/status on `synthesized_field_versions`, `sources.content_text`, `add_api_spend`) and 0011 (public read of published, current rows) |
+
+How one item is made:
+1. **Fetch.** The target's pages are fetched through `safeFetch` (public hosts only), plus up to 3 same-site pages linked by expected link text (e.g. "Analysis by the Legislative Analyst", "About", "Issues"). Main text only, stored on `sources`; re-fetched at most daily.
+2. **Skip if unchanged.** The input hash covers the document texts, model and prompt version, so nothing is re-run unless a cited document changed.
+3. **Extract.** Every answer is `{text, quote, sourceId}` or null.
+4. **Check.**
+   - The quote must appear in the cited document (case, spacing, quote styles and dashes ignored; "…" allowed between parts in order).
+   - The text passes the neutrality lint.
+   - The text is capped.
+   - Only `<mark>` tags survive.
+5. **Confirm.** A second, low-effort call answers "does this quote, on its own, support this sentence?" for every claim. Unsupported claims are dropped, and the check fails closed.
+6. **Store.**
+   - A version with surviving answers is `published`.
+   - A version where nothing survived is `held`, with the reason.
+   - Every run logs model, prompt version, cost and rejections in `synthesis_runs`.
+
+Not yet: PDFs (HTML only), local measures (no official list), states other than California in `official-guides.json`, web-search discovery (off until the owner approves it), race context (office duties).
+
 ## 2. Trust boundary
 
 | Claude MUST NOT determine | Claude MAY do (offline, with sources) |
@@ -49,8 +82,8 @@ official / source documents ─► fetch + hash (sources) ─► extraction (EXT
 | Env var | Purpose | Default (verified 2026-10-28 via Anthropic model table) |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Runtime key (server-only) | — |
-| `ANTHROPIC_DEFAULT_MODEL` | Higher-capability synthesis: candidate summaries, measure explanations, comparisons | `claude-opus-5-5` |
-| `ANTHROPIC_EXTRACTION_MODEL` | High-volume low-cost extraction, classification, normalization | `claude-haiku-5-5` |
+| `ANTHROPIC_DEFAULT_MODEL` | Research extraction (measures, judges, candidate profiles) | `claude-haiku-5-5` (owner, 2026-10-29: lowest cost; every answer is quote-checked in code) |
+| `ANTHROPIC_EXTRACTION_MODEL` | The quote-support check | same as the default model |
 
 Implementation notes for when the pipeline is built (P2):
 - SDK: `@anthropic-ai/sdk`, server-only, in scripts and cron routes.

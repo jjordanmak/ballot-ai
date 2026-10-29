@@ -94,7 +94,7 @@ src/
 │   ├── ballot/[electionSlug]/[ballotKey]/page.tsx   Ballot view (address-free key, noindex)
 │   ├── archive/[electionId]/[zip]/page.tsx          Deprecated June 2026 primary (frozen snapshot; previews only)
 │   ├── api/address/*                  Places suggestion proxy (same-site only, monthly cap)
-│   ├── api/cron/*                     Collectors: news (2 min), polls (20 min), news-recheck (daily)
+│   ├── api/cron/*                     Collectors: news (2 min), polls (20 min), news-recheck (daily), research (hourly, AI)
 │   ├── layout.tsx                     Root metadata, fonts
 │   └── globals.css                    Design tokens, mark styles, animations
 ├── components/                        UI components (one per concern); ballot/ = new ballot view
@@ -104,6 +104,8 @@ src/
     ├── ballot/                        Application service: resolve, load, store, validate, copy
     ├── providers/                     BallotResolver/ElectionProvider + google-civic/ + fixture/
     ├── feeds/                         News + poll collectors, matcher, checks, safe fetch, X-link discovery
+    ├── ai/                            Claude config (the only place model IDs live), extraction calls, quote/neutrality checks
+    ├── research/                      Research job: targets, official-page fetching, verification (AI_ARCHITECTURE.md)
     ├── usage/                         Monthly API quota (Places)
     ├── observability/                 Redacting logger
     └── supabase/                      Typed clients (server/browser/admin) + DB types
