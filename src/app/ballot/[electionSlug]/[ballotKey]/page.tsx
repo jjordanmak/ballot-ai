@@ -155,6 +155,8 @@ export default async function BallotPage({ params }: { params: Params }) {
                     docs={mv.sourceDocs}
                     officialGuideUrl={officialUrl}
                     anchorId={`candidate-${g.id}-${mv.contest.id}`}
+                    state={ballot.location.state}
+                    statewide={mv.statewide}
                   />
                 ))}
               </div>

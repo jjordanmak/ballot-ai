@@ -8,6 +8,7 @@ import { CATEGORY_LABEL, CATEGORY_ORDER, type Contest, type ResolvedBallot } fro
 import type { CandidateEnrichment, EnrichmentBundle, MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import type { Candidate, Party, Race } from "@/data/types";
 import { rankedChoiceRule } from "@/domain/rankedChoice";
+import { raceVoteNeeded } from "@/domain/voteNeeded";
 import { normalizeForMatch, readableName } from "@/domain/text";
 import { candidateKey, contestKey, measureKey } from "./enrichmentKeys";
 
@@ -58,7 +59,6 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
     ...citedIds(e?.formatExplainer, e?.context, e?.whyItMatters, e?.whatsAtStake, e?.bigPicture, e?.polling?.summary),
     ...(e?.polling?.poll?.sources ?? []),
   ]);
-  const officialSource = c.sources.find((s) => s.official);
   const candidates = c.choices.map((ch) => {
     const ce = bundle.candidates?.[candidateKey(c, ch)];
     const name = displayName(c, ch, bundle);
@@ -97,13 +97,11 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
     return candidate;
   });
 
-  const voteFor = c.voteFor;
+  // District shows above the title, vote-for on the count line and the ballot
+  // data in the race's Sources block, so the strip only carries researched facts.
   const meta: Race["meta"] = [
-    ...(rankedChoiceRule(c, state) ? [{ label: "Voting", value: "Ranked choice" }] : voteFor ? [{ label: "Vote for", value: String(voteFor) }] : []),
-    ...(c.numberElected && c.numberElected > 1 ? [{ label: "Seats", value: String(c.numberElected) }] : []),
-    { label: "District", value: c.division.name || "—" },
+    ...(c.numberElected && c.numberElected > 1 && c.numberElected !== c.voteFor ? [{ label: "Seats", value: String(c.numberElected) }] : []),
     ...(e?.meta ?? []),
-    ...(officialSource ? [{ label: "Ballot data", value: officialSource.name, wide: true }] : []),
   ].slice(0, 8);
 
   const poll = e?.polling?.poll;
@@ -145,6 +143,8 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
       officialSources: c.sources,
       voteFor: c.voteFor,
       numberElected: c.numberElected,
+      rankedChoice: !!rankedChoiceRule(c, state),
+      voteNeeded: raceVoteNeeded(c, state),
     },
   };
 }
@@ -162,8 +162,7 @@ export function displayName(c: Contest, ch: Contest["choices"][number], bundle: 
 function formatLabel(c: Contest, state?: string): string {
   if (c.contestType === "retention") return "Retention · Yes / No";
   const parts = [c.contestType === "general" ? "General election" : c.rawType ?? "Contest"];
-  if (rankedChoiceRule(c, state)) parts.push("Ranked choice · Rank candidates");
-  else if (c.voteFor) parts.push(c.voteFor === 1 ? "Vote for 1" : `Vote for up to ${c.voteFor}`);
+  if (rankedChoiceRule(c, state)) parts.push("Ranked choice");
   if (c.special) parts.push("Special election");
   return parts.join(" · ");
 }

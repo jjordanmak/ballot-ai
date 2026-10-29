@@ -1,5 +1,6 @@
 import type { CandidateEnrichment, ContestEnrichment, SourceDoc } from "@/domain/enrichment";
 import type { SourceRef } from "@/domain/ballot";
+import type { VoteNeeded } from "@/domain/voteNeeded";
 
 export type Party =
   | "Democratic"
@@ -228,9 +229,13 @@ export interface Race {
   general?: {
     enrichment?: ContestEnrichment;
     sourceDocs: Record<string, SourceDoc>;
+    /** Where the ballot data came from (official source, conduit, retrieved time). */
     officialSources: SourceRef[];
     voteFor?: number;
     numberElected?: number;
+    rankedChoice?: boolean;
+    /** What it takes to win, from data or a cited rule. */
+    voteNeeded?: VoteNeeded;
   };
 }
 

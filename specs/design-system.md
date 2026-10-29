@@ -47,6 +47,16 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 
 **Standard (owner, 2026-10-29):** a party gets its own color only when it is as strongly tied to one as red and blue are to Republicans and Democrats. Today that is Green (green) and Libertarian (gold). Every other party (Peace and Freedom, American Independent, Constitution, Working Families, Conservative, Forward, Alaskan Independence…) is neutral gray, and the pill always prints the party exactly as the ballot data names it (`Candidate.partyName`). Party is never shown by color alone.
 
+### Citations and sources (Nov 3 ballot)
+- **One Sources block per block that makes claims**: each race header, each measure card, each candidate profile ends with its own Sources block. Inline markers point into that block's list; numbering restarts per block.
+- **Race and measure blocks start with "Ballot data:"** (official source · via conduit · retrieved time), then any rule source ("Vote needed: …"), then the researched sources. Candidate profiles skip the ballot-data line (the race block covers the listing).
+- **One researched source → no inline markers** and one unnumbered line; two or more → numbered `[n]` markers and a numbered list.
+- Side-by-side cells link their source directly.
+
+### Vote needed and measure questions
+- Every race shows what it takes to win on its count line ("Vote for 1 of 2 candidates · Most votes wins"); every measure shows "Passes with …" naming the share **and its base** ("of the votes cast on this measure" / "of all ballots cast in the election"). Unverified rules say so; never guessed (`src/domain/voteNeeded.ts`).
+- Measures carry "What it means for you": the same six questions, same order, on every measure (`src/lib/ballot/measureImpact.ts`), answered only from official nonpartisan analyses, cited; unanswered → "Not addressed in the official analysis". No green/red for Yes/No.
+
 ### Supplementary tints
 Used for data encoding (section pillars, news item types) — never as primary surface backgrounds.
 

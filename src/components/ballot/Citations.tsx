@@ -56,14 +56,17 @@ export function SourceList({
   docs,
   title = "Sources",
   provenance,
+  notes,
 }: {
   docs: Record<string, SourceDoc>;
   title?: string;
   provenance?: SourceRef[];
+  /** Extra labeled sources, e.g. the rule behind "Vote needed". */
+  notes?: { label: string; name: string; url: string }[];
 }) {
   const entries = Object.entries(docs);
   const hasProvenance = !!provenance?.length;
-  if (!entries.length && !hasProvenance) return null;
+  if (!entries.length && !hasProvenance && !notes?.length) return null;
   const label = "font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em]";
   return (
     <div className="mt-8 pt-4 border-t border-[var(--color-ink-3)]">
@@ -73,6 +76,15 @@ export function SourceList({
           <span className="text-[var(--color-paper-4)]">Ballot data:</span> <ProvenanceLine sources={provenance!} />
         </p>
       )}
+      {notes?.map((n) => (
+        <p key={n.label} className="text-[11px] leading-[1.5] text-[var(--color-paper-3)] mb-1">
+          <span className="text-[var(--color-paper-4)]">{n.label}:</span>{" "}
+          <a href={n.url} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--color-accent)] inline-flex items-center gap-0.5">
+            {n.name}
+            <ArrowUpRight size={10} aria-hidden />
+          </a>
+        </p>
+      ))}
       {entries.length === 1 ? (
         <p className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
           {hasProvenance && <span className="text-[var(--color-paper-4)]">Explanations: </span>}

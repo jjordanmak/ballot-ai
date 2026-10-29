@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Newspaper,
   AtSign,
@@ -146,18 +146,24 @@ export function NewsFeed({
   const [archiveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
   const liveItems = fromFeed ?? archiveItems;
   const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(true);
+  // Off until we've measured: nothing to scroll means both buttons stay disabled.
+  const [canRight, setCanRight] = useState(false);
 
   useEffect(() => {
     setLiveItems(items ?? []);
   }, [items]);
 
-  const updateAffordance = () => {
+  const empty = liveItems.length === 0;
+  const updateAffordance = useCallback(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || empty) {
+      setCanLeft(false);
+      setCanRight(false);
+      return;
+    }
     setCanLeft(el.scrollLeft > 4);
     setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
+  }, [empty]);
 
   useEffect(() => {
     updateAffordance();
@@ -169,7 +175,7 @@ export function NewsFeed({
       el.removeEventListener("scroll", updateAffordance);
       window.removeEventListener("resize", updateAffordance);
     };
-  }, [liveItems]);
+  }, [liveItems, updateAffordance]);
 
   const scrollBy = (dir: "left" | "right") => {
     const el = scrollRef.current;

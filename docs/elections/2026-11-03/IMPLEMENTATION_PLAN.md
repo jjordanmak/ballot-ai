@@ -44,6 +44,8 @@
 | P1-10 | Official links in profile headers: **built 2026-10-29.** Campaign website and X account from official filings (SoS voter guide statements, San Mateo County roster `Website` field; `ca-official-links.json`, 24 candidates), plus X accounts the daily job finds on a candidate's own campaign site (`src/lib/feeds/links.ts` → `candidate_links`). Each link is cited; nothing is guessed or searched |
 | P1-11 | Live polls: **built 2026-10-29.** `/api/cron/polls` (every 20 minutes) reads poll tables on Wikipedia's election pages for tracked contests and publishes polls from approved pollsters (`src/data/sources/pollsters.json`, 50, owner review pending) that pass the automated checks (SOURCE_STRATEGY §5.1). The race polling card shows the newest live poll with a "Poll list via Wikipedia (CC BY-SA)" credit |
 
+| P1-12 | Measure "What it means for you" (owner, 2026-10-29): the same six questions on every measure (taxes or fees, cost to government, where the money goes, who is affected, the law today, type of change), answered only from official nonpartisan analyses and cited; "Vote needed" with its base on every race and measure (`src/domain/voteNeeded.ts`, verified and cited rules only). **UI built; California answers pending** research of each proposition's Legislative Analyst analysis (needs `voterguide.sos.ca.gov` / `lao.ca.gov` allowed in the session network). Other states: "being researched" until their official analyses are added |
+
 ## Pre-merge audit (2026-10-29)
 
 National correctness, failure handling and live-feed safety, all built and on the branch:

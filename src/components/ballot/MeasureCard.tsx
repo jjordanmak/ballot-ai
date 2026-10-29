@@ -2,7 +2,8 @@ import { ChevronRight, ExternalLink } from "lucide-react";
 import type { Contest } from "@/domain/ballot";
 import type { MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import { NewsFeed } from "@/components/NewsFeed";
-import { StatusPill } from "@/components/PartyTag";
+import { COUNTS_VOTES_CAST, measureVoteNeeded } from "@/domain/voteNeeded";
+import { IMPACT_QUESTIONS, impactAnswers } from "@/lib/ballot/measureImpact";
 import { Cite, SourceList } from "./Citations";
 
 /**
@@ -16,15 +17,22 @@ export function MeasureCard({
   enrichment,
   docs = {},
   anchorId,
+  state,
+  statewide = false,
 }: {
   contest: Contest;
   officialGuideUrl?: string;
   enrichment?: MeasureEnrichment;
   docs?: Record<string, SourceDoc>;
   anchorId?: string;
+  /** USPS code of the ballot, for the state's vote-needed rule. */
+  state?: string;
+  statewide?: boolean;
 }) {
   const m = contest.measure;
   const e = enrichment;
+  const voteNeeded = measureVoteNeeded(contest, state, statewide);
+  const impact = impactAnswers(e, e?.title || m?.title || contest.ballotTitle, m?.identifier);
   const title = e?.title || m?.title || "";
   const heading = title || m?.identifier || contest.title || "Untitled measure";
   const showEyebrow = !!m?.identifier && !!title;
@@ -46,8 +54,11 @@ export function MeasureCard({
           </h3>
           {contest.division.name && <p className="mt-1 text-[13px] text-[var(--color-paper-3)]">{contest.division.name}</p>}
         </div>
-        {m?.passageThreshold && <StatusPill>Passes with: {m.passageThreshold}</StatusPill>}
       </header>
+      <p className="mt-3 text-[13px] text-[var(--color-paper-2)]" title={COUNTS_VOTES_CAST}>
+        <span className="font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)] mr-2">Passes with</span>
+        <span className={voteNeeded.verified ? "" : "text-[var(--color-paper-3)]"}>{voteNeeded.text}</span>
+      </p>
 
       {e?.summary ? (
         <p className="mt-5 text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty max-w-3xl">
@@ -65,15 +76,33 @@ export function MeasureCard({
         </div>
       )}
 
-      {e?.fiscalEffect && (
-        <div className="mt-6 max-w-3xl">
-          <div className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em] mb-1.5">Fiscal effect</div>
-          <p className="text-[14px] leading-[1.6] text-[var(--color-paper-2)]">
-            {e.fiscalEffect.text}
-            <Cite ids={e.fiscalEffect.sources} docs={docs} />
-          </p>
-        </div>
-      )}
+      <section className="mt-7 max-w-4xl" aria-label="What it means for you">
+        <div className="font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] mb-3">What it means for you</div>
+        <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+          {IMPACT_QUESTIONS.map(({ key, question }) => {
+            const a = impact[key];
+            return (
+              <div key={key}>
+                <dt className="text-[13px] text-[var(--color-paper)] font-medium">{question}</dt>
+                <dd className={`mt-1 text-[14px] leading-[1.6] ${a.kind === "missing" ? "italic text-[var(--color-paper-4)] text-[13px]" : "text-[var(--color-paper-2)]"}`}>
+                  {a.kind === "cited" ? (
+                    <>
+                      {a.item.text}
+                      <Cite ids={a.item.sources} docs={docs} />
+                    </>
+                  ) : a.kind === "title" ? (
+                    <>
+                      {a.text} <span className="text-[var(--color-paper-4)] text-[12px]">(from the official title)</span>
+                    </>
+                  ) : (
+                    a.text
+                  )}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      </section>
 
       {(e?.argumentFor || e?.argumentAgainst) && (
         <details className="mt-6 max-w-4xl group/args">
@@ -153,7 +182,11 @@ export function MeasureCard({
         </div>
       )}
 
-      <SourceList docs={docs} provenance={contest.sources} />
+      <SourceList
+        docs={docs}
+        provenance={contest.sources}
+        notes={voteNeeded.source ? [{ label: "Vote needed", ...voteNeeded.source }] : undefined}
+      />
     </article>
   );
 }

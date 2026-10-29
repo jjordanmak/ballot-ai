@@ -49,16 +49,15 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           </p>
         )}
         <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mt-3 tracking-[0.16em]">
-          {race.unopposed
-            ? "Unopposed"
-            : race.navLabel?.startsWith("Retention")
-              ? "Retention vote"
-              : `${totalCount} candidate${totalCount === 1 ? "" : "s"}`}
-          {g?.voteFor && g.voteFor > 1 ? ` · vote for up to ${g.voteFor}` : ""}
+          {countLine(race, totalCount)}
+          {g?.voteNeeded && (
+            <span className={g.voteNeeded.verified ? "" : "text-[var(--color-paper-4)]"}> · {g.voteNeeded.text}</span>
+          )}
         </div>
       </div>
 
       {/* Meta strip — labels above values for clearer hierarchy + breathing room */}
+      {race.meta.length > 0 && (
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-5 max-w-3xl border-t border-[var(--color-ink-3)] pt-5">
         {race.meta.map((m) => (
           <div key={m.label} className={`flex flex-col ${m.wide ? "col-span-2 whitespace-nowrap" : ""}`}>
@@ -71,6 +70,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           </div>
         ))}
       </div>
+      )}
 
       {/* Intro grid */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-12 gap-y-10 gap-x-8">
@@ -135,7 +135,13 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
         <NewsFeed items={race.news} feed={race.feed} />
       </div>
 
-      {g && <SourceList docs={g.sourceDocs} title="Sources for this race" />}
+      {g && (
+        <SourceList
+          docs={g.sourceDocs}
+          provenance={g.officialSources}
+          notes={g.voteNeeded?.source ? [{ label: "Vote needed", ...g.voteNeeded.source }] : undefined}
+        />
+      )}
     </header>
   );
 }
@@ -266,4 +272,19 @@ function PollingPanel({ race, className }: { race: Race; className?: string }) {
       )}
     </div>
   );
+}
+
+/**
+ * "Vote for 1 of 2 candidates", "Vote for up to 3 of 7 candidates",
+ * "Rank the candidates · 5 candidates", "Unopposed", "Retention vote".
+ */
+export function countLine(race: Race, active: number): string {
+  if (race.unopposed) return "Unopposed";
+  if (race.navLabel?.startsWith("Retention")) return "Retention vote";
+  const cands = `${active} candidate${active === 1 ? "" : "s"}`;
+  const g = race.general;
+  if (!g) return cands;
+  if (g.rankedChoice) return `Rank the candidates · ${cands}`;
+  if (!g.voteFor) return cands;
+  return `Vote for ${g.voteFor > 1 ? "up to " : ""}${g.voteFor} of ${cands}`;
 }

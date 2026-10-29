@@ -99,6 +99,19 @@ export interface MeasureEnrichment {
   yesMeans?: Cited;
   noMeans?: Cited;
   fiscalEffect?: Cited;
+  /**
+   * "What it means for you": answers to fixed questions, only from official
+   * nonpartisan analyses (e.g. California's Legislative Analyst). Missing
+   * keys render "Not addressed in the official analysis".
+   */
+  impact?: {
+    taxes?: Cited;
+    cost?: Cited;
+    money?: Cited;
+    affected?: Cited;
+    currentLaw?: Cited;
+    kind?: Cited;
+  };
   /** Official ballot arguments, attributed to their authors by the guide. */
   argumentFor?: Cited;
   argumentAgainst?: Cited;
