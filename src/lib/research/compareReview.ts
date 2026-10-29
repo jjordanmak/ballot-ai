@@ -19,6 +19,7 @@ export interface RunInfo {
   seconds?: number;
   rejected?: { field: string; reason: string; detail?: string }[];
   raw?: unknown;
+  usage?: { input_tokens?: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null } | null;
 }
 
 export interface CellInput {
@@ -63,6 +64,8 @@ export interface SettingSummary {
   kept: number;
   rejectedByReason: Record<string, number>;
   blank: number;
+  /** Share of input tokens read from the prompt cache (0–1), or null before any run. */
+  cachedShare: number | null;
 }
 
 const FIELDS: Record<CompareTarget["kind"], { key: string; label: string }[]> = {
@@ -113,9 +116,10 @@ const norm = (lines: Line[]) => lines.map((l) => l.text.replace(/<\/?mark>/g, ""
 export function buildComparison(targets: CompareTarget[], settings: Setting[], cells: Map<string, CellInput>): { items: Item[]; summary: SettingSummary[] } {
   const ids = settings.map(settingId);
   const summary = new Map<string, SettingSummary>(
-    ids.map((s) => [s, { setting: s, items: targets.length, done: 0, costMicroUsd: 0, avgSeconds: null, kept: 0, rejectedByReason: {}, blank: 0 }]),
+    ids.map((s) => [s, { setting: s, items: targets.length, done: 0, costMicroUsd: 0, avgSeconds: null, kept: 0, rejectedByReason: {}, blank: 0, cachedShare: null }]),
   );
   const secs = new Map<string, number[]>(ids.map((s) => [s, []]));
+  const tokens = new Map<string, { all: number; cached: number }>(ids.map((s) => [s, { all: 0, cached: 0 }]));
   const items: Item[] = targets.map((target) => {
     const fields = FIELDS[target.kind];
     const row: Cell[] = ids.map((setting) => {
@@ -139,6 +143,13 @@ export function buildComparison(targets: CompareTarget[], settings: Setting[], c
         out.seconds = input.run.seconds;
         sum.costMicroUsd += out.costMicroUsd;
         if (typeof out.seconds === "number") secs.get(setting)!.push(out.seconds);
+        const u = input.run.usage;
+        if (u) {
+          const t = tokens.get(setting)!;
+          const cached = u.cache_read_input_tokens ?? 0;
+          t.cached += cached;
+          t.all += (u.input_tokens ?? 0) + cached + (u.cache_creation_input_tokens ?? 0);
+        }
         for (const r of out.rejected) sum.rejectedByReason[r.reason] = (sum.rejectedByReason[r.reason] ?? 0) + 1;
       }
       return out;
@@ -147,6 +158,7 @@ export function buildComparison(targets: CompareTarget[], settings: Setting[], c
     const differing = fields.filter((f) => new Set(done.map((c) => norm(c.fields[f.key] ?? []))).size > 1).map((f) => f.key);
     return { target, fields, cells: row, differing };
   });
+  for (const [s, t] of tokens) if (t.all) summary.get(s)!.cachedShare = Math.round((t.cached / t.all) * 100) / 100;
   for (const [s, list] of secs) if (list.length) summary.get(s)!.avgSeconds = Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10;
   return { items, summary: [...summary.values()] };
 }

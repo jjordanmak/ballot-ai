@@ -10,7 +10,7 @@ import { buildTargets } from "./targets";
 type Row = Record<string, unknown>;
 
 /** Just enough of the Supabase query builder and RPCs for the research job, in memory. */
-function fakeDb(seed: Record<string, Row[]>, clock: () => Date) {
+function fakeDb(seed: Record<string, Row[]>, clock: () => Date, slotWait: () => number = () => 0) {
   const tables: Record<string, Row[]> = { sources: [], synthesis_runs: [], synthesized_field_versions: [], api_usage: [], research_state: [], fetch_hosts: [], ...seed };
   const keys: Record<string, string> = { research_state: "key", fetch_hosts: "host", sources: "url" };
   let n = 0;
@@ -79,6 +79,7 @@ function fakeDb(seed: Record<string, Row[]>, clock: () => Date) {
         for (const r of due) r.locked_until = new Date(clock().getTime() + (args.p_lock_seconds as number) * 1000).toISOString();
         return Promise.resolve({ data: due.map((r) => r.key), error: null });
       }
+      if (name === "reserve_host_slot") return Promise.resolve({ data: slotWait(), error: null });
       return Promise.resolve({ data: 0, error: null });
     },
   };
@@ -89,11 +90,17 @@ const ANALYSIS = `<html><body><main><h1>Proposition 7</h1>
 <p>Under current law, the state charges a 6% tax on sales.</p>
 <p>This measure raises the tax to 7.25% and sends the money to road repair.</p>
 <p>Fiscal effect: about $2 billion a year in new state revenue.</p>
+<p><a href="/propositions/7/analysis/">Analysis by the Legislative Analyst</a></p>
 ${"<p>Additional background text for length.</p>".repeat(10)}</main></body></html>`;
+
+const LAO = `<html><body><main><h1>Proposition 7: Analysis by the Legislative Analyst</h1>
+<p>LAO-MARKER. Background: the state sales tax funds the general fund.</p>
+${"<p>More of the official analysis, for length.</p>".repeat(10)}</main></body></html>`;
 
 function pageFetch(robots = "") {
   return vi.fn(async (url: string) => {
     if (url.endsWith("/robots.txt")) return robots ? new Response(robots, { status: 200, headers: { "content-type": "text/plain" } }) : new Response("", { status: 404 });
+    if (url.includes("/propositions/7/analysis/")) return new Response(LAO, { status: 200, headers: { "content-type": "text/html" } });
     if (url.includes("/propositions/7/")) return new Response(ANALYSIS, { status: 200, headers: { "content-type": "text/html", etag: '"v1"' } });
     return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
   });
@@ -147,10 +154,10 @@ const publishCfg: AiConfig = { ...base, mode: "publish" };
 const compareCfg: AiConfig = { ...base, mode: "compare", compare: [{ model: "claude-haiku-5-5", effort: "low" }, { model: "claude-opus-5-5", effort: "high" }] };
 const resolve = async () => [{ address: "93.184.216.34", family: 4 }];
 
-function setup(seed: Record<string, Row[]> = {}, robots = "") {
+function setup(seed: Record<string, Row[]> = {}, robots = "", slotWait: () => number = () => 0) {
   let now = new Date("2026-10-29T07:00:00Z");
   const clock = () => now;
-  const fake = fakeDb({ contests, ...seed }, clock);
+  const fake = fakeDb({ contests, ...seed }, clock, slotWait);
   const { client, parse } = fakeClient();
   const deps = (config: AiConfig) => ({
     db: fake.db,
@@ -245,8 +252,32 @@ describe("runJob", () => {
     expect(runs[1].metadata).toMatchObject({ setting: { model: "claude-opus-5-5", effort: "high" } });
     expect(runs[1].metadata.costMicroUsd).toBeGreaterThan(runs[0].metadata.costMicroUsd);
     expect(runs[0].metadata.rejected).toEqual([expect.objectContaining({ reason: "quote not found" })]);
-    // The page fetch was shared: one read of the official page for both settings.
-    expect(s.tables.sources).toHaveLength(1);
+    // The pages were read once and shared by both settings.
+    expect(s.tables.sources.map((x) => x.url).sort()).toEqual(["https://voterguide.sos.ca.gov/propositions/7/", "https://voterguide.sos.ca.gov/propositions/7/analysis/"]);
+  });
+
+  it("compare mode: every setting reads the same documents, including the pages the first one followed", async () => {
+    const s = setup();
+    await dispatch({ ...s.deps(compareCfg), runRemote: async () => {} });
+    for (const k of [`${KEY}@claude-haiku-5-5:low`, `${KEY}@claude-opus-5-5:high`]) await runJob(s.deps(compareCfg), k);
+    const docsSent = s.parse.mock.calls
+      .map((c) => c[0].messages[0].content)
+      .filter((content) => !content.startsWith("For each"))
+      .map((content) => content.slice(0, content.lastIndexOf("</document>")));
+    expect(docsSent).toHaveLength(2);
+    expect(docsSent[0]).toContain("LAO-MARKER");
+    expect(docsSent[1]).toBe(docsSent[0]);
+  });
+
+  it("waits when a site is too busy instead of running on fewer documents, then runs", async () => {
+    let wait = 60_000;
+    const s = setup({}, "", () => wait);
+    await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
+    expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("waiting");
+    expect(s.parse).not.toHaveBeenCalled();
+    wait = 0;
+    s.advance(2 * 60_000);
+    expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("published");
   });
 
   it("skips a job whose documents haven't changed", async () => {

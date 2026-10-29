@@ -237,18 +237,6 @@ export function buildTargets(rows: ContestRow[], bundle?: EnrichmentBundle): Tar
   return [...out, ...offices.values()].sort((a, b) => order[a.kind] - order[b.kind]);
 }
 
-/** The instruction for one target. Built from stored entities only (never request data). */
-export function taskFor(t: Target): string {
-  if (t.kind === "measure") {
-    return `Measure: ${t.label}.\nAnswer each question about this measure only, from the documents. Use the official analysis where there is one. For "kind", say what type of measure it is (for example constitutional amendment, statute, bond, tax) and who placed it on the ballot.`;
-  }
-  if (t.kind === "office") {
-    return `Office: ${t.office}, ${t.division}.\nFrom the documents, say what this office does (its main duties), its term length, and how many seats or members it has. Salary only if a document states it. Describe the office, not any person who holds it.`;
-  }
-  if (t.kind === "retention") {
-    return `Judge: ${t.personName}, ${t.office} (${t.division}), on the ballot for a retention vote (Yes/No on whether to keep this judge).\nThe documents may describe several judges: use only passages about ${t.personName}. Give their current role, background and past positions. Leave "priorities" empty.`;
-  }
-  return `Candidate: ${t.personName}, running for ${t.office} (${t.division}).\nThe documents may include an official candidate statement (the candidate's own words), official .gov pages, a Ballotpedia page and the campaign's website, and may mention other people: use only passages about ${t.personName}. Extract current role, background, past positions, and up to five priorities they state (attribute each: "Says they will…"). Prefer official documents when sources overlap.`;
-}
+export { researchTask as taskFor } from "@/lib/ai/prompts";
 
 export { pdfHostOk };

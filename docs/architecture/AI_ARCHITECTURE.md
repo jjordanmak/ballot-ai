@@ -58,6 +58,22 @@ The research pipeline exists, runs in the app (never in a Claude Code session), 
   - Official documents come first in the prompt.
 - **What this office does:** `.gov` pages only, one description per office and place (`officeKeyFor`; e.g. one for all 80 Assembly districts). Shown in the race header as "The office".
 
+**One document set per item, shared by every setting.**
+- **Gathering:** the first job for an item does it, holding the `<item>#search` row:
+  - it searches;
+  - it reads the pages fresh, so it can follow their links;
+  - it records the exact pages used.
+- **Other settings** wait for that, then read the same stored copies, so every comparison column sees byte-identical documents.
+- **Busy site:** if the site is too busy to read, the job waits 1–2 minutes and retries rather than running on fewer documents. After 10 waits it runs with what it has.
+
+**Prompts and caching (owner, 2026-10-29).**
+- **One file:** every prompt lives in `src/lib/ai/prompts.ts`, with one `PROMPT_VERSION` and a snapshot test, so wording changes are deliberate.
+- **Already cached:** the frozen research instructions (about 1.2K tokens, over the 512-token minimum on Haiku/Sonnet/Opus 5.5). The run log shows reads on repeat calls, and the review page has an "Input from cache" column.
+- **Documents are not cached, by design:**
+  - Changing effort invalidates the message-level cache on these models, so the three effort columns of one model can't share them.
+  - In publishing, each item runs once per document change, so a cache write (1.25×) would usually never be read.
+  - Moving documents into the system prompt to share them is ruled out: fetched pages are untrusted data and must not carry instruction authority.
+
 **Compare mode (`AI_MODE=compare`, the default until the owner decides).**
 - Only the comparison set runs, once per setting in `AI_COMPARE` (default: Haiku, Sonnet and Opus at low, medium and high).
 - Each result is stored as `held` ("model comparison") under `<field>@<model>:<effort>`. The ballot page reads only `published` rows, so none of it is served.
