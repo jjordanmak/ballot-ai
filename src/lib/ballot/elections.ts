@@ -11,6 +11,7 @@ import { GoogleCivicElectionProvider, matchProviderElection } from "@/lib/provid
 import type { ElectionProvider } from "@/lib/providers/types";
 import { FIXTURE_ELECTION } from "./fixtureElection";
 import { supabaseServer } from "@/lib/supabase/server";
+import { electionToday } from "@/domain/electionDay";
 
 export { FIXTURE_ELECTION };
 
@@ -48,7 +49,7 @@ export class SupabaseElectionSource implements ElectionSource {
 
   constructor(
     private readonly civic: ElectionProvider = new GoogleCivicElectionProvider(),
-    private readonly today: () => string = () => new Date().toISOString().slice(0, 10),
+    private readonly today: () => string = () => electionToday(),
   ) {}
 
   async current(): Promise<ElectionLookup> {

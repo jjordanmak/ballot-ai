@@ -13,6 +13,7 @@ import { validateBallot } from "../src/lib/ballot/validate";
 import { FixtureBallotResolver } from "../src/lib/providers/fixture";
 import { AddressInput } from "../src/lib/providers/address";
 import { FIXTURE_ELECTION } from "../src/lib/ballot/fixtureElection";
+import { electionToday } from "../src/domain/electionDay";
 
 function walk(dir: string): string[] {
   try {
@@ -26,7 +27,7 @@ function walk(dir: string): string[] {
 }
 
 async function main() {
-  const today = process.env.VALIDATE_TODAY ?? new Date().toISOString().slice(0, 10);
+  const today = process.env.VALIDATE_TODAY ?? electionToday();
   const inputs: { name: string; ballot: ResolvedBallot }[] = [];
 
   const sample = await new FixtureBallotResolver(() => new Date(`${FIXTURE_ELECTION.date}T00:00:00Z`)).resolveBallot(

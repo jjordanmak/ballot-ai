@@ -123,7 +123,7 @@ function normalizeContest(
   // VIP feeds send measures as "ballot-measure"; Civic docs say "Referendum".
   const isMeasure = /^(referendum|ballot[- ]?measure|measure|proposition|initiative)$/i.test(c.type ?? "") ||
     (!c.candidates?.length && !!c.referendumTitle);
-  const contestType = mapContestType(c.type, isMeasure);
+  let contestType = mapContestType(c.type, isMeasure);
   const parsed = isMeasure ? parseMeasureTitle(c.referendumTitle || c.ballotTitle || c.office || "") : undefined;
   const title = (isMeasure
     ? parsed!.identifier || c.referendumSubtitle || parsed!.remainder || c.ballotTitle || c.office
@@ -137,11 +137,14 @@ function normalizeContest(
     title,
     districtName: c.district?.name,
   });
+  // Retention questions often arrive typed "General"; the office or ballot wording says otherwise.
+  if (!isMeasure && contestType !== "retention" && category === "judicial" &&
+      /\b(retain|retained|retention)\b/i.test(`${c.office ?? ""} ${c.ballotTitle ?? ""}`)) {
+    contestType = "retention";
+  }
   const division = mapDivision(c, {
     stateCode,
-    statewide:
-      !c.district?.scope &&
-      (category === "statewide" || (isMeasure && /^(proposition|prop\.?)\s/i.test(parsed!.identifier ?? ""))),
+    statewide: !c.district?.scope && (category === "statewide" || (isMeasure && isStatewideMeasure(c, parsed!, stateCode))),
   });
 
   const id = stableId(
@@ -228,27 +231,53 @@ function mapContestType(t: string | undefined, isMeasure: boolean): ContestType 
   return "other";
 }
 
+/**
+ * VIP feeds often give a statewide measure the voter's county as its
+ * district. Treat it as statewide when its identifier is a state-level form
+ * ("Proposition 50", "State Question 836", "State Issue 1", "Constitutional
+ * Amendment A", "Amendment 2") or its district is the state itself. Numbered
+ * "Question"/"Issue"/"Measure" alone stay local: towns and counties number
+ * their own.
+ */
+function isStatewideMeasure(c: CivicContest, parsed: ParsedMeasureTitle, stateCode: string | undefined): boolean {
+  if (c.level?.includes("administrativeArea1")) return true;
+  const stateName = stateCode ? STATE_NAMES[stateCode.toUpperCase()] : undefined;
+  const d = (c.district?.name ?? "").trim().toLowerCase();
+  if (stateName && (d === stateName.toLowerCase() || d === `state of ${stateName.toLowerCase()}`)) return true;
+  const id = parsed.identifier ?? "";
+  const local = /\b(county|city|town|village|borough|parish|charter|local|school|district)\b/i;
+  if (parsed.jurisdiction && local.test(parsed.jurisdiction)) return false;
+  if (/^(proposition|prop\.?)\s*\d+$/i.test(id)) return true;
+  if (/^state\s+(question|issue|measure|proposition)\b/i.test(id)) return true;
+  if (/^(constitutional\s+)?amendment\b/i.test(id) && !local.test(c.referendumTitle ?? "")) return true;
+  return false;
+}
+
 function mapDivision(c: CivicContest, ctx: { stateCode?: string; statewide: boolean }): Division {
   // VIP often labels a statewide contest with the voter's county as its
   // "district". When the office is statewide by title, say so.
   if (ctx.statewide && ctx.stateCode) {
     const code = ctx.stateCode.toUpperCase();
-    return {
-      key: `ocd-division/country:us/state:${code.toLowerCase()}`,
-      ocdId: `ocd-division/country:us/state:${code.toLowerCase()}`,
-      name: STATE_NAMES[code] ?? code,
-      scope: "statewide",
-    };
+    const ocdId = stateOcdId(code);
+    return { key: ocdId, ocdId, name: STATE_NAMES[code] ?? code, scope: "statewide" };
   }
+  // Provider district names and ids repeat across states ("State House
+  // District 12", "Sheriff"), so every non-OCD key carries the state.
+  const st = (ctx.stateCode ?? "us").toLowerCase();
   const d = c.district;
-  if (!d) return { key: `unknown::${normalizeForMatch(c.office ?? c.referendumTitle)}`, name: "" };
+  if (!d) return { key: `${st}:unknown::${normalizeForMatch(c.office ?? c.referendumTitle)}`, name: "" };
   const scope = d.scope?.toLowerCase();
   return {
-    key: `${scope ?? "unknown"}:${d.id ?? ""}:${normalizeForMatch(d.name)}`,
+    key: `${st}:${scope ?? "unknown"}:${d.id ?? ""}:${normalizeForMatch(d.name)}`,
     name: d.name ?? "",
     scope: d.scope,
     districtId: d.id,
   };
+}
+
+/** OCD id for a state; DC is a district, not a state, in OCD. */
+export function stateOcdId(code: string): string {
+  return code.toUpperCase() === "DC" ? "ocd-division/country:us/district:dc" : `ocd-division/country:us/state:${code.toLowerCase()}`;
 }
 
 function mapSources(src: CivicSource[] | undefined, retrievedAt: string): SourceRef[] {
@@ -340,7 +369,7 @@ export function parseMeasureTitle(raw: string): ParsedMeasureTitle {
 }
 
 const IDENT_SRC =
-  "(?:proposition|prop\\.?|measure|question|amendment|issue|initiative|referendum|constitutional amendment|ballot measure)\\s*[A-Za-z]{0,3}-?\\d+[A-Za-z]?|(?:measure|question|issue)\\s+[A-Z]{1,3}";
+  "(?:state\\s+)?(?:proposition|prop\\.?|measure|question|amendment|issue|initiative|referendum|constitutional amendment|ballot measure)\\s*(?:no\\.?\\s*)?[A-Za-z]{0,3}-?\\d+(?:-\\d+)?[A-Za-z]?|(?:proposition|prop\\.?|measure|question|issue|amendment|constitutional amendment)\\s+[A-Z]{1,3}";
 
 function mapMeasure(c: CivicContest, parsed: ParsedMeasureTitle, contestId: string, sources: SourceRef[]): Measure {
   return {

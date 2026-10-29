@@ -216,3 +216,58 @@ describe("districtsFrom", () => {
     expect(districtsFrom([], titles.map(contest)).map((d) => `${d.kind}:${d.number}`)).toEqual(["congressional:15", "state_lower:19"]);
   });
 });
+
+describe("division keys", () => {
+  const ballotIn = (state: string) =>
+    normalizeVoterInfo(
+      {
+        normalizedInput: { line1: "", city: "X", state, zip: "" },
+        contests: [
+          { type: "General", office: "State Representative", district: { name: "State House District 12", scope: "stateLower", id: "12" }, candidates: [{ name: "A" }] },
+          { type: "General", office: "Sheriff", candidates: [{ name: "B" }] },
+        ],
+      } as unknown as CivicVoterInfoResponse,
+      election,
+      T,
+    );
+  it("carries the state, so the same district name in two states never collides", () => {
+    const tx = ballotIn("TX").contests.map((c) => c.division.key);
+    const pa = ballotIn("PA").contests.map((c) => c.division.key);
+    expect(tx).toEqual(["tx:statelower:12:state house district 12", "tx:unknown::sheriff"]);
+    expect(pa.every((k, i) => k !== tx[i])).toBe(true);
+  });
+  it("uses DC's OCD form", async () => {
+    const { stateOcdId } = await import("./normalize");
+    expect(stateOcdId("DC")).toBe("ocd-division/country:us/district:dc");
+    expect(stateOcdId("oh")).toBe("ocd-division/country:us/state:oh");
+  });
+});
+
+describe("statewide measures outside California", () => {
+  const measure = (referendumTitle: string, state: string, districtName = "Franklin County") =>
+    normalizeVoterInfo(
+      {
+        normalizedInput: { line1: "", city: "X", state, zip: "" },
+        contests: [{ type: "Referendum", referendumTitle, district: { name: districtName } }],
+      } as unknown as CivicVoterInfoResponse,
+      election,
+      T,
+    ).contests[0];
+  it("places state-level identifiers in the state", () => {
+    expect(measure("State Issue 1", "OH").division.name).toBe("Ohio");
+    expect(measure("State Question 836", "OK").division.name).toBe("Oklahoma");
+    expect(measure("Amendment 2", "FL").division.name).toBe("Florida");
+    expect(measure("Constitutional Amendment A", "TX").division.name).toBe("Texas");
+  });
+  it("keeps numbered local questions and issues local", () => {
+    expect(measure("Question 5", "MA", "Town of Arlington").division.name).toBe("Town of Arlington");
+    expect(measure("Issue 7", "OH").division.name).toBe("Franklin County");
+    expect(measure("Franklin County, Issue 12", "OH").division.name).toBe("Franklin County");
+  });
+  it("parses more identifier forms", async () => {
+    const { parseMeasureTitle } = await import("./normalize");
+    expect(parseMeasureTitle("Measure 26-245").identifier).toBe("Measure 26-245");
+    expect(parseMeasureTitle("Proposition KK").identifier).toBe("Proposition KK");
+    expect(parseMeasureTitle("Amendment No. 1").identifier).toBe("Amendment No. 1");
+  });
+});

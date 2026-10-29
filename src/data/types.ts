@@ -10,10 +10,17 @@ export type Party =
   | "American Independent"
   | "No Party Preference"
   | "Independent"
+  /** Any other party; its name comes from `Candidate.partyName`. */
+  | "Other"
   /** Nonpartisan office: no party appears on the ballot. */
   | "Nonpartisan";
 
-export type PartyKey = "dem" | "rep" | "grn" | "lib" | "pf" | "aip" | "np";
+/**
+ * Party color keys. A party gets its own color only when it is as strongly
+ * tied to one as red and blue are to Republicans and Democrats (Green,
+ * Libertarian gold). Every other party is neutral gray, named in text.
+ */
+export type PartyKey = "dem" | "rep" | "grn" | "lib" | "np";
 
 export type PollingStatus =
   | "Frontrunner"
@@ -52,6 +59,8 @@ export interface Candidate {
   id: string;
   name: string;
   party: Party;
+  /** Party exactly as the ballot data prints it; shown instead of the generic label when present. */
+  partyName?: string;
   /** Optional headshot URL (e.g. Wikimedia portrait). Falls back to initials. */
   headshot?: string;
   /** Whether the candidate appears in the comparison table by default. */
@@ -227,9 +236,10 @@ export const PARTY_TO_KEY: Record<Party, PartyKey> = {
   Republican: "rep",
   Green: "grn",
   Libertarian: "lib",
-  "Peace and Freedom": "pf",
-  "American Independent": "aip",
+  "Peace and Freedom": "np",
+  "American Independent": "np",
   "No Party Preference": "np",
   Independent: "np",
+  Other: "np",
   Nonpartisan: "np",
 };

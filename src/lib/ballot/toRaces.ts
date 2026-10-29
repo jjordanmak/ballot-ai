@@ -7,6 +7,7 @@
 import { CATEGORY_LABEL, CATEGORY_ORDER, type Contest, type ResolvedBallot } from "@/domain/ballot";
 import type { CandidateEnrichment, EnrichmentBundle, MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import type { Candidate, Party, Race } from "@/data/types";
+import { rankedChoiceRule } from "@/domain/rankedChoice";
 import { readableName } from "@/domain/text";
 import { candidateKey, contestKey, measureKey } from "./enrichmentKeys";
 
@@ -39,7 +40,7 @@ export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { rac
       });
       continue;
     }
-    races.push({ race: contestToRace(c, bundle), rank: CATEGORY_ORDER.indexOf(c.category) });
+    races.push({ race: contestToRace(c, bundle, ballot.location.state), rank: CATEGORY_ORDER.indexOf(c.category) });
   }
   return {
     races: races.sort((a, b) => a.rank - b.rank).map((r) => r.race),
@@ -48,10 +49,10 @@ export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { rac
 }
 
 function isStatewide(c: Contest): boolean {
-  return c.division.scope === "statewide" || /^ocd-division\/country:us\/state:[a-z]{2}$/.test(c.division.ocdId ?? "");
+  return c.division.scope === "statewide" || /^ocd-division\/country:us\/(state:[a-z]{2}|district:dc)$/.test(c.division.ocdId ?? "");
 }
 
-function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
+function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Race {
   const e = bundle.contests?.[contestKey(c)];
   const docs = pickSources(bundle.sources, [
     ...citedIds(e?.formatExplainer, e?.context, e?.whyItMatters, e?.whatsAtStake, e?.bigPicture, e?.polling?.summary),
@@ -67,6 +68,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
       name,
       ballotName: ch.ballotName,
       party: toParty(ch.party),
+      partyName: ch.party?.trim() || undefined,
       headshot: ce?.headshot?.url,
       major: true,
       pollingStatus: "",
@@ -97,7 +99,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
 
   const voteFor = c.voteFor;
   const meta: Race["meta"] = [
-    ...(voteFor ? [{ label: "Vote for", value: String(voteFor) }] : []),
+    ...(rankedChoiceRule(c, state) ? [{ label: "Voting", value: "Ranked choice" }] : voteFor ? [{ label: "Vote for", value: String(voteFor) }] : []),
     ...(c.numberElected && c.numberElected > 1 ? [{ label: "Seats", value: String(c.numberElected) }] : []),
     { label: "District", value: c.division.name || "—" },
     ...(e?.meta ?? []),
@@ -110,11 +112,18 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
     // Two retention contests can share an office title; name the justice.
     office: c.contestType === "retention" && c.choices.length === 1 ? `${c.title}: ${candidates[0].name}` : c.title,
     jurisdiction: c.division.name || "",
-    format: formatLabel(c),
+    format: formatLabel(c, state),
     // Retention contests show the official ballot question when nothing richer is researched.
-    formatExplainer: e?.formatExplainer?.text ?? (c.contestType === "retention" ? retentionQuestion(c, candidates) : ""),
+    formatExplainer:
+      e?.formatExplainer?.text ??
+      (c.contestType === "retention"
+        ? retentionQuestion(c, candidates)
+        : rankedChoiceRule(c, state)
+          ? `Ranked-choice voting: rank the candidates in order of preference (${rankedChoiceRule(c, state)!.source}).`
+          : ""),
     meta,
-    unopposed: c.choices.length === 1 && c.contestType !== "retention",
+    // One judicial candidate may be a retention question the provider didn't label; never call it unopposed.
+    unopposed: c.choices.length === 1 && c.contestType !== "retention" && c.category !== "judicial",
     intro: {
       context: e?.context?.text ?? "",
       whyItMatters: e?.whyItMatters?.text ?? "",
@@ -150,10 +159,11 @@ export function displayName(c: Contest, ch: Contest["choices"][number], bundle: 
   return bundle.candidates?.[candidateKey(c, ch)]?.displayName ?? readableName(ch.ballotName);
 }
 
-function formatLabel(c: Contest): string {
+function formatLabel(c: Contest, state?: string): string {
   if (c.contestType === "retention") return "Retention · Yes / No";
   const parts = [c.contestType === "general" ? "General election" : c.rawType ?? "Contest"];
-  if (c.voteFor) parts.push(c.voteFor === 1 ? "Vote for 1" : `Vote for up to ${c.voteFor}`);
+  if (rankedChoiceRule(c, state)) parts.push("Ranked choice · Rank candidates");
+  else if (c.voteFor) parts.push(c.voteFor === 1 ? "Vote for 1" : `Vote for up to ${c.voteFor}`);
   if (c.special) parts.push("Special election");
   return parts.join(" · ");
 }
@@ -170,7 +180,8 @@ function toParty(p: string | undefined): Party {
   if (/american independent/.test(n)) return "American Independent";
   if (/no party|npp|decline/.test(n)) return "No Party Preference";
   if (/nonpartisan/.test(n)) return "Nonpartisan";
-  return "Independent";
+  if (/^independent( party)?$/.test(n.trim())) return "Independent";
+  return "Other";
 }
 
 function sameName(a: string, b: string): boolean {
@@ -216,3 +227,26 @@ function sourceLabel(all: Record<string, SourceDoc>, id: string | undefined): st
   return id ? all[id]?.publisher : undefined;
 }
 
+
+/**
+ * Heading for the statewide measures, in the state's own wording: when every
+ * statewide identifier on this ballot uses one term ("Proposition 50",
+ * "State Question 836", "Issue 1"), the heading uses it; otherwise
+ * "Statewide measures".
+ */
+export function statewideMeasuresHeading(measures: MeasureView[]): string {
+  const TERMS: [RegExp, string][] = [
+    [/^(proposition|prop\.?)\b/i, "State propositions"],
+    [/^state question\b/i, "State questions"],
+    [/^(state )?issue\b/i, "Statewide issues"],
+    [/^question\b/i, "Ballot questions"],
+    [/^(constitutional )?amendment\b/i, "Constitutional amendments"],
+    [/^(state )?measure\b/i, "State measures"],
+    [/^initiative\b/i, "State initiatives"],
+    [/^referendum\b/i, "State referendums"],
+  ];
+  const headings = new Set(
+    measures.filter((m) => m.statewide).map((m) => TERMS.find(([re]) => re.test(m.contest.measure?.identifier ?? m.contest.title))?.[1] ?? ""),
+  );
+  return headings.size === 1 && !headings.has("") ? [...headings][0] : "Statewide measures";
+}

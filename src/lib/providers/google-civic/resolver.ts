@@ -83,7 +83,7 @@ export class GoogleCivicBallotResolver implements BallotResolver {
       election,
       contests: n.contests,
       location: n.location,
-      districts: districtsFrom(divisionIds, n.contests),
+      districts: districtsFrom(divisionIds, n.contests, n.location.state),
       administration: n.administration,
       mailOnly: n.mailOnly,
       retrievedAt,

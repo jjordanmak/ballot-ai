@@ -55,7 +55,7 @@ export function supplementWithOfficialRecords(ballot: ResolvedBallot): ResolvedB
         if (!r.appliesTo.counties.some((c) => normalizeForMatch(c) === normalizeForMatch(county))) continue;
       }
       if (alreadyPresent(ballot.contests, r.justice)) continue;
-      added.push(toContest(r, ballot.election!.id, source));
+      added.push(toContest(r, ballot.election!.id, source, file.source.publisher));
     }
   }
   if (!added.length) return ballot;
@@ -78,7 +78,7 @@ function alreadyPresent(contests: Contest[], justice: string): boolean {
   return contests.some((c) => c.category === "judicial" && c.choices.some((ch) => normalizeForMatch(ch.ballotName) === key));
 }
 
-function toContest(r: RetentionRecord, electionId: string, source: SourceRef): Contest {
+function toContest(r: RetentionRecord, electionId: string, source: SourceRef, publisher: string): Contest {
   const id = stableId("ct", electionId, "official-retention", r.office, r.justice!);
   const choice: CandidateChoice = {
     id: stableId("cd", id, r.justice!),
@@ -93,7 +93,7 @@ function toContest(r: RetentionRecord, electionId: string, source: SourceRef): C
     rawType: "Retention",
     title: r.office,
     ballotTitle: r.question,
-    division: { key: `court:${normalizeForMatch(r.court)}`, name: r.court, scope: "judicial" },
+    division: { key: `${r.appliesTo.state.toLowerCase()}:court:${normalizeForMatch(r.court)}`, name: r.court, scope: "judicial" },
     category: "judicial",
     voteFor: 1,
     special: false,
@@ -101,6 +101,6 @@ function toContest(r: RetentionRecord, electionId: string, source: SourceRef): C
     levels: [],
     choices: [choice],
     sources: [source],
-    verification: { status: "verified", source, note: "Certified by the California Secretary of State" },
+    verification: { status: "verified", source, note: `Certified by the ${publisher}` },
   };
 }

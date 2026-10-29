@@ -42,9 +42,10 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 | `--color-rep` / `--color-rep-soft` | Republican |
 | `--color-grn` / `--color-grn-soft` | Green |
 | `--color-lib` / `--color-lib-soft` | Libertarian |
-| `--color-pf` / `--color-pf-soft` | Peace and Freedom |
-| `--color-aip` / `--color-aip-soft` | American Independent |
-| `--color-np` / `--color-np-soft` | No Party Preference |
+| `--color-lib` amber is hue 60, distinct from the yellow accent (hue 82) | |
+| `--color-np` / `--color-np-soft` | Every other party, independents, no party preference, nonpartisan |
+
+**Standard (owner, 2026-10-29):** a party gets its own color only when it is as strongly tied to one as red and blue are to Republicans and Democrats. Today that is Green (green) and Libertarian (gold). Every other party (Peace and Freedom, American Independent, Constitution, Working Families, Conservative, Forward, Alaskan Independence…) is neutral gray, and the pill always prints the party exactly as the ballot data names it (`Candidate.partyName`). Party is never shown by color alone.
 
 ### Supplementary tints
 Used for data encoding (section pillars, news item types) — never as primary surface backgrounds.

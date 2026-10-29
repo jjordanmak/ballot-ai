@@ -404,7 +404,7 @@ function CandidateColHeader({ candidate, raceId }: { candidate: Candidate; raceI
           className={`shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2 py-0.5 ${partyClass(candidate.party)}`}
         >
           <span className={`w-1 h-1 rounded-full ${partyDot(candidate.party)}`} />
-          {partyLabel(candidate.party)}
+          {partyLabel(candidate.party, candidate.partyName)}
         </span>
 {/* General-election races carry no polling-status labels (PRD §14). */}
         {(candidate.pollingStatus || candidate.pollingPct != null || isSuspended) && (

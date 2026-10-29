@@ -14,6 +14,7 @@ import { getEnrichment } from "./enrichment";
 import { supplementWithOfficialRecords } from "./officialRecords";
 import { getBallotRuntime, type BallotRuntime } from "./runtime";
 import { validateBallot } from "./validate";
+import { electionToday } from "@/domain/electionDay";
 
 export type ResolveOutcome =
   | { ok: true; status: ResolutionStatus; electionSlug: string; ballotKey: string }
@@ -51,7 +52,7 @@ export async function resolveBallotForAddress(
 
   const ballot = await runtime.resolver.resolveBallot(address, election);
   if (hasBallot(ballot)) supplementWithOfficialRecords(ballot);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = electionToday();
   if (hasBallot(ballot)) {
     const seen = new Set(ballot.warnings.map((w) => `${w.code}|${w.contestId ?? ""}`));
     for (const w of validateBallot(ballot, today)) {

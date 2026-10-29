@@ -11,11 +11,13 @@ const PARTY_LABEL: Record<Party, string> = {
   "American Independent": "American Indep.",
   "No Party Preference": "No Party Pref.",
   Independent: "Independent",
+  Other: "Other party",
   Nonpartisan: "Nonpartisan",
 };
 
-export function partyLabel(p: Party) {
-  return PARTY_LABEL[p];
+/** The ballot's own party wording when known, else the generic label. */
+export function partyLabel(p: Party, name?: string) {
+  return name?.trim() || PARTY_LABEL[p];
 }
 
 /**
@@ -29,8 +31,6 @@ const PARTY_BG_PILL: Record<string, string> = {
   rep: "bg-[var(--color-rep-soft)] text-[var(--color-rep)]",
   grn: "bg-[var(--color-grn-soft)] text-[var(--color-grn)]",
   lib: "bg-[var(--color-lib-soft)] text-[var(--color-lib)]",
-  pf: "bg-[var(--color-pf-soft)] text-[var(--color-pf)]",
-  aip: "bg-[var(--color-aip-soft)] text-[var(--color-aip)]",
   np: "bg-[var(--color-np-soft)] text-[var(--color-np)]",
 };
 
@@ -39,8 +39,6 @@ const PARTY_BG_SOLID: Record<string, string> = {
   rep: "bg-[var(--color-rep)]",
   grn: "bg-[var(--color-grn)]",
   lib: "bg-[var(--color-lib)]",
-  pf: "bg-[var(--color-pf)]",
-  aip: "bg-[var(--color-aip)]",
   np: "bg-[var(--color-np)]",
 };
 
@@ -49,8 +47,6 @@ const PARTY_BORDER: Record<string, string> = {
   rep: "border-[var(--color-rep)]",
   grn: "border-[var(--color-grn)]",
   lib: "border-[var(--color-lib)]",
-  pf: "border-[var(--color-pf)]",
-  aip: "border-[var(--color-aip)]",
   np: "border-[var(--color-np)]",
 };
 
@@ -141,8 +137,6 @@ export function partyKeyFromName(name: string | undefined): string {
   if (/republican/.test(n)) return "rep";
   if (/\bgreen\b/.test(n)) return "grn";
   if (/libertarian/.test(n)) return "lib";
-  if (/peace and freedom/.test(n)) return "pf";
-  if (/american independent/.test(n)) return "aip";
   return "np";
 }
 

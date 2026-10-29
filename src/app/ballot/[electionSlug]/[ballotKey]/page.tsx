@@ -17,7 +17,7 @@ import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
 import { formatElectionDate, locationLabel, locationLine, STATUS_COPY } from "@/lib/ballot/copy";
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { loadBallot } from "@/lib/ballot/loadBallot";
-import { toRaces, type MeasureView } from "@/lib/ballot/toRaces";
+import { statewideMeasuresHeading, toRaces, type MeasureView } from "@/lib/ballot/toRaces";
 import { discoveredLinks, initialFeed, type DiscoveredLink } from "@/lib/feeds/read";
 import { districtsFrom } from "@/domain/districts";
 
@@ -28,7 +28,7 @@ type Params = Promise<{ electionSlug: string; ballotKey: string }>;
 
 /** Measures are listed in the nav as two pseudo races (statewide / local), one row per measure. */
 const MEASURE_GROUPS = [
-  { id: "measures-state", statewide: true, title: "State propositions", eyebrow: "Statewide" },
+  { id: "measures-state", statewide: true, title: "Statewide measures", eyebrow: "Statewide" },
   { id: "measures-local", statewide: false, title: "Local measures", eyebrow: "County, city and district" },
 ] as const;
 
@@ -52,7 +52,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const { races, measures } = toRaces(ballot, getEnrichment(electionSlug));
   // Tab title stays "City, ST"; the sidebar and header add the ZIP.
   const location = locationLine(ballot.location);
-  const onBallot = new Set(districtsFrom([], ballot.contests).map((d) => d.kind));
+  const onBallot = new Set(districtsFrom([], ballot.contests, ballot.location.state).map((d) => d.kind));
   const contestIds = ballot.contests.flatMap((c) => (c.durableId ? [c.durableId] : []));
   const electionId = ballot.election?.id ?? "";
   const candidateIds = races.flatMap((r) => r.candidates.flatMap((c) => (c.feed?.candidateId ? [c.feed.candidateId] : [])));
@@ -60,7 +60,11 @@ export default async function BallotPage({ params }: { params: Params }) {
   addDiscoveredLinks(races, links);
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
-  const measureGroups = MEASURE_GROUPS.map((g) => ({ ...g, items: measures.filter((m) => m.statewide === g.statewide) })).filter(
+  const measureGroups = MEASURE_GROUPS.map((g) => ({
+    ...g,
+    title: g.statewide ? statewideMeasuresHeading(measures) : g.title,
+    items: measures.filter((m) => m.statewide === g.statewide),
+  })).filter(
     (g) => g.items.length > 0,
   );
   const navRaces = [...races, ...measureGroups.map((g) => measuresNavRace(g.id, g.title, g.items))];

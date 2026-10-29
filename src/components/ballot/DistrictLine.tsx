@@ -1,8 +1,16 @@
 import type { DistrictKind, DistrictRef } from "@/domain/ballot";
 import { STATE_NAMES } from "@/domain/categorize";
 
-/** States whose lower house is called the Assembly. */
-const ASSEMBLY_STATES = new Set(["CA", "NV", "NY", "WI"]);
+/** What each state calls its lower house (default: House of Representatives). Nebraska has one chamber. */
+const ASSEMBLY_STATES = new Set(["CA", "NV", "NY", "WI", "NJ"]);
+const DELEGATE_STATES = new Set(["MD", "VA", "WV"]);
+
+function lowerHouse(st: string, stateName: string): { abbr: string; district: string; chamber: string } {
+  if (ASSEMBLY_STATES.has(st))
+    return { abbr: "AD", district: "Assembly District", chamber: st === "NJ" ? "New Jersey General Assembly" : `${stateName} State Assembly` };
+  if (DELEGATE_STATES.has(st)) return { abbr: "HD", district: "House of Delegates District", chamber: `${stateName} House of Delegates` };
+  return { abbr: "HD", district: "State House District", chamber: `${stateName} House of Representatives` };
+}
 
 function ordinal(n: string): string {
   const v = Number(n);
@@ -23,28 +31,42 @@ function districtItem(d: DistrictRef, state: string | undefined, onBallot: boole
   const stateName = STATE_NAMES[st] ?? "the state";
   const race = onBallot ? " That race is on this ballot." : " There's no race for this seat on this ballot.";
   const kinds: Record<DistrictKind, () => Item> = {
-    congressional: () => ({
-      label: `${st ? `${st}-` : "CD-"}${d.number}`,
-      title: `${stateName}'s ${ordinal(d.number)} Congressional District`,
-      body: `Voters here elect one member of the U.S. House of Representatives.${race}`,
-    }),
+    congressional: () =>
+      d.number === "AL"
+        ? {
+            label: `${st || "CD"}-AL`,
+            title: `${stateName}'s at-large Congressional District`,
+            body: `${stateName} elects its one member of the U.S. House of Representatives statewide.${race}`,
+          }
+        : {
+            label: `${st ? `${st}-` : "CD-"}${d.number}`,
+            title: `${stateName}'s ${ordinal(d.number)} Congressional District`,
+            body: `This address is in the district that elects this seat in the U.S. House of Representatives.${race}`,
+          },
     state_lower: () => {
-      const assembly = ASSEMBLY_STATES.has(st);
+      const h = lowerHouse(st, stateName);
       return {
-        label: `${assembly ? "AD" : "HD"}-${d.number}`,
-        title: `${assembly ? "Assembly" : "State House"} District ${d.number}`,
-        body: `Voters here elect one member of the ${assembly ? `${stateName} State Assembly` : `${stateName} legislature's lower house`}.${race}`,
+        label: `${h.abbr}-${d.number}`,
+        title: `${h.district} ${d.number}`,
+        body: `This address is in a district of the ${h.chamber}.${race}`,
       };
     },
-    state_upper: () => ({
-      label: `SD-${d.number}`,
-      title: `State Senate District ${d.number}`,
-      body: `Voters here elect one member of the ${stateName} State Senate.${race}`,
-    }),
+    state_upper: () =>
+      st === "NE"
+        ? {
+            label: `LD-${d.number}`,
+            title: `Legislative District ${d.number}`,
+            body: `This address is in a district of the Nebraska Legislature, which has a single chamber.${race}`,
+          }
+        : {
+            label: `SD-${d.number}`,
+            title: `State Senate District ${d.number}`,
+            body: `This address is in a district of the ${stateName} State Senate.${race}`,
+          },
     board_of_equalization: () => ({
       label: `BOE-${d.number}`,
       title: `State Board of Equalization District ${d.number}`,
-      body: `Voters here elect one member of the ${stateName} State Board of Equalization, an elected state tax board.${race}`,
+      body: `This address is in a district of the ${stateName} State Board of Equalization, an elected state tax board.${race}`,
     }),
   };
   return kinds[d.kind]();
@@ -72,7 +94,7 @@ export function DistrictLine({
           {
             label: county,
             title: county,
-            body: "The county runs the election at this address. Its elections office has your official sample ballot.",
+            body: "The county this address is in. Your local election office has your official sample ballot.",
           },
         ]
       : []),

@@ -755,7 +755,7 @@
       "title": "Associate Justice of the Supreme Court",
       "ballotTitle": "Shall Associate Justice of the Supreme Court KELLI M. EVANS be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:supreme court",
+        "key": "ca:court:supreme court",
         "name": "Supreme Court",
         "scope": "judicial"
       },
@@ -816,7 +816,7 @@
       "title": "Associate Justice of the Supreme Court",
       "ballotTitle": "Shall Associate Justice of the Supreme Court JOSHUA GROBAN be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:supreme court",
+        "key": "ca:court:supreme court",
         "name": "Supreme Court",
         "scope": "judicial"
       },
@@ -877,7 +877,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division One",
       "ballotTitle": "Shall Associate Justice CHARLES A. SMILEY be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -938,7 +938,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division One",
       "ballotTitle": "Shall Associate Justice KATHLEEN M. BANKE be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -999,7 +999,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division One",
       "ballotTitle": "Shall Associate Justice MONIQUE LANGHORNE WILSON be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1060,7 +1060,7 @@
       "title": "Presiding Justice, Court of Appeal, First District, Division Two",
       "ballotTitle": "Shall Presiding Justice THERESE M. STEWART be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1121,7 +1121,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division Two",
       "ballotTitle": "Shall Associate Justice TARA M. DESAUTELS be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1182,7 +1182,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division Three",
       "ballotTitle": "Shall Associate Justice IOANA PETROU be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1243,7 +1243,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division Three",
       "ballotTitle": "Shall Associate Justice VICTOR A. RODRIGUEZ be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1304,7 +1304,7 @@
       "title": "Presiding Justice, Court of Appeal, First District, Division Four",
       "ballotTitle": "Shall Presiding Justice TRACIE L. BROWN be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1365,7 +1365,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division Five",
       "ballotTitle": "Shall Associate Justice MARK SIMONS be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1426,7 +1426,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division Five",
       "ballotTitle": "Shall Associate Justice DANNY Y. CHOU be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1487,7 +1487,7 @@
       "title": "Associate Justice, Court of Appeal, First District, Division Five",
       "ballotTitle": "Shall Associate Justice GORDON BURNS be elected to the office for the term provided by law?",
       "division": {
-        "key": "court:court of appeal first appellate district",
+        "key": "ca:court:court of appeal first appellate district",
         "name": "Court of Appeal, First Appellate District",
         "scope": "judicial"
       },
@@ -1547,7 +1547,7 @@
       "rawType": "General",
       "title": "Member, Board of Supervisors, District 5 (Short Term)",
       "division": {
-        "key": "countycouncil::5th supervisorial district 2022",
+        "key": "ca:countycouncil::5th supervisorial district 2022",
         "name": "5th Supervisorial District - 2022",
         "scope": "countyCouncil"
       },
@@ -1626,7 +1626,7 @@
       "rawType": "General",
       "title": "City of Daly City Member, City Council",
       "division": {
-        "key": "unknown::city of daly city",
+        "key": "ca:unknown::city of daly city",
         "name": "City of Daly City"
       },
       "category": "city",
@@ -1814,7 +1814,7 @@
       "rawType": "General",
       "title": "County Board of Education Member, Trustee Area 2",
       "division": {
-        "key": "schoolboard::san mateo county board of education trustee area 2 2022",
+        "key": "ca:schoolboard::san mateo county board of education trustee area 2 2022",
         "name": "San Mateo County Board of Education Trustee Area 2 - 2022",
         "scope": "schoolBoard"
       },
@@ -1893,7 +1893,7 @@
       "rawType": "General",
       "title": "San Mateo County Community College District Member, Governing Board, Trustee Area 2",
       "division": {
-        "key": "schoolboard::smc community college district trustee area 2 2022",
+        "key": "ca:schoolboard::smc community college district trustee area 2 2022",
         "name": "SMC Community College District Trustee Area 2 - 2022",
         "scope": "schoolBoard"
       },
@@ -1972,7 +1972,7 @@
       "rawType": "General",
       "title": "U.S. Representative, District 15",
       "division": {
-        "key": "unknown::15th congressional district 2025",
+        "key": "ca:unknown::15th congressional district 2025",
         "name": "15th Congressional District - 2025"
       },
       "category": "federal",
@@ -2052,7 +2052,7 @@
       "rawType": "General",
       "title": "Member of the State Assembly, District 19",
       "division": {
-        "key": "statelower::19th assembly district 2022",
+        "key": "ca:statelower::19th assembly district 2022",
         "name": "19th Assembly District - 2022",
         "scope": "stateLower"
       },
@@ -2974,7 +2974,7 @@
       "title": "Measure M",
       "ballotTitle": "Jefferson Union High School District, Measure M (2/3 Approval Required)",
       "division": {
-        "key": "unknown::jefferson union high school district",
+        "key": "ca:unknown::jefferson union high school district",
         "name": "Jefferson Union High School District"
       },
       "category": "measures",
@@ -3032,7 +3032,7 @@
       "title": "Measure AA",
       "ballotTitle": "County of San Mateo, Measure AA (Majority Approval Required)",
       "division": {
-        "key": "unknown::county of san mateo",
+        "key": "ca:unknown::county of san mateo",
         "name": "County of San Mateo"
       },
       "category": "measures",
@@ -3090,7 +3090,7 @@
       "title": "Measure J",
       "ballotTitle": "County of San Mateo, Measure J (Majority Approval Required)",
       "division": {
-        "key": "unknown::county of san mateo",
+        "key": "ca:unknown::county of san mateo",
         "name": "County of San Mateo"
       },
       "category": "measures",
@@ -3148,7 +3148,7 @@
       "title": "Measure U",
       "ballotTitle": "County of San Mateo, Measure U (Majority Approval Required)",
       "division": {
-        "key": "unknown::county of san mateo",
+        "key": "ca:unknown::county of san mateo",
         "name": "County of San Mateo"
       },
       "category": "measures",
@@ -3206,7 +3206,7 @@
       "title": "Regional Transit Measure",
       "ballotTitle": "Regional Transit Measure (Majority Approval Required)",
       "division": {
-        "key": "unknown::county of san mateo",
+        "key": "ca:unknown::county of san mateo",
         "name": "County of San Mateo"
       },
       "category": "measures",
@@ -3263,7 +3263,7 @@
       "title": "Measure L",
       "ballotTitle": "County of San Mateo, Measure L (Majority Approval Required)",
       "division": {
-        "key": "unknown::county of san mateo",
+        "key": "ca:unknown::county of san mateo",
         "name": "County of San Mateo"
       },
       "category": "measures",
@@ -3321,7 +3321,7 @@
       "title": "Measure V",
       "ballotTitle": "San Mateo County Community College District, Measure V (55 Percent Approval Required)",
       "division": {
-        "key": "schoolboard::san mateo county community college district",
+        "key": "ca:schoolboard::san mateo county community college district",
         "name": "San Mateo County Community College District",
         "scope": "schoolBoard"
       },
@@ -3499,15 +3499,15 @@
     }
   ],
   "districtDescriptors": [
-    "countycouncil::5th supervisorial district 2022",
+    "ca:countycouncil::5th supervisorial district 2022",
     "ocd-division/country:us/state:ca",
-    "schoolboard::san mateo county board of education trustee area 2 2022",
-    "schoolboard::san mateo county community college district",
-    "schoolboard::smc community college district trustee area 2 2022",
-    "statelower::19th assembly district 2022",
-    "unknown::15th congressional district 2025",
-    "unknown::city of daly city",
-    "unknown::county of san mateo",
-    "unknown::jefferson union high school district"
+    "ca:schoolboard::san mateo county board of education trustee area 2 2022",
+    "ca:schoolboard::san mateo county community college district",
+    "ca:schoolboard::smc community college district trustee area 2 2022",
+    "ca:statelower::19th assembly district 2022",
+    "ca:unknown::15th congressional district 2025",
+    "ca:unknown::city of daly city",
+    "ca:unknown::county of san mateo",
+    "ca:unknown::jefferson union high school district"
   ]
 }

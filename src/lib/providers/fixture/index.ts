@@ -57,7 +57,7 @@ export class FixtureBallotResolver implements BallotResolver {
       election,
       contests: n.contests,
       location: n.location,
-      districts: districtsFrom([], n.contests),
+      districts: districtsFrom([], n.contests, n.location.state),
       administration: n.administration,
       mailOnly: n.mailOnly,
       retrievedAt,

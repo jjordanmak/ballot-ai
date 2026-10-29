@@ -13,6 +13,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { ElectionRef } from "../src/domain/ballot";
+import { electionToday } from "../src/domain/electionDay";
 import { validateBallot } from "../src/lib/ballot/validate";
 import { supplementWithOfficialRecords } from "../src/lib/ballot/officialRecords";
 import { AddressInput } from "../src/lib/providers/address";
@@ -65,7 +66,7 @@ async function main() {
 
   const ballot = await new GoogleCivicBallotResolver().resolveBallot(address, election);
   supplementWithOfficialRecords(ballot);
-  ballot.warnings.push(...validateBallot(ballot, new Date().toISOString().slice(0, 10)));
+  ballot.warnings.push(...validateBallot(ballot, electionToday()));
 
   const fixtureJson = JSON.stringify(ballot, null, 2) + "\n";
   const md = ballotMarkdown(`QA: ${label} — ${election.name}`, ballot, [

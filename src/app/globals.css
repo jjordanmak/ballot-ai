@@ -56,10 +56,6 @@
   --color-grn-soft: oklch(70% 0.14 150 / 0.20);
   --color-lib: oklch(74% 0.14 60);
   --color-lib-soft: oklch(74% 0.14 60 / 0.20);
-  --color-pf: oklch(72% 0.17 320);
-  --color-pf-soft: oklch(72% 0.17 320 / 0.20);
-  --color-aip: oklch(70% 0.16 290);
-  --color-aip-soft: oklch(70% 0.16 290 / 0.20);
   --color-np: oklch(72% 0.02 70);
   --color-np-soft: oklch(72% 0.02 70 / 0.20);
 }

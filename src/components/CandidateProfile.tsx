@@ -119,7 +119,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
               className={`shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono-cap text-[10px] px-2.5 py-0.5 ${partyClass(candidate.party)}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${partyDot(candidate.party)}`} />
-              {partyLabel(candidate.party)}
+              {partyLabel(candidate.party, candidate.partyName)}
             </span>
 
             {suspended ? (
@@ -643,8 +643,6 @@ function Headshot({ candidate, className = "", loading = "lazy" }: { candidate: 
     Republican: { bg: "bg-[var(--color-rep-soft)]", fg: "text-[var(--color-rep)]" },
     Green: { bg: "bg-[var(--color-grn-soft)]", fg: "text-[var(--color-grn)]" },
     Libertarian: { bg: "bg-[var(--color-lib-soft)]", fg: "text-[var(--color-lib)]" },
-    "Peace and Freedom": { bg: "bg-[var(--color-pf-soft)]", fg: "text-[var(--color-pf)]" },
-    "American Independent": { bg: "bg-[var(--color-aip-soft)]", fg: "text-[var(--color-aip)]" },
     "No Party Preference": { bg: "bg-[var(--color-np-soft)]", fg: "text-[var(--color-np)]" },
     Independent: { bg: "bg-[var(--color-np-soft)]", fg: "text-[var(--color-np)]" },
   };
