@@ -61,7 +61,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
       {/* Meta strip — labels above values for clearer hierarchy + breathing room */}
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-5 max-w-3xl border-t border-[var(--color-ink-3)] pt-5">
         {race.meta.map((m) => (
-          <div key={m.label} className="flex flex-col">
+          <div key={m.label} className={`flex flex-col ${m.wide ? "col-span-2 whitespace-nowrap" : ""}`}>
             <span className="font-mono-cap text-[9px] text-[var(--color-paper-4)] mb-1.5 tracking-[0.16em]">
               {m.label}
             </span>

@@ -191,7 +191,8 @@ export interface Race {
   /** Brief format explainer */
   formatExplainer: string;
   /** Term length, salary, etc. shown in the header strip */
-  meta: { label: string; value: string }[];
+  /** `wide` items span two columns and never wrap (e.g. the ballot data source). */
+  meta: { label: string; value: string; wide?: boolean }[];
   unopposed: boolean;
   /** Race-level intro sections */
   intro: {

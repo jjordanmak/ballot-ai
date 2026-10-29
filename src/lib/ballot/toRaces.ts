@@ -103,7 +103,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
     ...(c.numberElected && c.numberElected > 1 ? [{ label: "Seats", value: String(c.numberElected) }] : []),
     { label: "District", value: c.division.name || "—" },
     ...(e?.meta ?? []),
-    ...(officialSource ? [{ label: "Ballot data", value: `${officialSource.name} (official)` }] : []),
+    ...(officialSource ? [{ label: "Ballot data", value: officialSource.name, wide: true }] : []),
   ].slice(0, 8);
 
   const poll = e?.polling?.poll;

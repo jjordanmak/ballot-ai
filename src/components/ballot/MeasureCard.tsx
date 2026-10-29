@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import type { Contest } from "@/domain/ballot";
 import type { MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import { NewsFeed } from "@/components/NewsFeed";
@@ -78,7 +78,8 @@ export function MeasureCard({
 
       {(e?.argumentFor || e?.argumentAgainst) && (
         <details className="mt-6 max-w-4xl group/args">
-          <summary className="cursor-pointer font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] hover:text-[var(--color-accent)]">
+          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-2 font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] hover:text-[var(--color-accent)]">
+            <ChevronRight size={12} aria-hidden className="transition-transform group-open/args:rotate-90" />
             Official arguments for and against
           </summary>
           <p className="mt-2 text-[12px] text-[var(--color-paper-4)]">
