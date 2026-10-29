@@ -28,6 +28,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { NewsFeed } from "./NewsFeed";
+import { normalizeForMatch } from "@/domain/text";
 import type { Candidate, EndorsementCategory } from "@/data/types";
 import { ENDORSEMENT_ORDER } from "@/data/types";
 import { partyClass, partyDot, partyLabel, StatusPill } from "./PartyTag";
@@ -163,7 +164,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
               <Cite ids={candidate.general.ballotDesignation.sources} docs={candidate.general.sourceDocs} />
             </div>
           )}
-          {candidate.ballotName && candidate.ballotName !== candidate.name && (
+          {candidate.ballotName && normalizeForMatch(candidate.ballotName) !== normalizeForMatch(candidate.name) && (
             <div className="mt-1 font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)]">
               On your ballot as {candidate.ballotName}
             </div>
@@ -824,10 +825,6 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
     return (
       <div className="pt-8 space-y-4">
         <Researching what="This candidate's profile is" />
-        <p className="text-[13px] text-[var(--color-paper-2)]">
-          On your ballot as <span className="text-[var(--color-paper)]">{candidate.name}</span>
-          {candidate.party !== "Nonpartisan" && <> · {candidate.party}</>}.
-        </p>
         {g.campaignUrl && <CampaignLink url={g.campaignUrl} />}
       </div>
     );

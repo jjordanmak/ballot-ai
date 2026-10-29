@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ExternalLink, Info, ListChecks, Mail } from "lucide-react";
+import type { ReactNode } from "react";
+import { Columns3, ExternalLink, Info, ListChecks, Mail } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -7,6 +8,7 @@ import { RaceHeader } from "@/components/RaceHeader";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { CandidatesHeader } from "@/components/CandidatesHeader";
 import { MeasureCard } from "@/components/ballot/MeasureCard";
+import { Researching } from "@/components/ballot/Citations";
 import type { Race } from "@/data/types";
 import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
 import { formatElectionDate, locationLabel, STATUS_COPY } from "@/lib/ballot/copy";
@@ -74,14 +76,18 @@ export default async function BallotPage({ params }: { params: Params }) {
           measureCount={measures.length}
           candidateCount={totalCandidates}
           retrievedAt={ballot.retrievedAt}
-        />
-
-        <Notices ballot={ballot} officialUrl={officialUrl} />
+        >
+          <Notices ballot={ballot} officialUrl={officialUrl} />
+        </Cover>
 
         {races.map((race, i) => (
-          <section key={race.id} id={`race-${race.id}`} className="scroll-mt-4" data-race-id={race.id}>
+          <section key={race.id} id={`race-${race.id}`} className="scroll-mt-4 pt-16" data-race-id={race.id}>
             <RaceHeader race={race} index={i + 1} />
-            {race.issues.length > 0 && !race.unopposed && <ComparisonTable race={race} />}
+            {race.issues.length > 0 && !race.unopposed ? (
+              <ComparisonTable race={race} />
+            ) : (
+              race.candidates.length > 1 && <SideBySidePending />
+            )}
             <CandidatesHeader
               profileCandidates={race.candidates}
               activeCount={race.candidates.length}
@@ -135,6 +141,19 @@ export default async function BallotPage({ params }: { params: Params }) {
   );
 }
 
+/** Same heading shape as ComparisonTable; shown until issue positions are researched and cited. */
+function SideBySidePending() {
+  return (
+    <section className="mt-16 pt-8">
+      <div className="mb-8 font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
+        <Columns3 size={12} className="text-[var(--color-accent)]" />
+        Side-by-side
+      </div>
+      <Researching what="The issue-by-issue comparison is" />
+    </section>
+  );
+}
+
 function measuresNavRace(id: string, office: string, measures: MeasureView[]): Race {
   return {
     id,
@@ -178,7 +197,9 @@ function Cover({
   measureCount,
   candidateCount,
   retrievedAt,
+  children,
 }: {
+  children?: ReactNode;
   location: string;
   electionName: string;
   electionDate: string;
@@ -193,7 +214,7 @@ function Cover({
       <h1 className="font-display text-[44px] sm:text-[60px] xl:text-[76px] leading-[0.95] tracking-[-0.03em] text-balance">
         Voter{"’"}s Guide
       </h1>
-      <p className="mt-6 max-w-2xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
+      <p className="mt-6 max-w-3xl text-[17px] leading-[1.6] text-[var(--color-paper-2)] text-pretty no-auto-highlight">
         <mark>Every race, every candidate, every measure</mark> on your ballot, with every fact linked to its source.
       </p>
       <h2 className="font-display italic font-light text-[22px] sm:text-[26px] mt-8 text-[var(--color-paper-2)] text-balance">
@@ -215,6 +236,7 @@ function Cover({
           })}
         />
       </div>
+      {children}
     </header>
   );
 }
@@ -231,7 +253,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?: string }) {
   const admin = ballot.administration;
   return (
-    <div className="mt-8 flex flex-col gap-3 max-w-3xl">
+    <div className="mt-10 flex flex-col gap-3 max-w-3xl">
       {ballot.status === "PARTIAL" && (
         <div role="status" className="rounded-lg border border-[var(--color-accent-soft)] bg-[var(--color-ink-1)] px-4 py-3">
           <p className="flex items-center gap-2 text-[14px] text-[var(--color-paper)] font-medium">
