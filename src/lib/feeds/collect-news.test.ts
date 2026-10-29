@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkEntry } from "./checks";
-import { collectNews, nextDue } from "./collect-news";
+import { collectNews, nextDue, retryAfter } from "./collect-news";
 import type { NewsSource } from "./sources";
 
 const NOW = new Date("2026-10-29T12:00:00Z");
@@ -137,6 +137,13 @@ describe("nextDue", () => {
     expect(nextDue({ scope: "national" }, { last_fetched_at: last, failures: 3 })).toBe(at("2026-10-29T12:15:40Z"));
     expect(nextDue({ scope: "state" }, { last_fetched_at: last, failures: 40 })).toBe(at("2026-10-29T17:59:40Z"));
   });
+  it("waits as long as a publisher's Retry-After asks", () => {
+    const last = "2026-10-29T12:00:00Z";
+    expect(nextDue({ scope: "national" }, { last_fetched_at: last, failures: 1, retry_at: "2026-10-29T13:00:00Z" })).toBe(at("2026-10-29T13:00:00Z"));
+    expect(retryAfter("120", new Date(last))).toBe("2026-10-29T12:02:00.000Z");
+    expect(retryAfter("Thu, 29 Oct 2026 12:30:00 GMT", new Date(last))).toBe("2026-10-29T12:30:00.000Z");
+    expect(retryAfter("soon", new Date(last))).toBeNull();
+  });
 });
 
 describe("collectNews scheduling", () => {
@@ -165,7 +172,7 @@ describe("collectNews scheduling", () => {
 });
 
 describe("collectNews robustness", () => {
-  it("treats a 200 that isn't a feed as a failure, and saves source state only after storing items", async () => {
+  it("treats a 200 that isn't a feed as a failure (when the site advertises no feed), and saves source state only after storing items", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const { db, states } = fakeDb();
     const fetchImpl = vi.fn(async () => new Response("<!doctype html><html><body>Moved</body></html>"));
@@ -177,8 +184,46 @@ describe("collectNews robustness", () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       resolve: publicDns,
     });
-    expect(summary.failed).toEqual(["a: not a feed"]);
-    expect(states).toMatchObject([{ source_key: "a", failures: 1, last_error: "not a feed" }]);
+    expect(summary.failed).toEqual(["a: no feed advertised"]);
+    expect(states).toMatchObject([{ source_key: "a", failures: 1, last_error: "no feed advertised", resolved_url: null }]);
+  });
+
+  it("finds a moved feed on the outlet's own site and keeps using it", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db, states } = fakeDb();
+    const RSS = `<?xml version="1.0"?><rss><channel><title>A</title></channel></rss>`;
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url === "https://a.test/old-feed") return new Response("gone", { status: 404 });
+      if (url === "https://a.test/") return new Response(`<html><head><link rel="alternate" type="application/rss+xml" href="/politics/feed/"><link rel="alternate" type="application/rss+xml" href="https://other.test/feed"></head></html>`);
+      if (url === "https://a.test/politics/feed/") return new Response(RSS);
+      return new Response("?", { status: 500 });
+    });
+    const summary = await collectNews({
+      db: db as never,
+      electionId: "e",
+      sources: [{ key: "a", name: "A", url: "https://a.test/old-feed", scope: "national", enabled: true }],
+      now: NOW,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolve: publicDns,
+    });
+    expect(summary.failed).toEqual([]);
+    expect(summary.discovered).toEqual(["a: https://a.test/politics/feed/"]);
+    expect(states).toMatchObject([{ source_key: "a", failures: 0, resolved_url: "https://a.test/politics/feed/" }]);
+  });
+
+  it("never fetches a turned-off source", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db } = fakeDb();
+    const fetchImpl = vi.fn(async () => new Response(""));
+    await collectNews({
+      db: db as never,
+      electionId: "e",
+      sources: [{ key: "a", name: "A", url: "https://a.test/feed", scope: "national", enabled: false, disabledReason: "blocks automated readers" }],
+      now: NOW,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolve: publicDns,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
   it("re-publishes held items once publishing is back on", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});

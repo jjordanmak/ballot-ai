@@ -37,8 +37,8 @@ async function assertPublic(url: URL, resolve: typeof lookup) {
 }
 
 /** Read at most `maxBytes` of a body as text; longer bodies are cut off (`truncated`). */
-async function readCapped(res: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
-  if (!res.body) return { text: "", truncated: false };
+async function readCapped(res: Response, maxBytes: number): Promise<{ text: string; bytes: Uint8Array; truncated: boolean }> {
+  if (!res.body) return { text: "", bytes: new Uint8Array(), truncated: false };
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -54,7 +54,8 @@ async function readCapped(res: Response, maxBytes: number): Promise<{ text: stri
     }
     chunks.push(value);
   }
-  return { text: new TextDecoder().decode(Buffer.concat(chunks)), truncated };
+  const bytes = new Uint8Array(Buffer.concat(chunks));
+  return { text: new TextDecoder().decode(bytes), bytes, truncated };
 }
 
 export interface SafeResponse {
@@ -63,6 +64,8 @@ export interface SafeResponse {
   headers: Headers;
   /** Undefined for HEAD requests and non-OK responses. */
   text?: string;
+  /** The raw body (same bytes as `text`), for binary formats such as PDF. */
+  bytes?: Uint8Array;
   truncated: boolean;
   finalUrl: string;
 }
@@ -84,8 +87,8 @@ export async function safeFetch(
       continue;
     }
     const wantBody = res.ok && (init.method ?? "GET").toUpperCase() !== "HEAD";
-    const body = wantBody ? await readCapped(res, init.maxBytes ?? DEFAULT_MAX_BYTES) : { text: undefined, truncated: false };
-    return { status: res.status, ok: res.ok, headers: res.headers, text: body.text, truncated: body.truncated, finalUrl: current.toString() };
+    const body = wantBody ? await readCapped(res, init.maxBytes ?? DEFAULT_MAX_BYTES) : { text: undefined, bytes: undefined, truncated: false };
+    return { status: res.status, ok: res.ok, headers: res.headers, text: body.text, bytes: body.bytes, truncated: body.truncated, finalUrl: current.toString() };
   }
   throw new BlockedUrlError("too many redirects");
 }

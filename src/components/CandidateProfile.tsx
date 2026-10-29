@@ -33,7 +33,7 @@ import type { Candidate, EndorsementCategory } from "@/data/types";
 import { ENDORSEMENT_ORDER } from "@/data/types";
 import { partyClass, partyDot, partyLabel, StatusPill } from "./PartyTag";
 import { RichText, RichBlock, type HighlightMode } from "./Highlight";
-import { Cite, Researching, SourceList } from "./ballot/Citations";
+import { AiLabel, Cite, Researching, SourceList } from "./ballot/Citations";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
 
 /**
@@ -837,6 +837,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
 
   return (
     <div className="pt-8 space-y-12">
+      {!!g.aiFields?.length && <AiLabel className="-mb-8" />}
       {/* Their platform — the candidate's own main claims, attributed. */}
       <section>
         <div className="rounded-xl bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] p-6 sm:p-8">

@@ -106,10 +106,24 @@ export function SourceList({
   );
 }
 
-export function Researching({ what }: { what?: string }) {
+export function Researching({ what, live }: { what?: string; live?: boolean }) {
   return (
     <p className="text-[13px] leading-[1.55] italic text-[var(--color-paper-4)]">
-      {what ? `${what} being researched.` : "Being researched."} We only publish what we can cite.
+      {what ? `${what} being researched.` : "Being researched."}{" "}
+      {live ? "This fills in automatically in a few minutes, without reloading." : "We only publish what we can cite."}
+    </p>
+  );
+}
+
+/**
+ * Marks content written by the in-app research pipeline: an AI summary of
+ * the sources listed in the block, each answer checked against the exact
+ * sentence it cites (AI_ARCHITECTURE §2: labeled, never unlabeled).
+ */
+export function AiLabel({ className = "" }: { className?: string }) {
+  return (
+    <p className={`font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)] ${className}`}>
+      AI summary of the sources below · each item checked against the sentence it cites
     </p>
   );
 }

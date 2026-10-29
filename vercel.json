@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/polls",
       "schedule": "*/20 * * * *"
+    },
+    {
+      "path": "/api/cron/research",
+      "schedule": "* * * * *"
     }
   ]
 }

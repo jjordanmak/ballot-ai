@@ -13,6 +13,82 @@ There are therefore no deprecated models to migrate. Centralized configuration i
 
 **Claude Code vs. runtime:** Claude Code authentication is separate from ballot.ai's runtime `ANTHROPIC_API_KEY`. Development sessions never need the production key.
 
+## 1a. Built (2026-10-29)
+
+The research pipeline exists, runs in the app (never in a Claude Code session), and is off until the owner sets `ANTHROPIC_API_KEY` and `AI_SYNTHESIS_ENABLED=on` (docs/infrastructure/ENVIRONMENT.md).
+
+| Piece | Where |
+|---|---|
+| Model IDs, kill switch, monthly budget, prices | `src/lib/ai/config.ts` (default `claude-haiku-5-5`, owner decision 2026-10-29) |
+| Structured extraction + quote-support check | `src/lib/ai/extract.ts` (`messages.parse` + zod; standard API, no batching, so updates land within the hour) |
+| Output schemas, caps | `src/lib/ai/schemas.ts` |
+| Quote, neutrality and cleanup checks | `src/lib/ai/checks.ts` |
+| Targets (registry) and where to look | `src/lib/research/targets.ts` + `src/data/sources/official-guides.json` (see "Sources per kind" below) |
+| Polite fetching, PDF text | `src/lib/research/fetch.ts`, `robots.ts` |
+| Search for `.gov` / Ballotpedia pages | `src/lib/research/search.ts` |
+| Dispatch, run, store | `src/lib/research/run.ts`, dispatched every minute by `/api/cron/research` (`vercel.json`), state in `research_state` (migration 0012) |
+| Model comparison (owner review before publishing) | `src/data/research/compare-set.json`, `src/lib/research/compareReview.ts`, `compareLoad.ts`, `/internal/compare`; decisions in [MODEL_DECISIONS](MODEL_DECISIONS.md) |
+| Verification into the stored shape | `src/lib/research/verify.ts` |
+| Read path (curated wins; labeled) | `src/lib/ballot/research.ts`, `researchRead.ts`; `AiLabel` in `src/components/ballot/Citations.tsx` |
+| Tables | migrations 0010 (payload/status on `synthesized_field_versions`, `sources.content_text`, `add_api_spend`), 0011 (public read of published, current rows), 0012 (`research_state`, `fetch_hosts`, `claim_research_jobs`, `reserve_host_slot`, the `research` broadcast) |
+
+**Scheduling (owner, 2026-10-29).**
+- **Dispatcher, every minute, production only.** Each run:
+  - records any new jobs in `research_state`;
+  - claims the due ones atomically (`claim_research_jobs`, so two runs never take the same job), up to `AI_MAX_INFLIGHT`;
+  - calls the same route once per job (`?job=<key>`, with the cron secret). Each job is its own function invocation with its own 300 s limit, so a whole ballot finishes in minutes.
+- An idle minute is one cheap query.
+- **Re-reads:** a job comes due again 6 hours after it ran (+0–30 min jitter); compare-mode cells, 7 days.
+- **Claude runs only when a document's text changed.** Re-reading is a plain web request (often a 304).
+
+**Polite fetching.**
+- robots.txt is honored for `*` and `ballot.ai`, cached a day per site.
+- At most one request per site every ~10 s across all workers (`reserve_host_slot`, with jitter). A worker that would wait over 25 s uses the stored copy.
+- Conditional requests (ETag / Last-Modified).
+- An honest user agent.
+- A 403/429 doubles the site's spacing (up to 16×), and success halves it.
+- A site that blocks automated readers is skipped, never worked around.
+
+**Sources per kind (owner, 2026-10-29; the same for every item of a kind):**
+- **Measures:** official only. That means the state guide (statewide), or the county's official election page and the links on it (local), with PDFs read only from the official hosts listed per state (`officialPdfHosts`), plus a `.gov`-only search. Never Ballotpedia.
+- **Judges and candidates:**
+  - their official statement (state guide for statewide offices, county page otherwise);
+  - `.gov` pages and their own Ballotpedia page, found by one cached search;
+  - their campaign site, only when an official filing or Ballotpedia links it.
+  - Official documents come first in the prompt.
+- **What this office does:** `.gov` pages only, one description per office and place (`officeKeyFor`; e.g. one for all 80 Assembly districts). Shown in the race header as "The office".
+
+**Compare mode (`AI_MODE=compare`, the default until the owner decides).**
+- Only the comparison set runs, once per setting in `AI_COMPARE` (default: Haiku, Sonnet and Opus at low, medium and high).
+- Each result is stored as `held` ("model comparison") under `<field>@<model>:<effort>`. The ballot page reads only `published` rows, so none of it is served.
+- `synthesis_runs.metadata` keeps the setting, raw output, every rejected answer with its reason, tokens, cost and seconds.
+- **`AI_MODE=publish`:** every item at its kind's setting (`ANTHROPIC_MODEL_MEASURE` / `_PROFILE` / `_OFFICE`, each `model[:effort]`).
+
+**Live refresh.** A published row fires the `research` event on the ballot's existing Broadcast channel `feed:{election}:{state}` (trigger in 0012). The page re-renders its server data in place (`LiveFeed.tsx`), so a visitor never reloads.
+
+How one item is made:
+1. **Fetch.**
+   - What is fetched: the target's pages, up to 4 same-site pages they link to (links naming the target first, e.g. "Measure Z"), and the search results.
+   - Everything goes through `safeFetch` (public hosts only) and the polite rules above.
+   - Storage: main text, or PDF text, is stored on `sources`. Long documents are narrowed to the passages about the target.
+2. **Skip if unchanged.** The input hash covers the document texts, model and prompt version, so nothing is re-run unless a cited document changed.
+3. **Extract.** Every answer is `{text, quote, sourceId}` or null.
+4. **Check.**
+   - The quote must appear in the cited document (case, spacing, quote styles and dashes ignored; "…" allowed between parts in order).
+   - The text passes the neutrality lint.
+   - The text is capped.
+   - Only `<mark>` tags survive.
+5. **Confirm.** A second, low-effort call answers "does this quote, on its own, support this sentence?" for every claim. Unsupported claims are dropped, and the check fails closed.
+6. **Store.**
+   - A version with surviving answers is `published`.
+   - A version where nothing survived is `held`, with the reason.
+   - Every run logs model, prompt version, cost and rejections in `synthesis_runs`.
+
+Not yet:
+- **States:** states other than California in `official-guides.json`. Elsewhere, measures and offices rely on the `.gov` search, and people on search plus Ballotpedia.
+- **Counties:** counties other than San Mateo.
+- **Scans:** scanned (image-only) PDFs are skipped as "unreadable pdf".
+
 ## 2. Trust boundary
 
 | Claude MUST NOT determine | Claude MAY do (offline, with sources) |
@@ -49,8 +125,12 @@ official / source documents ─► fetch + hash (sources) ─► extraction (EXT
 | Env var | Purpose | Default (verified 2026-10-28 via Anthropic model table) |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Runtime key (server-only) | — |
-| `ANTHROPIC_DEFAULT_MODEL` | Higher-capability synthesis: candidate summaries, measure explanations, comparisons | `claude-opus-5-5` |
-| `ANTHROPIC_EXTRACTION_MODEL` | High-volume low-cost extraction, classification, normalization | `claude-haiku-5-5` |
+| `ANTHROPIC_DEFAULT_MODEL` | Fallback for every publish-mode setting below | `claude-haiku-5-5` (owner, 2026-10-29: lowest cost; every answer is quote-checked in code) |
+| `ANTHROPIC_MODEL_MEASURE` / `_PROFILE` / `_OFFICE` | Publish mode: `model[:effort]` per kind (measures; judges and candidates; office descriptions) | the default model, medium effort (pending [MODEL_DECISIONS](MODEL_DECISIONS.md)) |
+| `ANTHROPIC_MODEL_CHECK` (or the older `ANTHROPIC_EXTRACTION_MODEL`) | The quote-support check | `claude-haiku-5-5` |
+| `ANTHROPIC_SEARCH_MODEL` | The search step (finds URLs; writes nothing) | `claude-haiku-5-5` with the basic web search tool; falls back to Sonnet with the current tool if refused |
+| `AI_MODE` | `compare` (default) or `publish` | `compare` |
+| `AI_COMPARE` | Compare-mode columns, comma-separated `model:effort` | the 9 Haiku/Sonnet/Opus × low/medium/high settings |
 
 Implementation notes for when the pipeline is built (P2):
 - SDK: `@anthropic-ai/sdk`, server-only, in scripts and cron routes.

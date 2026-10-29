@@ -37,7 +37,17 @@ export function toRaces(ballot: ResolvedBallot, bundle: EnrichmentBundle): { rac
         enrichment: me,
         sourceDocs: pickSources(
           bundle.sources,
-          citedIds(me?.summary, me?.yesMeans, me?.noMeans, me?.fiscalEffect, me?.argumentFor, me?.argumentAgainst, me?.supporters, me?.opponents),
+          citedIds(
+            me?.summary,
+            me?.yesMeans,
+            me?.noMeans,
+            ...Object.values(me?.impact ?? {}),
+            me?.fiscalEffect,
+            me?.argumentFor,
+            me?.argumentAgainst,
+            me?.supporters,
+            me?.opponents,
+          ),
         ),
       });
       continue;
@@ -57,7 +67,7 @@ function isStatewide(c: Contest): boolean {
 function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Race {
   const e = bundle.contests?.[contestKey(c)];
   const docs = pickSources(bundle.sources, [
-    ...citedIds(e?.formatExplainer, e?.context, e?.whyItMatters, e?.whatsAtStake, e?.bigPicture, e?.polling?.summary),
+    ...citedIds(e?.formatExplainer, e?.context, e?.whyItMatters, e?.whatsAtStake, e?.bigPicture, e?.polling?.summary, ...Object.values(e?.office ?? {})),
     ...(e?.polling?.poll?.sources ?? []),
   ]);
   const candidates = c.choices.map((ch) => {

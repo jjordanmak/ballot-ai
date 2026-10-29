@@ -50,6 +50,10 @@ export interface ContestEnrichment {
   polling?: { summary?: Cited; poll?: PollResult };
   /** Issue rows for the side-by-side table, in display order. */
   issues?: { id: string; label: string }[];
+  /** "The office": what it does, term, seats (and salary only if stated), each cited. */
+  office?: { duties?: Cited; term?: Cited; seats?: Cited; salary?: Cited };
+  /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
+  aiFields?: string[];
 }
 
 export interface FundingSummary {
@@ -90,6 +94,8 @@ export interface CandidateEnrichment {
   notableFacts?: Cited[];
   endorsements?: { name: string; category: string; sources: string[] }[];
   funding?: FundingSummary;
+  /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
+  aiFields?: string[];
 }
 
 export interface MeasureEnrichment {
@@ -119,6 +125,8 @@ export interface MeasureEnrichment {
   supporters?: Cited;
   opponents?: Cited;
   officialUrl?: string;
+  /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
+  aiFields?: string[];
 }
 
 export interface EnrichmentBundle {

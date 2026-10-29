@@ -1,5 +1,9 @@
 import { renderToString } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// The provider refreshes server data when research lands; no app router in a string render.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
+
 import { LiveFeedProvider, type FeedRow } from "./LiveFeed";
 import { LivePoll } from "./LivePoll";
 

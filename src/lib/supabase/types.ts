@@ -651,6 +651,8 @@ export type Database = {
           last_fetched_at: string | null
           last_modified: string | null
           last_status: number | null
+          resolved_url: string | null
+          retry_at: string | null
           source_key: string
         }
         Insert: {
@@ -661,6 +663,8 @@ export type Database = {
           last_fetched_at?: string | null
           last_modified?: string | null
           last_status?: number | null
+          resolved_url?: string | null
+          retry_at?: string | null
           source_key: string
         }
         Update: {
@@ -671,7 +675,36 @@ export type Database = {
           last_fetched_at?: string | null
           last_modified?: string | null
           last_status?: number | null
+          resolved_url?: string | null
+          retry_at?: string | null
           source_key?: string
+        }
+        Relationships: []
+      }
+      fetch_hosts: {
+        Row: {
+          host: string
+          next_free_at: string
+          robots_fetched_at: string | null
+          robots_txt: string | null
+          slow_factor: number
+          updated_at: string
+        }
+        Insert: {
+          host: string
+          next_free_at?: string
+          robots_fetched_at?: string | null
+          robots_txt?: string | null
+          slow_factor?: number
+          updated_at?: string
+        }
+        Update: {
+          host?: string
+          next_free_at?: string
+          robots_fetched_at?: string | null
+          robots_txt?: string | null
+          slow_factor?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1075,6 +1108,42 @@ export type Database = {
           },
         ]
       }
+      research_state: {
+        Row: {
+          discovered: Json | null
+          failures: number
+          input_hash: string | null
+          key: string
+          last_outcome: string | null
+          locked_until: string | null
+          next_check_at: string
+          target: Json
+          updated_at: string
+        }
+        Insert: {
+          discovered?: Json | null
+          failures?: number
+          input_hash?: string | null
+          key: string
+          last_outcome?: string | null
+          locked_until?: string | null
+          next_check_at?: string
+          target: Json
+          updated_at?: string
+        }
+        Update: {
+          discovered?: Json | null
+          failures?: number
+          input_hash?: string | null
+          key?: string
+          last_outcome?: string | null
+          locked_until?: string | null
+          next_check_at?: string
+          target?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       resolution_events: {
         Row: {
           cache_hit: boolean
@@ -1156,6 +1225,7 @@ export type Database = {
         Row: {
           author: string | null
           canonical_url: string | null
+          content_text: string | null
           created_at: string
           excerpt: string | null
           fetched_at: string
@@ -1173,6 +1243,7 @@ export type Database = {
         Insert: {
           author?: string | null
           canonical_url?: string | null
+          content_text?: string | null
           created_at?: string
           excerpt?: string | null
           fetched_at?: string
@@ -1190,6 +1261,7 @@ export type Database = {
         Update: {
           author?: string | null
           canonical_url?: string | null
+          content_text?: string | null
           created_at?: string
           excerpt?: string | null
           fetched_at?: string
@@ -1279,9 +1351,12 @@ export type Database = {
           content: string
           created_at: string
           field_name: string
+          held_reason: string | null
           id: string
           is_current: boolean
+          payload: Json | null
           source_ids: string[]
+          status: string
           synthesis_run_id: string | null
           target_id: string
           target_type: string
@@ -1290,9 +1365,12 @@ export type Database = {
           content: string
           created_at?: string
           field_name: string
+          held_reason?: string | null
           id?: string
           is_current?: boolean
+          payload?: Json | null
           source_ids?: string[]
+          status?: string
           synthesis_run_id?: string | null
           target_id: string
           target_type: string
@@ -1301,9 +1379,12 @@ export type Database = {
           content?: string
           created_at?: string
           field_name?: string
+          held_reason?: string | null
           id?: string
           is_current?: boolean
+          payload?: Json | null
           source_ids?: string[]
+          status?: string
           synthesis_run_id?: string | null
           target_id?: string
           target_type?: string
@@ -1323,6 +1404,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_api_spend: {
+        Args: { p_amount: number; p_metric: string; p_period: string }
+        Returns: number
+      }
       ballot_feed: {
         Args: {
           p_contest_ids: string[]
@@ -1344,9 +1429,17 @@ export type Database = {
           url: string
         }[]
       }
+      claim_research_jobs: {
+        Args: { p_keys: string[]; p_limit: number; p_lock_seconds: number }
+        Returns: string[]
+      }
       consume_api_quota: {
         Args: { p_limit: number; p_metric: string; p_period: string }
         Returns: boolean
+      }
+      reserve_host_slot: {
+        Args: { p_host: string; p_spacing_ms: number }
+        Returns: number
       }
     }
     Enums: {

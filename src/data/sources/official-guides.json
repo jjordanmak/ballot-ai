@@ -1,0 +1,110 @@
+{
+  "_note": "Where the research pipeline looks for official documents, per state. Each URL is an official election-authority page; {number} is the measure number from the ballot title. 'follow' lists link texts on that page to read too (same site only). Add a state by adding a row, not code. candidateStatements: the state guide's statement page per office (match = office title regex). counties: a county's official election page for local measures and candidate statements; divisions = regex over registry division names served by that county. officialPdfHosts: sites whose PDFs may be read.",
+  "states": {
+    "CA": {
+      "publisher": "California Secretary of State",
+      "statewideMeasure": {
+        "pages": [
+          "https://voterguide.sos.ca.gov/propositions/{number}/",
+          "https://voterguide.sos.ca.gov/quick-reference-guide/{number}.htm"
+        ],
+        "follow": [
+          "analysis by the legislative analyst",
+          "analysis",
+          "official title and summary",
+          "title and summary"
+        ]
+      },
+      "retention": [
+        {
+          "match": "supreme court",
+          "url": "https://voterguide.sos.ca.gov/justices/supreme-court-justices/index.htm"
+        },
+        {
+          "match": "first (appellate )?district",
+          "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district1.htm"
+        },
+        {
+          "match": "second (appellate )?district",
+          "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district2.htm"
+        },
+        {
+          "match": "third (appellate )?district",
+          "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district3.htm"
+        },
+        {
+          "match": "fourth (appellate )?district",
+          "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district4.htm"
+        },
+        {
+          "match": "fifth (appellate )?district",
+          "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district5.htm"
+        },
+        {
+          "match": "sixth (appellate )?district",
+          "url": "https://voterguide.sos.ca.gov/justices/courts-of-appeal/district6.htm"
+        }
+      ],
+      "candidateStatements": [
+        {
+          "match": "^governor$",
+          "url": "https://voterguide.sos.ca.gov/candidates/governor-candidate-statements.htm"
+        },
+        {
+          "match": "^lieutenant governor$",
+          "url": "https://voterguide.sos.ca.gov/candidates/lt-governor-candidate-statements.htm"
+        },
+        {
+          "match": "^secretary of state$",
+          "url": "https://voterguide.sos.ca.gov/candidates/sos-candidate-statements.htm"
+        },
+        {
+          "match": "^controller$",
+          "url": "https://voterguide.sos.ca.gov/candidates/controller-candidate-statements.htm"
+        },
+        {
+          "match": "^treasurer$",
+          "url": "https://voterguide.sos.ca.gov/candidates/treasurer-candidate-statements.htm"
+        },
+        {
+          "match": "^attorney general$",
+          "url": "https://voterguide.sos.ca.gov/candidates/attorney-general-candidate-statements.htm"
+        },
+        {
+          "match": "^insurance commissioner$",
+          "url": "https://voterguide.sos.ca.gov/candidates/insurance-commissioner-candidate-statements.htm"
+        },
+        {
+          "match": "^superintendent of public instruction$",
+          "url": "https://voterguide.sos.ca.gov/candidates/superintendent-candidate-statements.htm"
+        },
+        {
+          "match": "board of equalization",
+          "url": "https://voterguide.sos.ca.gov/candidates/boe-candidate-statements.htm"
+        }
+      ],
+      "officialPdfHosts": [
+        "sos.ca.gov",
+        "smcacre.gov",
+        "smcacre.org"
+      ],
+      "counties": [
+        {
+          "name": "San Mateo County",
+          "publisher": "San Mateo County Elections",
+          "divisions": "san mateo|daly city|jefferson union|smc community college|supervisorial|trustee area|15th congressional|19th assembly|13th senate",
+          "page": "https://smcacre.gov/november-3-2026",
+          "follow": [
+            "measure",
+            "impartial analysis",
+            "candidate statement",
+            "voter information guide",
+            "sample ballot",
+            "local measures",
+            "candidates"
+          ]
+        }
+      ]
+    }
+  }
+}

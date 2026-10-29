@@ -8,8 +8,13 @@
  * updated" stat read from here instead of opening their own channels.
  * After a dropped connection (a phone waking up, a network change) or when
  * the tab becomes visible again, the page refetches so nothing is missed.
+ *
+ * The same channel carries "research" messages (migration 0012): when an AI
+ * summary for something on this ballot is published, the page re-renders its
+ * server data in place, so "being researched" sections fill in without a reload.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import type { NewsItem } from "@/data/types";
 import type { Json } from "@/lib/supabase/types";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
@@ -41,6 +46,7 @@ export function LiveFeedProvider({
   electionId,
   state,
   contestIds,
+  researchIds,
   initial,
   children,
 }: {
@@ -48,9 +54,14 @@ export function LiveFeedProvider({
   /** USPS code of the ballot's state: the broadcast topic. */
   state?: string;
   contestIds: string[];
+  /** Research target ids on this ballot (measures, candidates, offices). */
+  researchIds?: string[];
   initial: FeedRow[];
   children: ReactNode;
 }) {
+  const router = useRouter();
+  const refreshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const research = useMemo(() => new Set(researchIds ?? []), [researchIds]);
   const [rows, setRows] = useState(() => new Map(initial.map((r) => [r.id, r])));
   const ids = useMemo(() => new Set(contestIds), [contestIds]);
 
@@ -80,6 +91,13 @@ export function LiveFeedProvider({
           return next;
         });
       })
+      .on("broadcast", { event: "research" }, ({ payload }) => {
+        const target = (payload as { target?: string }).target;
+        if (!target || !research.has(target)) return;
+        // Several answers often land together: refresh once, a moment later.
+        clearTimeout(refreshTimer.current);
+        refreshTimer.current = setTimeout(() => router.refresh(), 1500);
+      })
       .subscribe((status) => {
         if (status !== "SUBSCRIBED") return;
         // A resubscribe means we may have missed items while disconnected.
@@ -94,7 +112,7 @@ export function LiveFeedProvider({
       document.removeEventListener("visibilitychange", onVisible);
       sb.removeChannel(channel);
     };
-  }, [electionId, state, ids, refetch]);
+  }, [electionId, state, ids, refetch, research, router]);
 
   const value = useMemo(() => ({ rows, contestIds: ids }), [rows, ids]);
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;

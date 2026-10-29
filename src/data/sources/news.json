@@ -1,12 +1,13 @@
 {
-  "_about": "Approved news sources for the live feed (owner approval pending, 2026-10-29). Fetched by source, not per candidate. scope: national (matches any tracked contest) | state (matches only its own state's contests; the state name counts as context) | local (same, plus jurisdiction terms the article may omit). Inclusion rule: original reporting, a public corrections policy, and no ownership or control by a party, campaign, PAC or litigation group; national outlets are chosen across the political spectrum; every outlet that meets the rule is treated the same. Opinion and sponsored items are held by the automated checks. Excluded: CNN and Reuters (no maintained public RSS), RealClearPolitics (aggregator: links to other outlets' stories), Democracy Docket and similar (run by a litigation or advocacy group). Feed URLs follow each outlet's published feed pattern and are confirmed by the collector's first run (feed_source_state.last_status); failing sources back off automatically, and enabled=false drops a source instantly.",
+  "_about": "Approved news sources for the live feed (approved 2026-10-29). Fetched by source, not per candidate. scope: national (matches any tracked contest) | state (matches only its own state's contests; the state name counts as context) | local (same, plus jurisdiction terms the article may omit). Inclusion rule: original reporting, a public corrections policy, and no ownership or control by a party, campaign, PAC or litigation group; national outlets are chosen across the political spectrum; every outlet that meets the rule is treated the same. Opinion and sponsored items are held by the automated checks. Excluded: CNN and Reuters (no maintained public RSS), RealClearPolitics (aggregator: links to other outlets' stories), Democracy Docket and similar (run by a litigation or advocacy group). Feed URLs follow each outlet's published feed pattern and are confirmed by the collector's first run (feed_source_state.last_status); failing sources back off automatically, and enabled=false drops a source instantly. Outlets that block automated readers (HTTP 403) are turned off with a disabledReason, never worked around (owner, 2026-10-29). Moved feeds are found automatically from the outlet's own advertised feed links (src/lib/feeds/discover.ts).",
   "sources": [
     {
       "key": "ap-politics",
       "name": "Associated Press",
       "url": "https://apnews.com/hub/politics?output=rss",
       "scope": "national",
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "npr-politics",
@@ -125,7 +126,8 @@
       "url": "https://www.ocregister.com/news/politics/feed/",
       "scope": "state",
       "state": "CA",
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "sd-union-tribune-politics",
@@ -133,7 +135,8 @@
       "url": "https://www.sandiegouniontribune.com/news/politics/feed/",
       "scope": "state",
       "state": "CA",
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "politico-california",
@@ -152,7 +155,8 @@
       "jurisdictions": [
         "San Mateo"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "mercury-news-peninsula",
@@ -163,7 +167,8 @@
       "jurisdictions": [
         "San Mateo"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "kqed-peninsula",
@@ -667,7 +672,7 @@
     {
       "key": "texas-tribune",
       "name": "The Texas Tribune",
-      "url": "https://www.texastribune.org/feeds/latest/",
+      "url": "https://feeds.texastribune.org/feeds/main/",
       "scope": "state",
       "state": "TX",
       "enabled": true
@@ -868,7 +873,8 @@
       "jurisdictions": [
         "New York City"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "laist",
@@ -890,7 +896,8 @@
       "jurisdictions": [
         "Los Angeles"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "press-enterprise-politics",
@@ -971,7 +978,8 @@
         "Chicago",
         "Cook"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "block-club-chicago",
@@ -1111,7 +1119,8 @@
         "Palm Beach",
         "Fort Lauderdale"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "orlando-sentinel-politics",
@@ -1123,7 +1132,8 @@
         "Orlando",
         "Orange"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "tampa-bay-times-politics",
@@ -1174,7 +1184,8 @@
       "jurisdictions": [
         "Atlanta"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "boston-globe-metro",
@@ -1196,7 +1207,8 @@
       "jurisdictions": [
         "Boston"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "arizona-luminaria",
@@ -1257,7 +1269,8 @@
       "jurisdictions": [
         "Denver"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "denverite",
@@ -1290,7 +1303,8 @@
       "jurisdictions": [
         "Baltimore"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "blocks automated readers (HTTP 403, 2026-10-29)"
     },
     {
       "key": "stltoday-politics",
@@ -1457,6 +1471,24 @@
         "Erie"
       ],
       "enabled": true
+    },
+    {
+      "key": "wbur",
+      "name": "WBUR",
+      "url": "https://www.wbur.org/news",
+      "scope": "state",
+      "state": "MA",
+      "enabled": true,
+      "note": "Nonprofit NPR station licensed to Boston University; published ethics and corrections guide. Feed found from the outlet's own advertised feed (discovery)."
+    },
+    {
+      "key": "wbez",
+      "name": "WBEZ Chicago",
+      "url": "https://www.wbez.org/politics",
+      "scope": "state",
+      "state": "IL",
+      "enabled": true,
+      "note": "Chicago Public Media (nonprofit). Feed found from the outlet's own advertised feed (discovery)."
     }
   ]
 }

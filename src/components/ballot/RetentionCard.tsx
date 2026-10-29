@@ -2,7 +2,8 @@ import type { Race } from "@/data/types";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
 import { COUNTS_VOTES_CAST } from "@/domain/voteNeeded";
 import { NewsFeed } from "@/components/NewsFeed";
-import { Cite, Researching, SourceList } from "./Citations";
+import { RichText } from "@/components/Highlight";
+import { AiLabel, Cite, Researching, SourceList } from "./Citations";
 import { MapYearInfo } from "./MapYearInfo";
 import { Meaning } from "./MeasureCard";
 
@@ -62,12 +63,13 @@ export function RetentionCard({ race, anchorId }: { race: Race; anchorId?: strin
       )}
 
       <section className="mt-7 max-w-3xl" aria-label="About the judge">
-        <div className="font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] mb-3">About the judge</div>
+        <div className="font-mono-cap text-[10px] tracking-[0.16em] text-[var(--color-paper-3)] mb-1">About the judge</div>
+        {p?.aiFields?.length ? <AiLabel className="mb-3" /> : <div className="mb-2" />}
         {bio.length || positions.length ? (
           <div className="space-y-2 text-[14px] leading-[1.6] text-[var(--color-paper-2)]">
             {bio.map((b, i) => (
               <p key={i}>
-                {b.text}
+                <RichText text={b.text} auto="neutral" />
                 <Cite ids={b.sources} docs={docs} />
               </p>
             ))}
