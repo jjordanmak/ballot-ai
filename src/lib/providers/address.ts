@@ -1,4 +1,22 @@
 /**
+ * True when an address names its ZIP code, or its city and state
+ * ("…, Daly City, CA"). Without them the ballot provider silently guesses a
+ * location ("1 Main St" → Dallas, "100 Main St, CA" → Los Angeles), so the
+ * form waits for a full address and the server refuses a partial one.
+ * Addresses picked from the suggestions always include all three.
+ */
+export function hasLocality(raw: string): boolean {
+  const s = raw.replace(/\s+/g, " ").trim().replace(COUNTRY_SUFFIX, "").trim();
+  if (ZIP.test(s)) return true;
+  if (!STATE_AT_END.test(s)) return false;
+  // City and state need their own place after the street: "Street, City, ST" or "Street, City ST".
+  const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
+  const last = parts[parts.length - 1] ?? "";
+  const cityBeforeState = last.replace(STATE_AT_END, "").trim().length > 0;
+  return parts.length >= 3 || (parts.length === 2 && cityBeforeState);
+}
+
+/**
  * Opaque wrapper for a residential address.
  *
  * The raw value is reachable only through `reveal()`, which provider
@@ -42,22 +60,9 @@ export class AddressInput {
     return new AddressInput(raw);
   }
 
-  /**
-   * True when the address names its ZIP code, or its city and state
-   * ("…, Daly City, CA"). Without them the ballot provider silently guesses
-   * a location ("1 Main St" → Dallas, "100 Main St, CA" → Los Angeles), so
-   * we ask for the full address instead of risking someone else's ballot.
-   * Addresses picked from the suggestions always include all three.
-   */
+  /** See `hasLocality()`. */
   hasLocality(): boolean {
-    const s = this.#raw.replace(COUNTRY_SUFFIX, "").trim();
-    if (ZIP.test(s)) return true;
-    if (!STATE_AT_END.test(s)) return false;
-    // City and state need their own place after the street: "Street, City, ST" or "Street, City ST".
-    const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
-    const last = parts[parts.length - 1] ?? "";
-    const cityBeforeState = last.replace(STATE_AT_END, "").trim().length > 0;
-    return parts.length >= 3 || (parts.length === 2 && cityBeforeState);
+    return hasLocality(this.#raw);
   }
 
   reveal(): string {

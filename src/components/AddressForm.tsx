@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight, ExternalLink, MapPin, ShieldCheck } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
 import { INCOMPLETE_ADDRESS_COPY, NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
+import { hasLocality } from "@/lib/providers/address";
 import { readyToSuggest } from "@/lib/providers/google-places/ready";
 
 interface Suggestion {
@@ -39,6 +40,10 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
         ? INCOMPLETE_ADDRESS_COPY
         : STATUS_COPY[state.status]
     : null;
+  // The button waits for a full address (ZIP, or city and state); the hint says what's missing.
+  const complete = hasLocality(address);
+  // Only once a street is under way ("123 Mai"), so the hint doesn't nag on the first keystrokes.
+  const missingLocality = !complete && readyToSuggest(address);
   const showLookup = !!state.lookup && (handoff || state.status === "NO_COVERAGE");
 
   useEffect(() => () => {
@@ -189,8 +194,14 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
         )}
       </div>
 
-      <p id="address-hint" className="-mt-1 text-[12px] leading-[1.5] text-[var(--color-paper-3)]">
-        Your home street address. No apartment or unit number needed: everyone at the same address has the same ballot.
+      <p
+        id="address-hint"
+        aria-live="polite"
+        className={`-mt-1 text-[12px] leading-[1.5] ${missingLocality ? "text-[var(--color-paper)]" : "text-[var(--color-paper-3)]"}`}
+      >
+        {missingLocality
+          ? "Add the city and state, or the ZIP code (for example: 123 Main St, Daly City, CA 94015), or pick your address from the suggestions."
+          : "Your home street address. No apartment or unit number needed: everyone at the same address has the same ballot."}
       </p>
 
       <div aria-live="polite" id="address-error">
@@ -214,7 +225,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
 
       <button
         type="submit"
-        disabled={pending || filling || address.trim().length < 5}
+        disabled={pending || filling || !complete}
         className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
       >
         {pending ? "Finding your ballot…" : "View my ballot"}
