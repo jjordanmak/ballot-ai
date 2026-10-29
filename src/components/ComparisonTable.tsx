@@ -18,7 +18,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff, RotateCcw, Info } from "lucide-react";
+import { ArrowDownToLine, GripHorizontal, Columns3, Eye, EyeOff, RotateCcw, Info, ExternalLink } from "lucide-react";
 import type { Race, Candidate } from "@/data/types";
 import { partyClass, partyDot, partyBorder, partyLabel, StatusPill } from "./PartyTag";
 import { RichText } from "./Highlight";
@@ -139,13 +139,13 @@ export function ComparisonTable({ race }: Props) {
                 className="pointer-events-none absolute left-0 top-full mt-2 w-[320px] z-50 opacity-0 group-hover/tip:opacity-100 group-focus/tip:opacity-100 transition-opacity duration-150 rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left"
               >
                 <span className="block text-[11px] text-[var(--color-paper-2)] leading-snug normal-case tracking-normal">
-                  We compare the major candidates in this race
-                  side-by-side on the policy issues that matter most for
-                  this office. Positions are drawn from candidate
-                  statements, debates, voting records, and public
-                  interviews — never inferred. Suspended and withdrawn
-                  candidates are excluded even when they remain on
-                  printed ballots. This race compares{" "}
+                  Candidates in this race side by side, in ballot order,
+                  on the issues researched for this office. Each position
+                  comes from a cited source (candidate statements,
+                  debates, voting records, public interviews) and is never
+                  inferred. Suspended and withdrawn candidates are
+                  excluded even when they remain on printed ballots. This
+                  race compares{" "}
                   {allCandidates.length} candidate
                   {allCandidates.length === 1 ? "" : "s"} across{" "}
                   {race.issues.length} issue
@@ -292,11 +292,19 @@ export function ComparisonTable({ race }: Props) {
                               auto={c.general ? "neutral" : "archive"}
                               className="text-[13px] leading-relaxed text-[var(--color-paper)] text-pretty"
                             />
-                            {pos.source && (
-                              <div className="mt-2 font-mono-cap text-[9px] text-[var(--color-paper-4)]">
-                                {pos.source}
-                              </div>
-                            )}
+                            {pos.source &&
+                              (pos.sourceUrl ? (
+                                <a
+                                  href={pos.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-2 inline-flex items-center gap-1 font-mono-cap text-[9px] text-[var(--color-paper-4)] hover:text-[var(--color-accent)]"
+                                >
+                                  {pos.source} <ExternalLink size={9} aria-hidden />
+                                </a>
+                              ) : (
+                                <div className="mt-2 font-mono-cap text-[9px] text-[var(--color-paper-4)]">{pos.source}</div>
+                              ))}
                           </>
                         ) : (
                           <span className="text-[12px] italic text-[var(--color-paper-4)]">

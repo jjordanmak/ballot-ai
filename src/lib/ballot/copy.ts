@@ -8,7 +8,7 @@ import type { CoarseLocation, ResolutionStatus } from "@/domain/ballot";
 export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: string; body: string }> = {
   PARTIAL: {
     title: "Some details may be incomplete",
-    body: "We found your ballot, but our data source didn't return complete information for every contest. Compare with your official sample ballot from your county elections office.",
+    body: "We found your ballot, but our data source didn't return complete information for every contest. Compare with your official sample ballot from your local election office.",
   },
   INVALID_ADDRESS: {
     title: "We couldn't find that address",
@@ -20,11 +20,11 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
   },
   ELECTION_NOT_FOUND: {
     title: "We don't have this election yet",
-    body: "Ballot data for this election isn't available from our source right now. Your county elections office has your official sample ballot.",
+    body: "Ballot data for this election isn't available from our source right now. Your local election office has your official sample ballot.",
   },
   NO_COVERAGE: {
     title: "We couldn't find a ballot for this address",
-    body: "This doesn't mean nothing is on your ballot. Our ballot data matches home street addresses; business addresses, cross streets, and city or ZIP alone usually can't be matched, and some areas haven't been published yet. Try your full home address with city, state, and ZIP code, or pick it from the suggestions as you type. Your county elections office also has your official sample ballot.",
+    body: "This doesn't mean nothing is on your ballot. Our ballot data matches home street addresses; business addresses, cross streets, and city or ZIP alone usually can't be matched, and some areas haven't been published yet. Try your full home address with city, state, and ZIP code, or pick it from the suggestions as you type. Your local election office also has your official sample ballot.",
   },
   RATE_LIMITED: {
     title: "Lots of people are looking up ballots right now",
@@ -44,7 +44,7 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
  */
 export const NO_STREET_NUMBER_COPY = {
   title: "We need a home street address to look up a ballot",
-  body: "Registered with cross streets or a description of where you live instead of a street address? Your state's official voter lookup can find your registration using your name and date of birth, and shows how to reach your county elections office for your sample ballot.",
+  body: "Registered with cross streets or a description of where you live instead of a street address? Your state's official voter lookup can find your registration using your name and date of birth, and shows how to reach your local election office for your sample ballot.",
 };
 
 /** Typed address without a ZIP or a city and state (checked before asking the provider). */

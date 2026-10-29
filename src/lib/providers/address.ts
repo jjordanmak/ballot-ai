@@ -7,13 +7,28 @@
  */
 export function hasLocality(raw: string): boolean {
   const s = raw.replace(/\s+/g, " ").trim().replace(COUNTRY_SUFFIX, "").trim();
-  if (ZIP.test(s)) return true;
+  // A ZIP only counts at the end ("…, CA 94015", "…, MA,02139"); Utah/Idaho
+  // grid numbers ("1234 E 10600 S") and PO boxes are not ZIPs.
+  if (ZIP_AT_END.test(s) && !/\bbox\s*#?\s*\d{5}(?:-\d{4})?$/i.test(s)) return true;
   if (!STATE_AT_END.test(s)) return false;
-  // City and state need their own place after the street: "Street, City, ST" or "Street, City ST".
+  // City and state need their own place after the street: "Street, City, ST",
+  // "Street, City ST", or "123 Main St Springfield, IL" (a city after the street type).
   const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
   const last = parts[parts.length - 1] ?? "";
   const cityBeforeState = last.replace(STATE_AT_END, "").trim().length > 0;
-  return parts.length >= 3 || (parts.length === 2 && cityBeforeState);
+  if (parts.length >= 3 || (parts.length === 2 && cityBeforeState)) return true;
+  return parts.length === 2 && CITY_AFTER_STREET.test(parts[0]);
+}
+
+/**
+ * Whether input starts like a home street address: a house number,
+ * a Wisconsin/Illinois grid number ("N1234 County Rd K"), a spelled-out
+ * number ("One Main St"), or Puerto Rico forms ("Urb …", "Carr 1 Km 2.3",
+ * "Calle …"). Anything else (cross streets, a place name) gets the
+ * official-lookup handoff.
+ */
+export function startsLikeStreetAddress(raw: string): boolean {
+  return /^\s*(\d|[NSEW]\d|(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s|urb\.?\s|urbanizaci[oó]n\s|carr\.?\s|carretera\s|calle\s|hc\s?\d|rr\s?\d)/i.test(raw);
 }
 
 /**
@@ -36,12 +51,16 @@ const STATES = [
   "Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire",
   "New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania",
   "Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington",
-  "West Virginia","Wisconsin","Wyoming","Puerto Rico","Guam",
+  "West Virginia","Wisconsin","Wyoming","Puerto Rico","Guam","U\\.S\\. Virgin Islands","Virgin Islands","American Samoa",
+  "Northern Mariana Islands",
 ];
 const STATE_AT_END = new RegExp(`(?:^|[\\s,])(?:${STATES.join("|")})\\.?$`, "i");
 const COUNTRY_SUFFIX = /[,\s]*(?:usa|u\.s\.a?\.?|us|united states(?: of america)?)\.?$/i;
-// A ZIP after the street (not the leading house number).
-const ZIP = /\s\d{5}(?:-\d{4})?(?=$|[\s,])/;
+// A ZIP as the last token, after a space or comma (never the leading house number).
+const ZIP_AT_END = /[\s,]\d{5}(?:-\d{4})?$/;
+// "123 Main St Springfield": a street type followed by more words (the city).
+const CITY_AFTER_STREET =
+  /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|way|ct|court|pl|place|hwy|highway|pkwy|parkway|cir|circle|ter|terrace|trl|trail|loop|sq|square)\.?\s+[a-z]/i;
 
 export class AddressInput {
   readonly #raw: string;

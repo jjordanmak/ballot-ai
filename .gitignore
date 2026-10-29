@@ -52,3 +52,12 @@ next-env.d.ts
 
 # Generated validation output (CI)
 /reports/validation/
+
+# Local tool settings and caches
+.claude/settings.local.json
+supabase/.temp/
+
+# Screenshots and QA scratch output never belong in the repo (they can show typed addresses)
+/*.png
+/*.jpg
+/qa-output/

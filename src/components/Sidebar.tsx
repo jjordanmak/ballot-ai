@@ -13,9 +13,9 @@ interface SidebarProps {
    * sidebar header can show the right ZIP / election. Optional so older
    * uses (the static page) keep working with sensible defaults. */
   productName?: string;
-  location?: string;
-  electionName?: string;
-  electionDate?: string;
+  location: string;
+  electionName: string;
+  electionDate: string;
   /** Footer line; defaults to the race count. */
   footer?: string;
 }
@@ -23,9 +23,9 @@ interface SidebarProps {
 export function Sidebar({
   races,
   productName = "ballot.ai",
-  location = "Daly City, CA · 94015",
-  electionName = "Statewide Direct Primary",
-  electionDate = "Jun 2, 2026",
+  location,
+  electionName,
+  electionDate,
   footer,
 }: SidebarProps) {
   // Hover-driven expansion: which race the cursor is over. Distinct from

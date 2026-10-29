@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ResolutionStatus } from "@/domain/ballot";
 import { STATE_LOOKUP_FALLBACK } from "@/lib/ballot/copy";
 import { resolveBallotForAddress } from "@/lib/ballot/resolveBallot";
+import { startsLikeStreetAddress } from "@/lib/providers/address";
 import { logEvent } from "@/lib/observability/log";
 
 export interface AddressFormState {
@@ -39,7 +40,7 @@ export async function resolveAddressAction(
   return {
     status: outcome.status as AddressFormState["status"],
     incomplete: outcome.incomplete,
-    noStreetNumber: typeof raw === "string" && !/^\s*\d/.test(raw),
+    noStreetNumber: typeof raw === "string" && !startsLikeStreetAddress(raw),
     lookup: admin?.voterLookupUrl
       ? { label: admin.regionName ? `${admin.regionName} voter lookup` : "Your state's voter lookup", url: admin.voterLookupUrl }
       : STATE_LOOKUP_FALLBACK,

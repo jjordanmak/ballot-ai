@@ -37,6 +37,8 @@ export interface IssuePosition {
   stance: string;
   /** One-word evidence label, e.g. "On record", "Campaign site", "Debate", "Voting record" */
   source?: string;
+  /** Link to the cited source (Nov 3 ballot), so the side-by-side is cited cell by cell. */
+  sourceUrl?: string;
 }
 
 /**

@@ -8,7 +8,7 @@ import { CATEGORY_LABEL, CATEGORY_ORDER, type Contest, type ResolvedBallot } fro
 import type { CandidateEnrichment, EnrichmentBundle, MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import type { Candidate, Party, Race } from "@/data/types";
 import { rankedChoiceRule } from "@/domain/rankedChoice";
-import { readableName } from "@/domain/text";
+import { normalizeForMatch, readableName } from "@/domain/text";
 import { candidateKey, contestKey, measureKey } from "./enrichmentKeys";
 
 export interface MeasureView {
@@ -85,7 +85,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
       voteForIf: [],
       bottomLine: "",
       issues: Object.fromEntries(
-        Object.entries(ce?.issues ?? {}).map(([k, v]) => [k, { stance: v.text, source: sourceLabel(bundle.sources, v.sources[0]) }]),
+        Object.entries(ce?.issues ?? {}).map(([k, v]) => [k, { stance: v.text, source: sourceLabel(bundle.sources, v.sources[0]), sourceUrl: bundle.sources[v.sources[0]]?.url }]),
       ),
       feed: ch.durableId ? { candidateId: ch.durableId } : undefined,
       general: {
@@ -184,9 +184,16 @@ function toParty(p: string | undefined): Party {
   return "Other";
 }
 
-function sameName(a: string, b: string): boolean {
-  const last = (s: string) => s.trim().split(/\s+/).pop()!.toLowerCase();
-  return last(a) === last(b);
+/** Same person: identical normalized names, or the same first and last name (two candidates can share a surname). */
+export function sameName(a: string, b: string): boolean {
+  const toks = (s: string) =>
+    normalizeForMatch(s.replace(/\([^)]*\)/g, " "))
+      .split(" ")
+      .filter((t) => t && !["jr", "sr", "ii", "iii", "iv"].includes(t));
+  const x = toks(a);
+  const y = toks(b);
+  if (!x.length || !y.length) return false;
+  return x.join(" ") === y.join(" ") || (x[0] === y[0] && x.at(-1) === y.at(-1));
 }
 
 function citedIds(...items: ({ sources: string[] } | undefined)[]): string[] {

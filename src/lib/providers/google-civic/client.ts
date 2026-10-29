@@ -86,7 +86,8 @@ export class GoogleCivicClient {
         const err = (await res.json().catch(() => ({}))) as GoogleApiError;
         const reason = err.error?.errors?.[0]?.reason ?? err.error?.status;
         const message = err.error?.message ?? err.error?.errors?.[0]?.message ?? "";
-        logEvent("civic.error", { op, status: res.status, reason, message, latency_ms: latency, attempt });
+        // Only the reason code: Google's message text can echo the request.
+        logEvent("civic.error", { op, status: res.status, reason, latency_ms: latency, attempt });
         if (res.status >= 500 && attempt === 0) {
           await sleep(250 + Math.random() * 500);
           continue;

@@ -162,7 +162,7 @@ export default async function BallotPage({ params }: { params: Params }) {
 
           <footer className="mt-20 pt-6 border-t border-[var(--color-ink-3)] text-[12px] leading-[1.6] text-[var(--color-paper-3)] max-w-2xl">
             ballot.ai is independent and nonpartisan. Which contests and candidates appear comes from official election data
-            (sources listed on each race). Researched content is cited item by item. Your county elections office is the
+            (sources listed on each race). Researched content is cited item by item. Your local election office is the
             official source for your ballot.
           </footer>
         </main>
