@@ -16,15 +16,15 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
   },
   AMBIGUOUS_ADDRESS: {
     title: "That address matches more than one place",
-    body: "Add a unit or apartment number, city, and ZIP code so we can find your exact ballot.",
+    body: "Add the city and ZIP code so we can find your exact ballot.",
   },
   ELECTION_NOT_FOUND: {
     title: "We don't have this election yet",
     body: "Ballot data for this election isn't available from our source right now. Your county elections office has your official sample ballot.",
   },
   NO_COVERAGE: {
-    title: "Ballot details aren't available for this address yet",
-    body: "This doesn't mean nothing is on your ballot. Our data source hasn't published contests for this location yet. Your county elections office has your official sample ballot.",
+    title: "We couldn't find a ballot for this address",
+    body: "This doesn't mean nothing is on your ballot. Our ballot data matches home street addresses; business addresses, cross streets, and city or ZIP alone usually can't be matched, and some areas haven't been published yet. Try your home street address, or check your official sample ballot from your county elections office.",
   },
   RATE_LIMITED: {
     title: "Lots of people are looking up ballots right now",

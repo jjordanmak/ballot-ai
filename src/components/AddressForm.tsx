@@ -5,7 +5,6 @@ import { ArrowRight, MapPin, ShieldCheck } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
 import { STATUS_COPY } from "@/lib/ballot/copy";
 import { readyToSuggest } from "@/lib/providers/google-places/ready";
-import { extractUnit, withUnit } from "@/lib/providers/google-places/unit";
 
 interface Suggestion {
   placeId: string;
@@ -72,9 +71,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
     inflight.current?.abort();
     setOpen(false);
     setActive(-1);
-    // Google suggests buildings; keep the unit the voter typed so they can see it's their address.
-    const unit = extractUnit(address);
-    setAddress(withUnit(s.secondary ? `${s.main}, ${s.secondary}` : s.main, unit));
+    setAddress(s.secondary ? `${s.main}, ${s.secondary}` : s.main);
     const token = session.current;
     session.current = null;
     if (!token) return;
@@ -86,7 +83,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
         body: JSON.stringify({ placeId: s.placeId, sessionToken: token }),
       });
       const full = ((await res.json()) as { address?: string }).address;
-      if (full) setAddress(withUnit(full, unit));
+      if (full) setAddress(full);
     } catch {
       // Keep the suggestion text; it still resolves.
     } finally {
@@ -142,7 +139,7 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
           aria-controls="address-suggestions"
           aria-activedescendant={open && active >= 0 && active < suggestions.length ? `address-option-${active}` : undefined}
           aria-invalid={!!error}
-          aria-describedby={error ? "address-error" : "address-privacy"}
+          aria-describedby={error ? "address-hint address-error" : "address-hint address-privacy"}
           className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg pl-10 pr-4 py-3.5 text-[16px] text-[var(--color-paper)] placeholder:text-[var(--color-paper-4)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
         />
         {open && (
@@ -182,6 +179,10 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
           </div>
         )}
       </div>
+
+      <p id="address-hint" className="-mt-1 text-[12px] leading-[1.5] text-[var(--color-paper-3)]">
+        Your home street address. No apartment or unit number needed: everyone at the same address has the same ballot.
+      </p>
 
       <div aria-live="polite" id="address-error">
         {error && (
