@@ -126,7 +126,7 @@ specs/                                 Historical specs + design system (PRD in 
 - `npm run seed` to (re)populate Supabase from the TS data files
 - `npm run build` to typecheck + production build
 - `npm test` (Vitest), `npm run typecheck`, `npm run validate:ballots` — CI runs all of these plus lint and build
-- `BALLOT_PROVIDER=fixture npm run dev` runs the whole address → ballot flow on fictional data with no credentials (try addresses containing `invalid`, `ratelimit`, `nocoverage`, `error`, `ambiguous` for failure states)
+- `BALLOT_PROVIDER=fixture npm run dev` runs the whole address → ballot flow on fictional data with no credentials (use a full address with city and state or ZIP, e.g. `1 Sample Way, Springfield, CA`; addresses containing `invalid`, `ratelimit`, `nocoverage`, `error`, `ambiguous` simulate failure states)
 - Env var names/purposes: `docs/infrastructure/ENVIRONMENT.md`
 - Env vars in `.env.local` (gitignored). `.env.example` lists all required vars.
 

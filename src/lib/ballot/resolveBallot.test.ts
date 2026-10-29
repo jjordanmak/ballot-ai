@@ -37,8 +37,8 @@ describe("resolveBallotForAddress", () => {
   it("gives every household with the same districts the same key", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const rt = runtime();
-    const a = await resolveBallotForAddress("1 Sample Way, Sample City", rt);
-    const b = await resolveBallotForAddress("99 Other Street, Sample City", rt);
+    const a = await resolveBallotForAddress("1 Sample Way, Sample City, CA", rt);
+    const b = await resolveBallotForAddress("99 Other Street, Sample City, CA", rt);
     expect(a.ok && b.ok && a.ballotKey === b.ballotKey).toBe(true);
   });
 
@@ -46,13 +46,23 @@ describe("resolveBallotForAddress", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const rt = runtime();
     expect(await resolveBallotForAddress("94015", rt)).toEqual({ ok: false, status: "INVALID_ADDRESS" });
-    expect(await resolveBallotForAddress("1 nocoverage Ave", rt)).toMatchObject({ ok: false, status: "NO_COVERAGE" });
-    expect(await resolveBallotForAddress("1 error Ave", rt)).toMatchObject({ ok: false, status: "PROVIDER_ERROR" });
+    expect(await resolveBallotForAddress("1 nocoverage Ave, Sample City, CA", rt)).toMatchObject({ ok: false, status: "NO_COVERAGE" });
+    expect(await resolveBallotForAddress("1 error Ave, Sample City, CA", rt)).toMatchObject({ ok: false, status: "PROVIDER_ERROR" });
+  });
+
+  it("asks for the full address instead of letting the provider guess when there's no ZIP or city and state", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const rt = runtime();
+    const resolve = vi.spyOn(rt.resolver, "resolveBallot");
+    for (const partial of ["1 Main St", "1 Main St, Daly City", "100 Main St, CA", "123 Main St Daly City CA"]) {
+      expect(await resolveBallotForAddress(partial, rt)).toEqual({ ok: false, status: "INVALID_ADDRESS", incomplete: true });
+    }
+    expect(resolve).not.toHaveBeenCalled();
   });
 
   it("passes the state's official voter lookup back when there's no ballot, for the cross-street handoff", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
-    const out = await resolveBallotForAddress("Main St and nocoverage Ave", runtime());
+    const out = await resolveBallotForAddress("Main St and nocoverage Ave, Sample City, CA", runtime());
     expect(out).toMatchObject({ ok: false, status: "NO_COVERAGE", administration: { voterLookupUrl: "https://example.org/voter-lookup" } });
   });
 });

@@ -16,7 +16,13 @@ import { validateBallot } from "./validate";
 
 export type ResolveOutcome =
   | { ok: true; status: ResolutionStatus; electionSlug: string; ballotKey: string }
-  | { ok: false; status: ResolutionStatus; administration?: ElectionAdministration };
+  | {
+      ok: false;
+      status: ResolutionStatus;
+      administration?: ElectionAdministration;
+      /** Typed without a ZIP or a city and state: the provider was not asked. */
+      incomplete?: boolean;
+    };
 
 export async function resolveBallotForAddress(
   rawAddress: unknown,
@@ -25,6 +31,8 @@ export async function resolveBallotForAddress(
   const started = Date.now();
   const address = AddressInput.parse(rawAddress);
   if (!address) return { ok: false, status: "INVALID_ADDRESS" };
+  // The provider guesses a location for partial addresses ("1 Main St" → Dallas); never risk the wrong ballot.
+  if (!address.hasLocality()) return { ok: false, status: "INVALID_ADDRESS", incomplete: true };
 
   const lookup = await runtime.elections.current();
   if (!lookup.ok) {

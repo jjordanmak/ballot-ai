@@ -7,6 +7,8 @@ import { resolveBallotForAddress } from "@/lib/ballot/resolveBallot";
 
 export interface AddressFormState {
   status?: Exclude<ResolutionStatus, "SUCCESS" | "PARTIAL">;
+  /** Typed without a ZIP or a city and state; ask for the full address. */
+  incomplete?: boolean;
   /** The input had no house number (cross streets, a description, a city): show the voter-lookup handoff. */
   noStreetNumber?: boolean;
   /** Official state voter lookup to hand off to. State-level link, never address-derived detail. */
@@ -28,6 +30,7 @@ export async function resolveAddressAction(
   const admin = outcome.administration;
   return {
     status: outcome.status as AddressFormState["status"],
+    incomplete: outcome.incomplete,
     noStreetNumber: typeof raw === "string" && !/^\s*\d/.test(raw),
     lookup: admin?.voterLookupUrl
       ? { label: admin.regionName ? `${admin.regionName} voter lookup` : "Your state's voter lookup", url: admin.voterLookupUrl }

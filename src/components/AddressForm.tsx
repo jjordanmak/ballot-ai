@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight, ExternalLink, MapPin, ShieldCheck } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
-import { NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
+import { INCOMPLETE_ADDRESS_COPY, NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
 import { readyToSuggest } from "@/lib/providers/google-places/ready";
 
 interface Suggestion {
@@ -32,7 +32,13 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
   const inflight = useRef<AbortController | null>(null);
   // No ballot and no house number: likely registered by cross streets or a description.
   const handoff = !!state.noStreetNumber && (state.status === "NO_COVERAGE" || state.status === "INVALID_ADDRESS");
-  const error = state.status ? (handoff ? NO_STREET_NUMBER_COPY : STATUS_COPY[state.status]) : null;
+  const error = state.status
+    ? handoff
+      ? NO_STREET_NUMBER_COPY
+      : state.incomplete
+        ? INCOMPLETE_ADDRESS_COPY
+        : STATUS_COPY[state.status]
+    : null;
   const showLookup = !!state.lookup && (handoff || state.status === "NO_COVERAGE");
 
   useEffect(() => () => {

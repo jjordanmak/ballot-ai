@@ -12,7 +12,7 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
   },
   INVALID_ADDRESS: {
     title: "We couldn't find that address",
-    body: "Check the street number, street name, city, and state, then try again. Use the address where you're registered to vote.",
+    body: "Check the street number, street name, city, state, and ZIP code, or pick your address from the suggestions as you type. Use the address where you're registered to vote.",
   },
   AMBIGUOUS_ADDRESS: {
     title: "That address matches more than one place",
@@ -24,7 +24,7 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
   },
   NO_COVERAGE: {
     title: "We couldn't find a ballot for this address",
-    body: "This doesn't mean nothing is on your ballot. Our ballot data matches home street addresses; business addresses, cross streets, and city or ZIP alone usually can't be matched, and some areas haven't been published yet. Try your home street address, or check your official sample ballot from your county elections office.",
+    body: "This doesn't mean nothing is on your ballot. Our ballot data matches home street addresses; business addresses, cross streets, and city or ZIP alone usually can't be matched, and some areas haven't been published yet. Try your full home address with city, state, and ZIP code, or pick it from the suggestions as you type. Your county elections office also has your official sample ballot.",
   },
   RATE_LIMITED: {
     title: "Lots of people are looking up ballots right now",
@@ -45,6 +45,12 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
 export const NO_STREET_NUMBER_COPY = {
   title: "We need a home street address to look up a ballot",
   body: "Registered with cross streets or a description of where you live instead of a street address? Your state's official voter lookup can find your registration using your name and date of birth, and shows how to reach your county elections office for your sample ballot.",
+};
+
+/** Typed address without a ZIP or a city and state (checked before asking the provider). */
+export const INCOMPLETE_ADDRESS_COPY = {
+  title: "Enter your full address",
+  body: "Include the city, state, and ZIP code (for example, 123 Main St, Daly City, CA 94015), or pick your address from the suggestions as you type.",
 };
 
 /** National fallback when the provider didn't name a state election office (NASS "Can I Vote"). */
