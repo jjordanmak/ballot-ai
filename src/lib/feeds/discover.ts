@@ -2,19 +2,26 @@
  * Finds an outlet's current feed when its listed feed URL has moved (404/410)
  * or now returns a web page. Reads only the outlet's own advertised feeds:
  * `<link rel="alternate" type="application/rss+xml|atom+xml">` on the page
- * that came back and on the site's homepage. Same site only.
+ * that came back and on the site's homepage. Same site only (the outlet's own
+ * domain, including its subdomains such as rss.wbur.org or ww2.kqed.org).
  */
 import { looksLikeFeed } from "./parse";
 import { safeFetch, type Resolver } from "./safeFetch";
 
 const FEED_TYPE = /application\/(rss|atom)\+xml/i;
 
+/** The registrable domain: "rss.wbur.org" → "wbur.org", "news.bbc.co.uk" → "bbc.co.uk". */
+export function siteOf(host: string): string {
+  const p = host.toLowerCase().split(".");
+  const n = p.length > 2 && p[p.length - 1].length === 2 && p[p.length - 2].length <= 3 ? 3 : 2;
+  return p.slice(-n).join(".");
+}
+
 const attr = (tag: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(tag)?.[1];
 
 /** Feed links a page advertises, best match for `original` first. Other sites' feeds are ignored. */
 export function advertisedFeeds(html: string, pageUrl: string, original: string): string[] {
   const page = new URL(pageUrl);
-  const site = (h: string) => h.replace(/^www\./, "");
   const found: string[] = [];
   for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
     if (!/\balternate\b/i.test(attr(tag, "rel") ?? "") || !FEED_TYPE.test(attr(tag, "type") ?? "")) continue;
@@ -22,7 +29,7 @@ export function advertisedFeeds(html: string, pageUrl: string, original: string)
     if (!href) continue;
     try {
       const u = new URL(href.replace(/&amp;/g, "&"), page);
-      if (!/^https?:$/.test(u.protocol) || site(u.hostname) !== site(page.hostname)) continue;
+      if (!/^https?:$/.test(u.protocol) || siteOf(u.hostname) !== siteOf(page.hostname)) continue;
       if (!found.includes(u.toString())) found.push(u.toString());
     } catch {
       // ignore malformed hrefs

@@ -115,7 +115,7 @@
     {
       "key": "kqed-news",
       "name": "KQED",
-      "url": "https://www.kqed.org/news/feed",
+      "url": "https://ww2.kqed.org/news/feed/",
       "scope": "state",
       "state": "CA",
       "enabled": true
@@ -179,7 +179,8 @@
       "jurisdictions": [
         "San Mateo"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "no public feed for this section; KQED advertises only its main news feed (kqed-news) (2026-10-29)"
     },
     {
       "key": "abc-politics",
@@ -207,7 +208,8 @@
       "name": "USA Today",
       "url": "https://rssfeeds.usatoday.com/usatoday-newstopstories",
       "scope": "national",
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "no public feed advertised (2026-10-29)"
     },
     {
       "key": "axios",
@@ -909,7 +911,8 @@
         "Riverside",
         "San Bernardino"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "pe.com no longer publishes news (2026-10-29)"
     },
     {
       "key": "voice-of-san-diego",
@@ -1001,7 +1004,8 @@
       "jurisdictions": [
         "Dallas"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "no public feed advertised (2026-10-29)"
     },
     {
       "key": "fort-worth-report",
@@ -1146,7 +1150,8 @@
         "Hillsborough",
         "Pinellas"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "no public feed advertised (2026-10-29)"
     },
     {
       "key": "jacksonville-today",
@@ -1173,7 +1178,8 @@
         "Cobb",
         "Gwinnett"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "no public feed advertised (2026-10-29)"
     },
     {
       "key": "wabe",
@@ -1196,7 +1202,8 @@
       "jurisdictions": [
         "Boston"
       ],
-      "enabled": true
+      "enabled": false,
+      "disabledReason": "no public feed advertised (2026-10-29)"
     },
     {
       "key": "boston-herald-politics",
