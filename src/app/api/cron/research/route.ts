@@ -1,6 +1,6 @@
 import { getBallotRuntime } from "@/lib/ballot/runtime";
 import { aiConfig } from "@/lib/ai/config";
-import { runResearch } from "@/lib/research/run";
+import { dispatch, runJob } from "@/lib/research/run";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { cronAuthorized } from "../_auth";
 
@@ -8,28 +8,36 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * Hourly (vercel.json, production only): researches new contests and ones
- * whose documents changed (docs/architecture/AI_ARCHITECTURE.md). Off unless
+ * Research (docs/architecture/AI_ARCHITECTURE.md). Off unless
  * AI_SYNTHESIS_ENABLED=on and ANTHROPIC_API_KEY is set.
  *
- * Manual runs (e.g. on a preview, with the cron secret): ?limit=3 caps how
- * many targets call Claude; ?only=<id>,<id> limits the run to those targets.
+ * - Every minute (vercel.json, production only), with no `job`: the
+ *   dispatcher claims the jobs that are due and calls this route once per
+ *   job, in parallel, so each gets its own time limit.
+ * - `?job=<key>`: one job (target × model setting). Same cron secret.
  */
 export async function GET(req: Request) {
   if (!cronAuthorized(req)) return new Response("Unauthorized", { status: 401 });
   const cfg = aiConfig();
   if (!cfg.enabled) return Response.json({ skipped: "AI synthesis is off (AI_SYNTHESIS_ENABLED / ANTHROPIC_API_KEY)" });
+  const db = getSupabaseAdmin();
+  const job = new URL(req.url).searchParams.get("job");
+  if (job) return Response.json(await runJob({ db, electionId: "", config: cfg }, job));
+
   const lookup = await getBallotRuntime().elections.current();
   if (!lookup.ok) return Response.json({ skipped: lookup.status });
-  const params = new URL(req.url).searchParams;
-  const limit = Number(params.get("limit"));
-  const only = params.get("only")?.split(",").map((s) => s.trim()).filter(Boolean);
-  const summary = await runResearch({
-    db: getSupabaseAdmin(),
+  const origin = new URL(req.url).origin;
+  const auth = req.headers.get("authorization") ?? "";
+  const summary = await dispatch({
+    db,
     electionId: lookup.election.id,
+    electionSlug: lookup.election.slug ?? undefined,
     config: cfg,
-    limit: Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : undefined,
-    only,
+    runRemote: (key) =>
+      fetch(`${origin}/api/cron/research?job=${encodeURIComponent(key)}`, {
+        headers: { authorization: auth },
+        signal: AbortSignal.timeout(290_000),
+      }).catch(() => undefined),
   });
   return Response.json(summary);
 }

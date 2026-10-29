@@ -1,15 +1,22 @@
 /**
  * The research job (docs/architecture/AI_ARCHITECTURE.md §3), run by
- * /api/cron/research. For each target in the durable registry:
+ * /api/cron/research every minute in production.
  *
- *   fetch its documents (public pages only, re-fetched at most daily)
- *   → skip if nothing changed since the last successful run
+ * dispatch(): lists the jobs (target × setting), records new ones in
+ * `research_state`, claims the ones that are due (atomically, so runs never
+ * overlap on a job) up to the in-flight limit, and fans them out: one
+ * function invocation per job, each with its own time limit.
+ *
+ * runJob(): for one job,
+ *   gather its documents (official pages, county PDFs, .gov/Ballotpedia via
+ *   search; read politely, re-read at most every 6 hours)
+ *   → skip if nothing changed since the last run
  *   → Claude extracts answers with exact quotes (structured output)
  *   → quotes must be in the cited document, wording passes the lint,
  *     a second call confirms each quote supports its sentence
- *   → synthesized_field_versions (published, or held with the reason)
+ *   → synthesized_field_versions: compare mode stores every setting's result
+ *     as held ("model comparison") for review; publish mode publishes.
  *
- * Stops at the time budget, the per-run item cap, or the month's spend.
  * Never touches an address; logs counts only.
  */
 import "server-only";
@@ -17,52 +24,54 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Database, Json } from "@/lib/supabase/types";
-import { aiConfig, type AiConfig } from "@/lib/ai/config";
-import { checkSupport, extract, PROMPT_VERSION, type Doc } from "@/lib/ai/extract";
-import { MeasureResearch, PersonResearch } from "@/lib/ai/schemas";
+import { aiConfig, settingId, type AiConfig, type Setting } from "@/lib/ai/config";
+import { checkSupport, extract, PROMPT_VERSION, type CallResult, type Doc } from "@/lib/ai/extract";
+import { MeasureResearch, OfficeResearch, PersonResearch } from "@/lib/ai/schemas";
+import { getEnrichment } from "@/lib/ballot/enrichment";
 import { billingPeriod } from "@/lib/usage/quota";
-import { safeFetch, type Resolver } from "@/lib/feeds/safeFetch";
+import type { Resolver } from "@/lib/feeds/safeFetch";
 import { logEvent } from "@/lib/observability/log";
-import { findLinks, htmlTitle, htmlToText } from "./text";
-import { buildTargets, taskFor, type ContestRow, type Target } from "./targets";
-import { buildPayload, payloadIsEmpty, screenMeasure, screenPerson, type FetchedDoc, type Pending } from "./verify";
+import compareSet from "@/data/research/compare-set.json";
+import { focusText, getDocument, type Fetched, type FetchDeps } from "./fetch";
+import { ballotpediaCampaignSite, searchUrls } from "./search";
+import { buildTargets, pdfHostOk, taskFor, type ContestRow, type Target, type TargetPage } from "./targets";
+import { findLinkEntries } from "./text";
+import { buildPayload, payloadIsEmpty, screenMeasure, screenOffice, screenPerson, type FetchedDoc, type Payload, type Pending } from "./verify";
 
 type Db = SupabaseClient<Database>;
 
 const SPEND_METRIC = "anthropic.microusd";
-const REFETCH_AFTER_MS = 24 * 3600_000;
 const MAX_DOC_CHARS = 60_000;
 const MAX_TOTAL_CHARS = 200_000; // ~50K tokens: well under Haiku's 100K-token price tier
-const MAX_FOLLOW = 3;
-const CONCURRENCY = 3;
-const USER_AGENT = "ballot.ai research (+https://ballot-ai.vercel.app)";
+const MAX_FOLLOW = 4;
+const SEARCH_TTL_MS = 7 * 24 * 3600_000;
+const RECHECK_MS = 6 * 3600_000;
+const COMPARE_RECHECK_MS = 7 * 24 * 3600_000;
+const LOCK_SECONDS = 300;
 
-export interface ResearchSummary {
-  targets: number;
-  considered: number;
-  unchanged: number;
-  noDocuments: number;
-  researched: number;
-  published: number;
-  held: number;
-  failed: number;
-  spentMicroUsd: number;
-  stoppedBy?: "time" | "budget" | "limit";
+export interface Job {
+  stateKey: string;
+  target: Target;
+  setting: Setting;
+  compare: boolean;
+  election: string;
 }
 
 export interface ResearchDeps {
   db: Db;
   electionId: string;
+  /** For the curated enrichment (official campaign links); defaults to the Nov 3 slug. */
+  electionSlug?: string;
   config?: AiConfig;
-  /** Max targets researched (Claude called) this run. */
-  limit?: number;
-  budgetMs?: number;
   now?: Date;
   fetchImpl?: typeof fetch;
   resolve?: Resolver;
   client?: Pick<Anthropic, "messages">;
-  /** Only these target ids (manual runs on previews). */
-  only?: string[];
+  sleep?: (ms: number) => Promise<void>;
+  /** How the dispatcher runs a claimed job (default: a call to this route). */
+  runRemote?: (stateKey: string) => Promise<unknown>;
+  /** Compare mode's items (default: src/data/research/compare-set.json). */
+  compareKeys?: string[];
 }
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -85,6 +94,23 @@ export async function loadContests(db: Db, electionId: string): Promise<ContestR
   }
 }
 
+/** The jobs for this mode: compare = the comparison set × every setting; publish = every target × its kind's setting. */
+export function jobsFor(cfg: AiConfig, targets: Target[], election: string, compareKeys: string[] = (compareSet as { targets: { key: string }[] }).targets.map((t) => t.key)): Job[] {
+  if (cfg.mode === "compare") {
+    const wanted = new Set(compareKeys);
+    return targets
+      .filter((t) => wanted.has(t.key))
+      .flatMap((t) => cfg.compare.map((setting) => ({ stateKey: `${t.key}@${settingId(setting)}`, target: t, setting, compare: true, election })));
+  }
+  return targets.map((t) => ({
+    stateKey: t.key,
+    target: t,
+    setting: cfg.publish[t.field === "measure" ? "measure" : t.field === "office" ? "office" : "profile"],
+    compare: false,
+    election,
+  }));
+}
+
 async function monthSpend(db: Db, now: Date): Promise<number> {
   const { data } = await db.from("api_usage").select("count").eq("period", billingPeriod(now)).eq("metric", SPEND_METRIC).maybeSingle();
   return data?.count ?? 0;
@@ -94,159 +120,254 @@ async function recordSpend(db: Db, now: Date, micro: number) {
   if (micro > 0) await db.rpc("add_api_spend", { p_period: billingPeriod(now), p_metric: SPEND_METRIC, p_amount: micro });
 }
 
-interface Fetched {
-  url: string;
-  html?: string;
-  text: string;
-  title: string;
-  sourceId: string;
-  fetchedAt: string;
+export interface DispatchSummary {
+  jobs: number;
+  claimed: number;
+  inflight: number;
+  stoppedBy?: "budget" | "disabled";
 }
 
-/** One document: the stored copy if read in the last day, else fetched and stored (sources row keyed by URL). */
-async function getDocument(
-  deps: ResearchDeps,
-  url: string,
-  meta: { official: boolean; publisher?: string },
-  now: Date,
-): Promise<Fetched | null> {
+/** Every minute: record new jobs, claim the due ones, fan them out. */
+export async function dispatch(deps: ResearchDeps): Promise<DispatchSummary> {
+  const cfg = deps.config ?? aiConfig();
+  const now = deps.now ?? new Date();
   const { db } = deps;
-  const { data: existing } = await db.from("sources").select("id, content_text, title, fetched_at").eq("url", url).maybeSingle();
-  if (existing?.content_text && now.getTime() - Date.parse(existing.fetched_at) < REFETCH_AFTER_MS) {
-    return { url, text: existing.content_text, title: existing.title ?? url, sourceId: existing.id, fetchedAt: existing.fetched_at };
+  if (!cfg.enabled) return { jobs: 0, claimed: 0, inflight: 0, stoppedBy: "disabled" };
+  const targets = buildTargets(await loadContests(db, deps.electionId), getEnrichment(deps.electionSlug ?? "2026-11-03"));
+  const jobs = jobsFor(cfg, targets, deps.electionId, deps.compareKeys);
+  // New jobs are due now; existing ones keep their schedule.
+  for (let i = 0; i < jobs.length; i += 200) {
+    const rows = jobs.slice(i, i + 200).map((j) => ({ key: j.stateKey, target: { ...j.target, setting: j.setting, compare: j.compare, election: j.election } as unknown as Json }));
+    await db.from("research_state").upsert(rows, { onConflict: "key", ignoreDuplicates: true });
   }
-  let res;
-  try {
-    res = await safeFetch(
-      url,
-      { headers: { "user-agent": USER_AGENT, accept: "text/html" }, signal: AbortSignal.timeout(20_000), maxBytes: 3_000_000 },
-      { fetchImpl: deps.fetchImpl, resolve: deps.resolve },
-    );
-  } catch {
-    return null;
+  if ((await monthSpend(db, now)) >= Math.floor(cfg.monthlyBudgetUsd * 1_000_000)) {
+    logEvent("research.dispatch", { jobs: jobs.length, claimed: 0, stoppedBy: "budget" });
+    return { jobs: jobs.length, claimed: 0, inflight: 0, stoppedBy: "budget" };
   }
-  const type = res.headers.get("content-type") ?? "";
-  // PDFs and other formats aren't read yet; HTML only.
-  if (!res.ok || !res.text || (type && !/html|xml|text\/plain/i.test(type))) return null;
-  const text = htmlToText(res.text).slice(0, MAX_DOC_CHARS);
-  if (text.length < 200) return null;
-  const title = htmlTitle(res.text) ?? url;
-  const host = new URL(res.finalUrl).hostname;
-  const row = {
-    url,
-    canonical_url: res.finalUrl !== url ? res.finalUrl : null,
-    source_type: meta.official ? "official" : "campaign",
-    trust_tier: meta.official ? "official" : "standard",
-    publisher: meta.publisher ?? host,
-    title,
-    content_text: text,
-    raw_hash: sha(text),
-    fetched_at: now.toISOString(),
-    status: "active",
-  };
-  const { data, error } = await db.from("sources").upsert(row, { onConflict: "url" }).select("id").single();
-  if (error || !data) return null;
-  return { url, html: res.text, text, title, sourceId: data.id, fetchedAt: row.fetched_at };
+  const { count } = await db.from("research_state").select("key", { count: "exact", head: true }).gt("locked_until", now.toISOString());
+  const inflight = count ?? 0;
+  const slots = Math.max(0, cfg.maxInflight - inflight);
+  let claimed: string[] = [];
+  if (slots) {
+    const { data } = await db.rpc("claim_research_jobs", { p_keys: jobs.map((j) => j.stateKey), p_limit: slots, p_lock_seconds: LOCK_SECONDS });
+    claimed = (data ?? []) as string[];
+  }
+  const run = deps.runRemote ?? ((key: string) => runJob({ ...deps, config: cfg }, key));
+  await Promise.allSettled(claimed.map((k) => run(k)));
+  const s = { jobs: jobs.length, claimed: claimed.length, inflight };
+  logEvent("research.dispatch", s);
+  return s;
 }
 
-/** The target's pages plus up to MAX_FOLLOW same-site pages they link to by the wanted link texts. */
-async function gatherDocuments(deps: ResearchDeps, t: Target, now: Date): Promise<FetchedDoc[]> {
-  const got: Fetched[] = [];
+interface SearchCache {
+  urls: string[];
+  campaign?: string | null;
+  followed?: string[];
+  at: string;
+}
+
+/** Search once per target (shared by every setting in compare mode), cached for a week. */
+async function searchFor(deps: ResearchDeps & { now: Date }, t: Target): Promise<{ cache: SearchCache | null; cost: number; wait?: boolean }> {
+  if (!t.search) return { cache: null, cost: 0 };
+  const key = `${t.key}#search`;
+  const { db, now } = deps;
+  const { data: row } = await db.from("research_state").select("discovered, locked_until").eq("key", key).maybeSingle();
+  const cached = row?.discovered as SearchCache | null | undefined;
+  if (cached && now.getTime() - Date.parse(cached.at) < SEARCH_TTL_MS) return { cache: cached, cost: 0 };
+  // Another setting's job is searching right now: try again shortly.
+  if (row?.locked_until && Date.parse(row.locked_until) > now.getTime()) return { cache: null, cost: 0, wait: true };
+  await db
+    .from("research_state")
+    .upsert({ key, target: { kind: "search", of: t.key } as Json, next_check_at: "2999-01-01T00:00:00Z", locked_until: new Date(now.getTime() + 120_000).toISOString() }, { onConflict: "key" });
+  const res = await searchUrls({ kind: t.search.kind, query: t.search.query, mustMention: t.search.mustMention, client: deps.client });
+  const cache: SearchCache = { urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], at: now.toISOString() };
+  await db.from("research_state").update({ discovered: cache as unknown as Json, locked_until: null, updated_at: now.toISOString() }).eq("key", key);
+  return { cache, cost: res.costMicroUsd };
+}
+
+const isGovHost = (u: string) => /(^|\.)gov$/i.test(new URL(u).hostname);
+const isBallotpedia = (u: string) => /(^|\.)ballotpedia\.org$/i.test(new URL(u).hostname);
+
+/** Every document for a target, politely fetched; long ones narrowed to the passages about it. */
+async function gatherDocuments(deps: ResearchDeps & { now: Date }, t: Target, cache: SearchCache | null): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[] }> {
+  const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
+  const got: { f: Fetched; page: TargetPage }[] = [];
   const seen = new Set<string>();
-  const metaFor = (official: boolean, publisher?: string) => ({ official, publisher });
-  const followQueue: { url: string; official: boolean; publisher?: string }[] = [];
+  let campaign = cache?.campaign ?? null;
+  const followed: string[] = [];
+  const read = async (page: TargetPage) => {
+    if (seen.has(page.url)) return null;
+    seen.add(page.url);
+    const r = await getDocument(fdeps, page.url, { official: page.official, publisher: page.publisher, allowPdf: page.allowPdf, sourceType: page.official ? "official" : isBallotpedia(page.url) ? "civic" : "campaign" });
+    if ("skipped" in r) return null;
+    got.push({ f: r, page });
+    return r;
+  };
+
+  // 1. Registry pages (official guides, county page, campaign site from an official filing), and the links they point to.
+  const follow: TargetPage[] = [];
   for (const p of t.pages) {
-    if (seen.has(p.url)) continue;
-    seen.add(p.url);
-    const d = await getDocument(deps, p.url, metaFor(p.official, p.publisher), now);
-    if (!d) continue;
-    got.push(d);
-    // Links are only discovered on a fresh fetch; a stored copy is reused as is.
-    if (d.html && t.follow.length) for (const u of findLinks(d.html, d.url, t.follow)) followQueue.push({ url: u, official: p.official, publisher: p.publisher });
+    const r = await read(p);
+    if (!r?.html || !t.follow.length) continue;
+    const links = findLinkEntries(r.html, r.url, t.follow);
+    // Links that name this target (e.g. "Measure Z") first.
+    const named = (l: { label: string }) => t.focus.some((f) => l.label.toLowerCase().includes(f.toLowerCase()));
+    for (const l of [...links.filter(named), ...links.filter((x) => !named(x))]) {
+      follow.push({ url: l.url, official: p.official, publisher: p.publisher, allowPdf: !!p.allowPdf && pdfHostOk(t.state, l.url) });
+    }
   }
-  // On a reused stored copy, keep following the pages found last time.
-  if (!followQueue.length && t.follow.length) {
-    const { data: prior } = await deps.db
-      .from("synthesis_runs")
-      .select("metadata")
-      .eq("target_type", t.targetType)
-      .eq("target_id", t.targetId)
-      .eq("field_name", t.field)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const urls = ((prior?.metadata as { followed?: string[] } | null)?.followed ?? []).slice(0, MAX_FOLLOW);
-    for (const u of urls) followQueue.push({ url: u, official: t.pages[0]?.official ?? false, publisher: t.pages[0]?.publisher });
+  // A stored copy has no HTML to follow from: reuse the pages followed last time.
+  if (!follow.length) for (const u of cache?.followed ?? []) follow.push({ url: u, official: t.pages[0]?.official ?? true, publisher: t.pages[0]?.publisher, allowPdf: pdfHostOk(t.state, u) });
+  for (const f of follow.slice(0, MAX_FOLLOW)) if (await read(f)) followed.push(f.url);
+
+  // 2. Search results: .gov pages (and, for people, their Ballotpedia page).
+  for (const u of cache?.urls ?? []) {
+    const r = await read({ url: u, official: isGovHost(u), publisher: new URL(u).hostname, allowPdf: pdfHostOk(t.state, u) });
+    // Ballotpedia names the campaign website; that's the only way a searched campaign site is used.
+    if (r?.html && isBallotpedia(u)) campaign = ballotpediaCampaignSite(r.html) ?? campaign;
   }
-  for (const f of followQueue.slice(0, MAX_FOLLOW)) {
-    if (seen.has(f.url)) continue;
-    seen.add(f.url);
-    const d = await getDocument(deps, f.url, metaFor(f.official, f.publisher), now);
-    if (d) got.push(d);
-  }
+  if (campaign && t.kind === "candidate") await read({ url: campaign, official: false });
+
+  // Official first, then the rest; long documents narrowed to this target.
   let total = 0;
   const docs: FetchedDoc[] = [];
-  for (const d of got) {
+  for (const { f, page } of [...got.filter((g) => g.page.official), ...got.filter((g) => !g.page.official)]) {
     if (total >= MAX_TOTAL_CHARS) break;
-    const text = d.text.slice(0, MAX_TOTAL_CHARS - total);
+    const text = focusText(f.text, t.focus, Math.min(MAX_DOC_CHARS, MAX_TOTAL_CHARS - total));
     total += text.length;
-    const official = t.pages.find((p) => p.url === d.url)?.official ?? followQueue.find((f) => f.url === d.url)?.official ?? false;
     docs.push({
       id: `D${docs.length + 1}`,
-      sourceId: d.sourceId,
+      sourceId: f.sourceId,
       text,
-      meta: { url: d.url, title: d.title, publisher: t.pages[0]?.publisher ?? new URL(d.url).hostname, official, fetchedAt: d.fetchedAt },
+      meta: { url: f.url, title: f.title, publisher: page.publisher ?? new URL(f.url).hostname, official: page.official, fetchedAt: f.fetchedAt },
     });
   }
-  return docs;
+  return { docs, campaign, followed };
 }
 
-const followedUrls = (t: Target, docs: FetchedDoc[]) => docs.map((d) => d.meta.url).filter((u) => !t.pages.some((p) => p.url === u));
-
-function inputHash(t: Target, model: string, docs: FetchedDoc[]): string {
+function inputHash(t: Target, setting: Setting, docs: FetchedDoc[]): string {
   const parts = docs.map((d) => `${d.meta.url}:${sha(d.text)}`).sort();
-  return sha([t.field, t.kind, t.label, model, PROMPT_VERSION, ...parts].join("\n"));
+  return sha([t.key, t.label, settingId(setting), PROMPT_VERSION, ...parts].join("\n"));
 }
 
-async function alreadyDone(db: Db, t: Target, hash: string): Promise<boolean> {
-  const { data } = await db
-    .from("synthesis_runs")
-    .select("id")
-    .eq("target_type", t.targetType)
-    .eq("target_id", t.targetId)
-    .eq("field_name", t.field)
-    .eq("input_hash", hash)
-    .eq("status", "succeeded")
-    .limit(1);
-  return !!data?.length;
+const transient = (problem?: string) => !!problem && /^api_(429|500|502|503|529|error)$|^error$/.test(problem);
+
+async function finishState(db: Db, key: string, now: Date, patch: { outcome: string; hash?: string; afterMs: number; failures?: number }) {
+  const jitter = Math.floor(Math.random() * 30 * 60_000);
+  await db
+    .from("research_state")
+    .update({
+      last_outcome: patch.outcome,
+      ...(patch.hash ? { input_hash: patch.hash } : {}),
+      next_check_at: new Date(now.getTime() + patch.afterMs + (patch.afterMs >= RECHECK_MS ? jitter : 0)).toISOString(),
+      locked_until: null,
+      failures: patch.failures ?? 0,
+      updated_at: now.toISOString(),
+    })
+    .eq("key", key);
 }
 
-async function researchOne(deps: ResearchDeps, cfg: AiConfig, t: Target, docs: FetchedDoc[], hash: string, now: Date) {
+export interface JobOutcome {
+  key: string;
+  outcome: "published" | "held" | "compared" | "failed" | "no documents" | "unchanged" | "rate limited" | "waiting" | "budget" | "missing";
+  spentMicroUsd: number;
+}
+
+/** One job: one target at one setting. */
+export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobOutcome> {
+  const cfg = deps.config ?? aiConfig();
+  const now = deps.now ?? new Date();
+  const d = { ...deps, now };
   const { db } = deps;
+  const { data: state } = await db.from("research_state").select("target, input_hash, failures").eq("key", stateKey).maybeSingle();
+  if (!state) return { key: stateKey, outcome: "missing", spentMicroUsd: 0 };
+  const stored = state.target as unknown as Target & { setting: Setting; compare: boolean; election: string };
+  const t: Target = stored;
+  const setting = stored.setting;
+  let spent = 0;
+
+  const search = await searchFor(d, t);
+  spent += search.cost;
+  if (search.wait) {
+    await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000, failures: state.failures });
+    return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
+  }
+  const { docs, campaign, followed } = await gatherDocuments(d, t, search.cache);
+  if (t.search && (campaign !== (search.cache?.campaign ?? null) || followed.length)) {
+    await db
+      .from("research_state")
+      .update({ discovered: { ...(search.cache ?? { urls: [], at: now.toISOString() }), campaign, followed: followed.length ? followed : search.cache?.followed ?? [] } as unknown as Json })
+      .eq("key", `${t.key}#search`);
+  }
+  await recordSpend(db, now, search.cost);
+  if (!docs.length) {
+    await finishState(db, stateKey, now, { outcome: "no documents", afterMs: RECHECK_MS });
+    return { key: stateKey, outcome: "no documents", spentMicroUsd: spent };
+  }
+  const hash = inputHash(t, setting, docs);
+  if (hash === state.input_hash) {
+    await finishState(db, stateKey, now, { outcome: "unchanged", hash, afterMs: stored.compare ? COMPARE_RECHECK_MS : RECHECK_MS });
+    return { key: stateKey, outcome: "unchanged", spentMicroUsd: spent };
+  }
+  if ((await monthSpend(db, now)) >= Math.floor(cfg.monthlyBudgetUsd * 1_000_000)) {
+    await finishState(db, stateKey, now, { outcome: "budget", afterMs: 3600_000, failures: state.failures });
+    return { key: stateKey, outcome: "budget", spentMicroUsd: spent };
+  }
+
+  const r = await researchOne(d, cfg, stored, setting, docs, hash);
+  spent += r.spent;
+  if (r.outcome === "failed" && transient(r.problem)) {
+    await finishState(db, stateKey, now, { outcome: "rate limited", afterMs: 2 * 60_000, failures: state.failures });
+    return { key: stateKey, outcome: "rate limited", spentMicroUsd: spent };
+  }
+  if (r.outcome === "failed") {
+    const failures = (state.failures ?? 0) + 1;
+    await finishState(db, stateKey, now, { outcome: "failed", afterMs: Math.min(RECHECK_MS, 15 * 60_000 * 2 ** Math.min(failures, 5)), failures });
+    return { key: stateKey, outcome: "failed", spentMicroUsd: spent };
+  }
+  await finishState(db, stateKey, now, { outcome: r.outcome, hash, afterMs: stored.compare ? COMPARE_RECHECK_MS : RECHECK_MS });
+  logEvent("research.job", { kind: t.kind, setting: settingId(setting), outcome: r.outcome, costMicroUsd: spent });
+  return { key: stateKey, outcome: r.outcome, spentMicroUsd: spent };
+}
+
+async function researchOne(
+  deps: ResearchDeps & { now: Date },
+  cfg: AiConfig,
+  t: Target & { compare: boolean; election: string },
+  setting: Setting,
+  docs: FetchedDoc[],
+  hash: string,
+): Promise<{ outcome: "published" | "held" | "compared" | "failed"; spent: number; problem?: string }> {
+  const { db, now } = deps;
+  const field = t.compare ? `${t.field}@${settingId(setting)}` : t.field;
+  const started = Date.now();
   const { data: run } = await db
     .from("synthesis_runs")
     .insert({
       target_type: t.targetType,
       target_id: t.targetId,
-      field_name: t.field,
+      field_name: field,
       trigger_type: "scheduled",
       status: "running",
-      model: cfg.model,
+      model: setting.model,
       prompt_version: PROMPT_VERSION,
       source_ids: docs.map((d) => d.sourceId),
       input_hash: hash,
       started_at: now.toISOString(),
-      metadata: { followed: followedUrls(t, docs) } as Json,
+      metadata: { setting, compare: t.compare } as unknown as Json,
     })
     .select("id")
     .single();
   const runId = run?.id ?? null;
 
   const modelDocs: Doc[] = docs.map((d) => ({ id: d.id, title: d.meta.title, url: d.meta.url, text: d.text }));
-  const isMeasure = t.kind === "measure";
-  const first = isMeasure
-    ? await extract({ model: cfg.model, schema: MeasureResearch, task: taskFor(t), docs: modelDocs, client: deps.client })
-    : await extract({ model: cfg.model, schema: PersonResearch, task: taskFor(t), docs: modelDocs, client: deps.client });
+  const call = { model: setting.model, effort: setting.effort, task: taskFor(t), docs: modelDocs, client: deps.client };
+  const first: CallResult<unknown> =
+    t.kind === "measure"
+      ? await extract({ ...call, schema: MeasureResearch })
+      : t.kind === "office"
+        ? await extract({ ...call, schema: OfficeResearch })
+        : await extract({ ...call, schema: PersonResearch });
   let spent = first.costMicroUsd;
 
   const finish = async (status: "succeeded" | "failed", extra: Record<string, unknown>, error?: string) => {
@@ -258,7 +379,7 @@ async function researchOne(deps: ResearchDeps, cfg: AiConfig, t: Target, docs: F
           status,
           error: error ?? null,
           completed_at: new Date().toISOString(),
-          metadata: { followed: followedUrls(t, docs), costMicroUsd: spent, usage: first.usage ?? null, ...extra } as Json,
+          metadata: { setting, compare: t.compare, costMicroUsd: spent, seconds: Math.round((Date.now() - started) / 100) / 10, usage: first.usage ?? null, raw: first.data ?? null, ...extra } as unknown as Json,
         })
         .eq("id", runId);
     }
@@ -266,93 +387,46 @@ async function researchOne(deps: ResearchDeps, cfg: AiConfig, t: Target, docs: F
 
   if (!first.data) {
     await finish("failed", {}, first.problem);
-    return { outcome: "failed" as const, spent };
+    return { outcome: "failed", spent, problem: first.problem };
   }
 
-  const screened = isMeasure ? screenMeasure(first.data as MeasureResearch, docs) : screenPerson(first.data as PersonResearch, docs);
+  const kind = t.kind === "measure" ? "measure" : t.kind === "office" ? "office" : "person";
+  const screened =
+    kind === "measure"
+      ? screenMeasure(first.data as MeasureResearch, docs)
+      : kind === "office"
+        ? screenOffice(first.data as OfficeResearch, docs)
+        : screenPerson(first.data as PersonResearch, docs);
+  // The checker is the same for every setting, so only the extraction differs between columns.
   const support = await checkSupport({ model: cfg.checkModel, claims: screened.pending.map((p: Pending) => ({ text: p.text, quote: p.quote })), client: deps.client });
   spent += support.costMicroUsd;
-  const built = buildPayload(
-    isMeasure ? "measure" : "person",
-    screened.pending,
-    support.supported,
-    docs,
-    isMeasure ? [] : (first.data as PersonResearch).pastPositions,
-  );
+  const built = buildPayload(kind, screened.pending, support.supported, docs, kind === "person" ? (first.data as PersonResearch).pastPositions : []);
   const rejected = [...screened.rejected, ...built.rejected];
   const empty = payloadIsEmpty(built.payload);
-  const status = empty ? "held" : "published";
-  const heldReason = empty ? (rejected.length ? `every answer failed a check (${[...new Set(rejected.map((r) => r.reason))].join(", ")})` : "documents had no answers") : null;
+  const payload: Payload = { ...built.payload, ...(t.state ? { scope: { election: t.election, state: t.state } } : {}) };
+  const status = t.compare || empty ? "held" : "published";
+  const heldReason = t.compare
+    ? "model comparison"
+    : empty
+      ? rejected.length
+        ? `every answer failed a check (${[...new Set(rejected.map((r) => r.reason))].join(", ")})`
+        : "documents had no answers"
+      : null;
 
-  await db.from("synthesized_field_versions").update({ is_current: false }).eq("target_type", t.targetType).eq("target_id", t.targetId).eq("field_name", t.field).eq("is_current", true);
-  const content = JSON.stringify(built.payload);
+  await db.from("synthesized_field_versions").update({ is_current: false }).eq("target_type", t.targetType).eq("target_id", t.targetId).eq("field_name", field).eq("is_current", true);
+  const content = JSON.stringify(payload);
   await db.from("synthesized_field_versions").insert({
     synthesis_run_id: runId,
     target_type: t.targetType,
     target_id: t.targetId,
-    field_name: t.field,
+    field_name: field,
     content,
-    payload: built.payload as unknown as Json,
+    payload: payload as unknown as Json,
     source_ids: built.sourceIds,
     is_current: true,
     status,
     held_reason: heldReason,
   });
   await finish("succeeded", { rejected, supportProblem: support.problem ?? null, output_hash: sha(content) });
-  return { outcome: status, spent };
-}
-
-export async function runResearch(deps: ResearchDeps): Promise<ResearchSummary> {
-  const cfg = deps.config ?? aiConfig();
-  const now = deps.now ?? new Date();
-  const until = Date.now() + (deps.budgetMs ?? 240_000);
-  const limit = deps.limit ?? 20;
-  const budgetMicro = Math.floor(cfg.monthlyBudgetUsd * 1_000_000);
-  const all = buildTargets(await loadContests(deps.db, deps.electionId));
-  const targets = deps.only?.length ? all.filter((t) => deps.only!.includes(t.targetId)) : all;
-  const s: ResearchSummary = { targets: targets.length, considered: 0, unchanged: 0, noDocuments: 0, researched: 0, published: 0, held: 0, failed: 0, spentMicroUsd: 0 };
-  let spentBefore = await monthSpend(deps.db, now);
-  const queue = [...targets];
-  let stop: ResearchSummary["stoppedBy"];
-
-  // A few targets at a time; each worker re-checks time, item cap and budget before calling Claude.
-  const worker = async () => {
-    while (queue.length && !stop) {
-      if (Date.now() > until) {
-        stop = "time";
-        break;
-      }
-      const t = queue.shift()!;
-      s.considered++;
-      const docs = await gatherDocuments(deps, t, now);
-      if (!docs.length) {
-        s.noDocuments++;
-        continue;
-      }
-      const hash = inputHash(t, cfg.model, docs);
-      if (await alreadyDone(deps.db, t, hash)) {
-        s.unchanged++;
-        continue;
-      }
-      if (s.researched >= limit) {
-        stop = "limit";
-        break;
-      }
-      if (spentBefore + s.spentMicroUsd >= budgetMicro) {
-        stop = "budget";
-        break;
-      }
-      s.researched++;
-      const r = await researchOne(deps, cfg, t, docs, hash, now);
-      s.spentMicroUsd += r.spent;
-      if (r.outcome === "published") s.published++;
-      else if (r.outcome === "held") s.held++;
-      else s.failed++;
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
-  if (stop) s.stoppedBy = stop;
-  spentBefore += s.spentMicroUsd;
-  logEvent("research.run", { ...s, monthSpentUsd: Math.round(spentBefore / 10_000) / 100 });
-  return s;
+  return { outcome: t.compare ? "compared" : status, spent };
 }

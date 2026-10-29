@@ -67,7 +67,7 @@ function isStatewide(c: Contest): boolean {
 function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Race {
   const e = bundle.contests?.[contestKey(c)];
   const docs = pickSources(bundle.sources, [
-    ...citedIds(e?.formatExplainer, e?.context, e?.whyItMatters, e?.whatsAtStake, e?.bigPicture, e?.polling?.summary),
+    ...citedIds(e?.formatExplainer, e?.context, e?.whyItMatters, e?.whatsAtStake, e?.bigPicture, e?.polling?.summary, ...Object.values(e?.office ?? {})),
     ...(e?.polling?.poll?.sources ?? []),
   ]);
   const candidates = c.choices.map((ch) => {

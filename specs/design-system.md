@@ -49,6 +49,8 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 
 ### Citations and sources (Nov 3 ballot)
 - **One Sources block per block that makes claims**: each race header, each measure card, each candidate profile ends with its own Sources block. Inline markers point into that block's list; numbering restarts per block.
+- **Race header order** (2026-10-29): intro grid ("The office" first, full width, then Context / Why it matters / What's at stake / The big picture), then the race's Sources block, then "In the news". Sources sit above the news so they stay with the claims they back.
+- **"The office"**: same eyebrow shape as the other intro blocks. It shows the duties paragraph, then one row "Term · Seats · Salary" (salary only when an official page states it). Every item is cited and carries the AI label when it came from the research job. Until then it shows "Being researched…", which fills in live without a reload.
 - **Race and measure blocks start with "Ballot data:"** (official source · via conduit · retrieved time), then any rule source ("Vote needed: …"), then the researched sources. Candidate profiles skip the ballot-data line (the race block covers the listing).
 - **One researched source → no inline markers** and one unnumbered line; two or more → numbered `[n]` markers and a numbered list.
 - Side-by-side cells link their source directly.

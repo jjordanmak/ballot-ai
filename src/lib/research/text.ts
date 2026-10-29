@@ -37,8 +37,13 @@ export function htmlTitle(html: string): string | undefined {
 
 /** Same-site links whose visible text matches one of `wanted` (case-insensitive), in page order. */
 export function findLinks(html: string, baseUrl: string, wanted: string[]): string[] {
+  return findLinkEntries(html, baseUrl, wanted).map((l) => l.url);
+}
+
+/** Like findLinks, with each link's visible text (to rank links that name the target first). */
+export function findLinkEntries(html: string, baseUrl: string, wanted: string[]): { url: string; label: string }[] {
   const base = new URL(baseUrl);
-  const out: string[] = [];
+  const out: { url: string; label: string }[] = [];
   const re = /<a\b[^>]*href\s*=\s*["']([^"'#]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (let m; (m = re.exec(html)); ) {
     const label = decode(m[2].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim().toLowerCase();
@@ -47,7 +52,7 @@ export function findLinks(html: string, baseUrl: string, wanted: string[]): stri
       const u = new URL(decode(m[1]), base);
       if (u.hostname !== base.hostname || !/^https?:$/.test(u.protocol)) continue;
       u.hash = "";
-      if (u.toString() !== base.toString() && !out.includes(u.toString())) out.push(u.toString());
+      if (u.toString() !== base.toString() && !out.some((o) => o.url === u.toString())) out.push({ url: u.toString(), label });
     } catch {
       // ignore malformed hrefs
     }

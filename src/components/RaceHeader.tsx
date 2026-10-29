@@ -6,7 +6,7 @@ import { NewsFeed } from "./NewsFeed";
 import { LivePoll } from "./ballot/LivePoll";
 import { MapYearInfo } from "./ballot/MapYearInfo";
 import { SuspendedList } from "./SuspendedList";
-import { Cite, Researching, SourceList } from "./ballot/Citations";
+import { AiLabel, Cite, Researching, SourceList } from "./ballot/Citations";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
 
 export function RaceHeader({ race, index }: { race: Race; index: number }) {
@@ -76,6 +76,9 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
 
       {/* Intro grid */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-12 gap-y-10 gap-x-8">
+        {/* The office: what it does, term, seats (researched, cited) */}
+        {g && <OfficeBlock office={e?.office} ai={!!e?.aiFields?.some((f) => f.startsWith("office."))} docs={g.sourceDocs} className="md:col-span-12" />}
+
         {/* Context — wide */}
         <IntroBlock
           eyebrow="Context"
@@ -132,11 +135,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
         <SuspendedList candidates={race.candidates.filter((c) => c.campaignSuspended)} />
       </div>
 
-      {/* Race-level "In the news" carousel */}
-      <div className="mt-12">
-        <NewsFeed items={race.news} feed={race.feed} />
-      </div>
-
+      {/* The race's sources sit with the race information, above the news. */}
       {g && (
         <SourceList
           docs={g.sourceDocs}
@@ -144,7 +143,66 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           notes={g.voteNeeded?.source ? [{ label: "Vote needed", ...g.voteNeeded.source }] : undefined}
         />
       )}
+
+      {/* Race-level "In the news" carousel */}
+      <div className="mt-12">
+        <NewsFeed items={race.news} feed={race.feed} />
+      </div>
     </header>
+  );
+}
+
+function OfficeBlock({
+  office,
+  ai,
+  docs,
+  className,
+}: {
+  office?: { duties?: Cited; term?: Cited; seats?: Cited; salary?: Cited };
+  ai: boolean;
+  docs: Record<string, SourceDoc>;
+  className?: string;
+}) {
+  const facts = (
+    [
+      ["Term", office?.term],
+      ["Seats", office?.seats],
+      ["Salary", office?.salary],
+    ] as const
+  ).filter(([, v]) => !!v) as [string, Cited][];
+  return (
+    <div className={className}>
+      <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mb-3 flex items-center gap-2">
+        <span className="w-3 h-px bg-[var(--color-accent)]" />
+        The office
+      </div>
+      {!office?.duties && !facts.length ? (
+        <Researching what="What this office does is" live />
+      ) : (
+        <div className="max-w-3xl">
+          {ai && <AiLabel className="mb-2" />}
+          {office?.duties && (
+            <p className="text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty">
+              <RichText text={office.duties.text} auto="neutral" />
+              <Cite ids={office.duties.sources} docs={docs} />
+            </p>
+          )}
+          {facts.length > 0 && (
+            <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[var(--color-paper-2)]">
+              {facts.map(([label, v]) => (
+                <div key={label} className="flex gap-1.5">
+                  <dt className="font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)] pt-[3px]">{label}</dt>
+                  <dd>
+                    <RichText text={v.text} auto="neutral" />
+                    <Cite ids={v.sources} docs={docs} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

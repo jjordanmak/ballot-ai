@@ -106,10 +106,11 @@ export function SourceList({
   );
 }
 
-export function Researching({ what }: { what?: string }) {
+export function Researching({ what, live }: { what?: string; live?: boolean }) {
   return (
     <p className="text-[13px] leading-[1.55] italic text-[var(--color-paper-4)]">
-      {what ? `${what} being researched.` : "Being researched."} We only publish what we can cite.
+      {what ? `${what} being researched.` : "Being researched."}{" "}
+      {live ? "This fills in automatically in a few minutes, without reloading." : "We only publish what we can cite."}
     </p>
   );
 }

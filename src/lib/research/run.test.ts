@@ -3,63 +3,82 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 vi.mock("server-only", () => ({}));
 
-import { runResearch } from "./run";
+import { DEFAULT_COMPARE, aiConfig, type AiConfig } from "@/lib/ai/config";
+import { dispatch, jobsFor, runJob } from "./run";
+import { buildTargets } from "./targets";
 
-/** Just enough of the Supabase query builder for the research job, in memory. */
-function fakeDb(seed: Record<string, Record<string, unknown>[]>) {
-  const tables: Record<string, Record<string, unknown>[]> = { sources: [], synthesis_runs: [], synthesized_field_versions: [], api_usage: [], ...seed };
+type Row = Record<string, unknown>;
+
+/** Just enough of the Supabase query builder and RPCs for the research job, in memory. */
+function fakeDb(seed: Record<string, Row[]>, clock: () => Date) {
+  const tables: Record<string, Row[]> = { sources: [], synthesis_runs: [], synthesized_field_versions: [], api_usage: [], research_state: [], fetch_hosts: [], ...seed };
+  const keys: Record<string, string> = { research_state: "key", fetch_hosts: "host", sources: "url" };
   let n = 0;
-  const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+  const rpcCalls: { name: string; args: Row }[] = [];
 
   function builder(table: string) {
     const rows = () => (tables[table] ??= []);
-    let filters: ((r: Record<string, unknown>) => boolean)[] = [];
-    let op: { kind: "select" } | { kind: "insert"; values: Record<string, unknown>[] } | { kind: "update"; patch: Record<string, unknown> } | { kind: "upsert"; values: Record<string, unknown>[]; key: string } = { kind: "select" };
+    let filters: ((r: Row) => boolean)[] = [];
+    let op: { kind: "select"; head?: boolean } | { kind: "insert"; values: Row[] } | { kind: "update"; patch: Row } | { kind: "upsert"; values: Row[]; key: string; ignore: boolean } = { kind: "select" };
     let lim = Infinity;
     let from = 0;
-    let single: "one" | "maybe" | null = null;
+    let single = false;
     const b = {
-      select: () => b,
+      select: (_c?: string, o?: { head?: boolean }) => (op.kind === "select" && o?.head && (op = { kind: "select", head: true }), b),
       eq: (k: string, v: unknown) => ((filters = [...filters, (r) => r[k] === v]), b),
       in: (k: string, vs: unknown[]) => ((filters = [...filters, (r) => vs.includes(r[k])]), b),
+      gt: (k: string, v: string) => ((filters = [...filters, (r) => typeof r[k] === "string" && (r[k] as string) > v]), b),
+      like: (k: string, p: string) => ((filters = [...filters, (r) => new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*")}$`).test(String(r[k]))]), b),
       order: () => b,
       range: (a: number, z: number) => ((from = a), (lim = z - a + 1), b),
       limit: (x: number) => ((lim = x), b),
-      maybeSingle: () => ((single = "maybe"), b),
-      single: () => ((single = "one"), b),
-      insert: (v: Record<string, unknown> | Record<string, unknown>[]) => ((op = { kind: "insert", values: [v].flat() }), b),
-      update: (patch: Record<string, unknown>) => ((op = { kind: "update", patch }), b),
-      upsert: (v: Record<string, unknown>, o: { onConflict: string }) => ((op = { kind: "upsert", values: [v].flat(), key: o.onConflict }), b),
-      then: (res: (x: { data: unknown; error: null }) => unknown) => {
-        let out: Record<string, unknown>[] = [];
+      maybeSingle: () => ((single = true), b),
+      single: () => ((single = true), b),
+      insert: (v: Row | Row[]) => ((op = { kind: "insert", values: [v].flat() }), b),
+      update: (patch: Row) => ((op = { kind: "update", patch }), b),
+      upsert: (v: Row | Row[], o?: { onConflict?: string; ignoreDuplicates?: boolean }) => ((op = { kind: "upsert", values: [v].flat(), key: o?.onConflict ?? keys[table], ignore: !!o?.ignoreDuplicates }), b),
+      then: (res: (x: { data: unknown; error: null; count?: number }) => unknown) => {
+        let out: Row[] = [];
         if (op.kind === "insert") {
-          out = op.values.map((v) => ({ id: `id-${++n}`, created_at: new Date(n * 1000).toISOString(), ...v }));
+          out = op.values.map((v) => ({ id: `id-${++n}`, ...v }));
           rows().push(...out);
         } else if (op.kind === "upsert") {
-          const key = op.key;
+          const { key, ignore } = op;
           out = op.values.map((v) => {
             const hit = rows().find((r) => r[key] === v[key]);
-            if (hit) return Object.assign(hit, v);
-            const row = { id: `id-${++n}`, ...v };
+            if (hit) return ignore ? hit : Object.assign(hit, v);
+            const row = { id: `id-${++n}`, failures: 0, ...v };
             rows().push(row);
             return row;
           });
         } else if (op.kind === "update") {
           out = rows().filter((r) => filters.every((f) => f(r)));
-          for (const r of out) Object.assign(r, (op as { patch: Record<string, unknown> }).patch);
+          for (const r of out) Object.assign(r, (op as { patch: Row }).patch);
         } else {
-          out = rows().filter((r) => filters.every((f) => f(r))).slice(from, from + lim);
+          out = rows().filter((r) => filters.every((f) => f(r)));
+          if (op.head) return Promise.resolve(res({ data: null, error: null, count: out.length }));
+          out = out.slice(from, from + lim);
         }
-        const data = single ? (out[0] ?? null) : out;
-        return Promise.resolve(res({ data, error: null }));
+        return Promise.resolve(res({ data: single ? (out[0] ?? null) : out, error: null }));
       },
     };
     return b;
   }
   const db = {
     from: (t: string) => builder(t),
-    rpc: (name: string, args: Record<string, unknown>) => {
+    rpc: (name: string, args: Row) => {
       rpcCalls.push({ name, args });
+      if (name === "claim_research_jobs") {
+        // Due and unlocked, by the database's clock.
+        const now = clock().toISOString();
+        const due = tables.research_state
+          .filter((r) => (args.p_keys as string[]).includes(r.key as string))
+          .filter((r) => !r.next_check_at || (r.next_check_at as string) <= now)
+          .filter((r) => !r.locked_until || (r.locked_until as string) <= now)
+          .slice(0, args.p_limit as number);
+        for (const r of due) r.locked_until = new Date(clock().getTime() + (args.p_lock_seconds as number) * 1000).toISOString();
+        return Promise.resolve({ data: due.map((r) => r.key), error: null });
+      }
       return Promise.resolve({ data: 0, error: null });
     },
   };
@@ -72,14 +91,17 @@ const ANALYSIS = `<html><body><main><h1>Proposition 7</h1>
 <p>Fiscal effect: about $2 billion a year in new state revenue.</p>
 ${"<p>Additional background text for length.</p>".repeat(10)}</main></body></html>`;
 
-const pageFetch = vi.fn(async (url: string) => {
-  if (url.includes("/propositions/7/")) return new Response(ANALYSIS, { status: 200, headers: { "content-type": "text/html" } });
-  return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
-});
+function pageFetch(robots = "") {
+  return vi.fn(async (url: string) => {
+    if (url.endsWith("/robots.txt")) return robots ? new Response(robots, { status: 200, headers: { "content-type": "text/plain" } }) : new Response("", { status: 404 });
+    if (url.includes("/propositions/7/")) return new Response(ANALYSIS, { status: 200, headers: { "content-type": "text/html", etag: '"v1"' } });
+    return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
+  });
+}
 
 function fakeClient() {
   const usage = { input_tokens: 10_000, output_tokens: 2_000, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
-  const parse = vi.fn(async (req: { messages: { content: string }[] }) => {
+  const parse = vi.fn(async (req: { model: string; output_config: { effort: string }; messages: { content: string }[] }) => {
     const content = req.messages[0].content;
     if (content.startsWith("For each numbered item")) {
       return { stop_reason: "end_turn", usage, parsed_output: { results: [{ n: 1, supported: true }, { n: 2, supported: true }] } };
@@ -118,43 +140,136 @@ const contests = [
     contest_candidates: [],
   },
 ];
+const KEY = "measure:m-7:measure";
 
-const config = { enabled: true, model: "claude-haiku-5-5", checkModel: "claude-haiku-5-5", monthlyBudgetUsd: 40 };
+const base = aiConfig({ AI_SYNTHESIS_ENABLED: "on", ANTHROPIC_API_KEY: "test" });
+const publishCfg: AiConfig = { ...base, mode: "publish" };
+const compareCfg: AiConfig = { ...base, mode: "compare", compare: [{ model: "claude-haiku-5-5", effort: "low" }, { model: "claude-opus-5-5", effort: "high" }] };
 const resolve = async () => [{ address: "93.184.216.34", family: 4 }];
 
-describe("runResearch", () => {
-  it("researches a statewide measure from the official page and publishes only checked answers", async () => {
-    const { db, tables, rpcCalls } = fakeDb({ contests });
-    const { client, parse } = fakeClient();
-    const s = await runResearch({ db, electionId: "e1", config, client, fetchImpl: pageFetch as never, resolve: resolve as never, now: new Date("2026-10-29T07:00:00Z") });
+function setup(seed: Record<string, Row[]> = {}, robots = "") {
+  let now = new Date("2026-10-29T07:00:00Z");
+  const clock = () => now;
+  const fake = fakeDb({ contests, ...seed }, clock);
+  const { client, parse } = fakeClient();
+  const deps = (config: AiConfig) => ({
+    db: fake.db,
+    electionId: "e1",
+    config,
+    client,
+    fetchImpl: pageFetch(robots) as never,
+    resolve: resolve as never,
+    sleep: async () => {},
+    compareKeys: [KEY],
+    get now() {
+      return clock();
+    },
+  });
+  return { ...fake, parse, deps, advance: (ms: number) => (now = new Date(now.getTime() + ms)) };
+}
 
-    expect(s).toMatchObject({ targets: 1, researched: 1, published: 1, held: 0, failed: 0 });
-    expect(parse).toHaveBeenCalledTimes(2);
-    const [v] = tables.synthesized_field_versions as { payload: { answers: Record<string, unknown> }; status: string; is_current: boolean; source_ids: string[] }[];
-    expect(v.status).toBe("published");
-    expect(v.is_current).toBe(true);
-    // The invented quote never made it; the two real ones did.
-    expect(Object.keys(v.payload.answers).sort()).toEqual(["cost", "taxes"]);
-    expect(v.source_ids).toHaveLength(1);
-    expect((tables.sources[0] as { source_type: string }).source_type).toBe("official");
-    expect(rpcCalls.find((c) => c.name === "add_api_spend")?.args.p_amount).toBeGreaterThan(0);
+describe("jobsFor", () => {
+  const targets = buildTargets(contests as never);
+  it("compare mode: every setting for each item in the comparison set, nothing else", () => {
+    const jobs = jobsFor({ ...base, mode: "compare", compare: DEFAULT_COMPARE }, targets, "e1", [KEY]);
+    expect(jobs).toHaveLength(9);
+    expect(jobs.every((j) => j.compare)).toBe(true);
+    expect(jobs.map((j) => j.stateKey)).toContain("measure:m-7:measure@claude-sonnet-5-5:high");
+    expect(jobsFor({ ...base, mode: "compare" }, targets, "e1", ["measure:other:measure"])).toHaveLength(0);
+  });
+  it("publish mode: every target once, at its kind's setting", () => {
+    const jobs = jobsFor({ ...publishCfg, publish: { ...publishCfg.publish, measure: { model: "claude-sonnet-5-5", effort: "low" } } }, targets, "e1");
+    expect(jobs).toEqual([expect.objectContaining({ stateKey: KEY, compare: false, setting: { model: "claude-sonnet-5-5", effort: "low" } })]);
+  });
+});
+
+describe("dispatch", () => {
+  it("records new jobs, claims the due ones up to the in-flight limit, and fans them out", async () => {
+    const s = setup();
+    const ran: string[] = [];
+    const first = await dispatch({ ...s.deps({ ...compareCfg, maxInflight: 1 }), runRemote: async (k) => void ran.push(k) });
+    expect(first).toMatchObject({ jobs: 2, claimed: 1 });
+    expect(s.tables.research_state.map((r) => r.key).sort()).toEqual([`${KEY}@claude-haiku-5-5:low`, `${KEY}@claude-opus-5-5:high`]);
+    // The claimed job is locked: the next minute's run takes the other one only.
+    s.advance(60_000);
+    await dispatch({ ...s.deps({ ...compareCfg, maxInflight: 2 }), runRemote: async (k) => void ran.push(k) });
+    expect(new Set(ran).size).toBe(2);
+    expect(ran).toHaveLength(2);
   });
 
-  it("skips a target whose documents haven't changed", async () => {
-    const { db } = fakeDb({ contests });
-    const { client, parse } = fakeClient();
-    const opts = { db, electionId: "e1", config, client, fetchImpl: pageFetch as never, resolve: resolve as never, now: new Date("2026-10-29T07:00:00Z") };
-    await runResearch(opts);
-    const again = await runResearch({ ...opts, now: new Date("2026-10-29T08:00:00Z") });
-    expect(again).toMatchObject({ researched: 0, unchanged: 1 });
-    expect(parse).toHaveBeenCalledTimes(2);
+  it("does nothing when switched off or over budget", async () => {
+    const off = setup();
+    expect(await dispatch({ ...off.deps({ ...compareCfg, enabled: false }) })).toMatchObject({ stoppedBy: "disabled" });
+    const broke = setup({ api_usage: [{ period: "2026-10", metric: "anthropic.microusd", count: 40_000_000 }] });
+    const run = vi.fn();
+    expect(await dispatch({ ...broke.deps(compareCfg), runRemote: run })).toMatchObject({ stoppedBy: "budget", claimed: 0 });
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe("runJob", () => {
+  it("publish mode: researches from the official page and publishes only checked answers", async () => {
+    const s = setup();
+    await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
+    const r = await runJob(s.deps(publishCfg), KEY);
+    expect(r.outcome).toBe("published");
+    expect(s.parse).toHaveBeenCalledTimes(2);
+    const [v] = s.tables.synthesized_field_versions as { field_name: string; payload: { answers: Record<string, unknown>; scope: unknown }; status: string; is_current: boolean; source_ids: string[] }[];
+    expect(v).toMatchObject({ field_name: "measure", status: "published", is_current: true });
+    // The invented quote never made it; the two real ones did.
+    expect(Object.keys(v.payload.answers).sort()).toEqual(["cost", "taxes"]);
+    expect(v.payload.scope).toEqual({ election: "e1", state: "CA" });
+    expect((s.tables.sources[0] as { source_type: string }).source_type).toBe("official");
+    expect(s.rpcCalls.find((c) => c.name === "add_api_spend")?.args.p_amount).toBeGreaterThan(0);
+    // Polite: robots.txt was read and the site's slot reserved before the page.
+    expect(s.tables.fetch_hosts[0]).toMatchObject({ host: "voterguide.sos.ca.gov" });
+    expect(s.rpcCalls.some((c) => c.name === "reserve_host_slot")).toBe(true);
+    const state = s.tables.research_state.find((x) => x.key === KEY)!;
+    expect(state).toMatchObject({ last_outcome: "published", locked_until: null });
+    expect(Date.parse(state.next_check_at as string)).toBeGreaterThanOrEqual(Date.parse("2026-10-29T13:00:00Z"));
+  });
+
+  it("compare mode: each setting's result is held under its own field, with its effort, cost and time", async () => {
+    const s = setup();
+    await dispatch({ ...s.deps(compareCfg), runRemote: async () => {} });
+    for (const k of [`${KEY}@claude-haiku-5-5:low`, `${KEY}@claude-opus-5-5:high`]) expect((await runJob(s.deps(compareCfg), k)).outcome).toBe("compared");
+    const research = s.parse.mock.calls.map((c) => c[0]).filter((req) => !req.messages[0].content.startsWith("For each"));
+    expect(research.map((req) => [req.model, req.output_config.effort])).toEqual([
+      ["claude-haiku-5-5", "low"],
+      ["claude-opus-5-5", "high"],
+    ]);
+    const rows = s.tables.synthesized_field_versions as { field_name: string; status: string; held_reason: string }[];
+    expect(rows.map((r) => r.field_name).sort()).toEqual(["measure@claude-haiku-5-5:low", "measure@claude-opus-5-5:high"]);
+    expect(rows.every((r) => r.status === "held" && r.held_reason === "model comparison")).toBe(true);
+    const runs = s.tables.synthesis_runs as { metadata: { setting: unknown; costMicroUsd: number; seconds: number; rejected: { reason: string }[] } }[];
+    expect(runs[1].metadata).toMatchObject({ setting: { model: "claude-opus-5-5", effort: "high" } });
+    expect(runs[1].metadata.costMicroUsd).toBeGreaterThan(runs[0].metadata.costMicroUsd);
+    expect(runs[0].metadata.rejected).toEqual([expect.objectContaining({ reason: "quote not found" })]);
+    // The page fetch was shared: one read of the official page for both settings.
+    expect(s.tables.sources).toHaveLength(1);
+  });
+
+  it("skips a job whose documents haven't changed", async () => {
+    const s = setup();
+    await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
+    await runJob(s.deps(publishCfg), KEY);
+    s.advance(7 * 3600_000);
+    expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("unchanged");
+    expect(s.parse).toHaveBeenCalledTimes(2);
+  });
+
+  it("honors robots.txt: a disallowed site isn't read, and with nothing else there's nothing to run", async () => {
+    const s = setup({}, "User-agent: *\nDisallow: /propositions/");
+    await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
+    expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("no documents");
+    expect(s.parse).not.toHaveBeenCalled();
   });
 
   it("stops at the monthly budget", async () => {
-    const { db } = fakeDb({ contests, api_usage: [{ period: "2026-10", metric: "anthropic.microusd", count: 40_000_000 }] });
-    const { client, parse } = fakeClient();
-    const s = await runResearch({ db, electionId: "e1", config, client, fetchImpl: pageFetch as never, resolve: resolve as never, now: new Date("2026-10-29T07:00:00Z") });
-    expect(s.stoppedBy).toBe("budget");
-    expect(parse).not.toHaveBeenCalled();
+    const s = setup();
+    await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
+    s.tables.api_usage.push({ period: "2026-10", metric: "anthropic.microusd", count: 40_000_000 });
+    expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("budget");
+    expect(s.parse).not.toHaveBeenCalled();
   });
 });

@@ -55,3 +55,13 @@ export const SupportCheck = z.object({
 
 /** Same limits for every person, so profiles in one race have the same shape. */
 export const CAPS = { background: 3, pastPositions: 5, priorities: 5, textChars: 300, quoteChars: 600 } as const;
+
+export const OfficeResearch = z.object({
+  duties: maybe.describe("What the office does: its main duties, in one or two sentences."),
+  term: maybe.describe("Term length (e.g. four years) and any term limit."),
+  seats: maybe.describe("How many seats or members the office or body has."),
+  salary: maybe.describe("Salary, only if a document states it."),
+});
+export type OfficeResearch = z.infer<typeof OfficeResearch>;
+
+export const OFFICE_FIELDS = ["duties", "term", "seats", "salary"] as const;

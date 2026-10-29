@@ -4,7 +4,7 @@
  * lint, and (second pass) the quote must support the text. Pure functions.
  */
 import { cleanText, neutralityProblem, quoteFound } from "@/lib/ai/checks";
-import { CAPS, MEASURE_FIELDS, type Answer, type MeasureResearch, type PersonResearch, type Position } from "@/lib/ai/schemas";
+import { CAPS, MEASURE_FIELDS, OFFICE_FIELDS, type Answer, type MeasureResearch, type OfficeResearch, type PersonResearch, type Position } from "@/lib/ai/schemas";
 
 export interface StoredSource {
   url: string;
@@ -46,7 +46,21 @@ export interface PersonPayload {
   sources: Record<string, StoredSource>;
 }
 
-export type Payload = MeasurePayload | PersonPayload;
+export type OfficeField = (typeof OFFICE_FIELDS)[number];
+
+export interface OfficePayload {
+  kind: "office";
+  answers: Partial<Record<OfficeField, StoredAnswer>>;
+  sources: Record<string, StoredSource>;
+}
+
+/** Where a published version applies, for the live refresh (no address: election id and state only). */
+export interface PayloadScope {
+  election: string;
+  state: string;
+}
+
+export type Payload = (MeasurePayload | PersonPayload | OfficePayload) & { scope?: PayloadScope };
 
 export interface FetchedDoc {
   /** "D1"… as shown to the model. */
@@ -105,6 +119,19 @@ export function screenMeasure(data: MeasureResearch, docs: FetchedDoc[]): { pend
   return { pending, rejected };
 }
 
+export function screenOffice(data: OfficeResearch, docs: FetchedDoc[]): { pending: Pending[]; rejected: Rejection[] } {
+  const byId = new Map(docs.map((d) => [d.id, d]));
+  const rejected: Rejection[] = [];
+  const pending: Pending[] = [];
+  for (const f of OFFICE_FIELDS) {
+    const a = data[f];
+    if (!a) continue;
+    const p = accept(f, a, byId, rejected);
+    if (p) pending.push(p);
+  }
+  return { pending, rejected };
+}
+
 export function screenPerson(data: PersonResearch, docs: FetchedDoc[]): { pending: Pending[]; rejected: Rejection[] } {
   const byId = new Map(docs.map((d) => [d.id, d]));
   const rejected: Rejection[] = [];
@@ -128,7 +155,7 @@ export function screenPerson(data: PersonResearch, docs: FetchedDoc[]): { pendin
 
 /** Second pass applied: keep only supported claims, in the payload shape. */
 export function buildPayload(
-  kind: "measure" | "person",
+  kind: "measure" | "person" | "office",
   pending: Pending[],
   supported: boolean[],
   docs: FetchedDoc[],
@@ -148,6 +175,11 @@ export function buildPayload(
     const answers: MeasurePayload["answers"] = {};
     for (const k of kept) answers[k.field as MeasureField] = answer(k);
     return { payload: { kind: "measure", answers, sources }, rejected, sourceIds: [...used] };
+  }
+  if (kind === "office") {
+    const answers: OfficePayload["answers"] = {};
+    for (const k of kept) answers[k.field as OfficeField] = answer(k);
+    return { payload: { kind: "office", answers, sources }, rejected, sourceIds: [...used] };
   }
   const person: PersonPayload = { kind: "person", background: [], pastPositions: [], priorities: [], sources };
   for (const k of kept) {
@@ -170,7 +202,7 @@ export function buildPayload(
 }
 
 export function payloadIsEmpty(p: Payload): boolean {
-  return p.kind === "measure"
-    ? Object.keys(p.answers).length === 0
-    : !p.currentRole && !p.background.length && !p.pastPositions.length && !p.priorities.length;
+  return p.kind === "person"
+    ? !p.currentRole && !p.background.length && !p.pastPositions.length && !p.priorities.length
+    : Object.keys(p.answers).length === 0;
 }

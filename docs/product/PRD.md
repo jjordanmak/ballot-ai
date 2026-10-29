@@ -342,3 +342,9 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 6. ~~Places Autocomplete~~. **Resolved 2026-10-28:** shipped as a server-side proxy (owner request). Costs are capped by a daily quota and a budget alert; see [PRIVACY](../architecture/PRIVACY.md) §2.
 7. **Multilingual support:** which languages first (Spanish, Chinese, Tagalog, Vietnamese, Korean for California)?
 8. **Geography public pages for SEO:** timing and granularity.
+9. **Opt-in election reminders and alerts (future feature; owner, 2026-10-29).** Also the starting point for accounts. Not built. Before building it:
+   - **Consent:** its own consent wording and a privacy policy update.
+   - **Law:** TCPA consent for texts; CAN-SPAM for email.
+   - **Storage:** secure, with deletion on request.
+   - **No address link:** a contact is never linked to an address or a ballot. Reminders key off coarse location (state, or election) only.
+   - **Not needed for research:** research for a newly looked-up ballot fills in within minutes without a reload, so no contact info is needed for that.

@@ -1,0 +1,186 @@
+{
+  "_about": "Model comparison sample (owner, 2026-10-29): ~30 items from the Daly City (94015) sample ballot, the contests on the owner's test ballot. Contest/candidate ids and office keys only; no address. Daly City City Council candidates are left out (7 candidates x 9 settings); its office description is in.",
+  "ballot": "Daly City (94015) sample ballot",
+  "targets": [
+    {
+      "key": "measure:f182391b-b26b-4005-8a84-49711aab64a4:measure",
+      "kind": "measure",
+      "label": "Proposition 1 (statewide bond)",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:1bb872da-1d22-43ae-9d11-509e9192f429:measure",
+      "kind": "measure",
+      "label": "Proposition 2 (legislative constitutional amendment)",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:1e55c359-f50a-4e6d-8f73-02f459625628:measure",
+      "kind": "measure",
+      "label": "Proposition 40 (initiative: constitutional amendment and statute, tax)",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:5f5ed6eb-93dd-4a09-8c7b-0798b1a6de11:measure",
+      "kind": "measure",
+      "label": "Measure M (Jefferson Union High School District)",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:0868e095-504d-410c-8b2b-2bb4a467bcdb:measure",
+      "kind": "measure",
+      "label": "Measure V (San Mateo County Community College District)",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:a128e151-1f0c-4202-b518-916cca8bdc5d:measure",
+      "kind": "measure",
+      "label": "Regional Transit Measure (County of San Mateo)",
+      "group": "Measures"
+    },
+    {
+      "key": "candidate:cbf4f405-9ab0-420a-ad31-75da0c174b28:profile",
+      "kind": "retention",
+      "label": "Kelli M. Evans, Associate Justice of the Supreme Court",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:e8b37815-0302-448a-8d1d-ff2a786f770b:profile",
+      "kind": "retention",
+      "label": "Joshua P. Groban, Associate Justice of the Supreme Court",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:658d43e2-e7e3-4b9a-a2ae-fda8e455599d:profile",
+      "kind": "retention",
+      "label": "Gordon Burns, Associate Justice, Court of Appeal, First District, Div. 5",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:594b91e8-b9d4-45d7-88ac-9cb6fc07035b:profile",
+      "kind": "retention",
+      "label": "Therese M. Stewart, Presiding Justice, Court of Appeal, First District, Div. 2",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:d598371e-1f2d-43fc-bb64-af513d504211:profile",
+      "kind": "candidate",
+      "label": "Xavier Becerra — Governor",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:cf45886a-a6d0-4c1f-b99b-9d1696ea88e7:profile",
+      "kind": "candidate",
+      "label": "Steve Hilton — Governor",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:26d87d99-ac5c-469f-ace9-4e5f4f06d01e:profile",
+      "kind": "candidate",
+      "label": "Kevin Mullin — U.S. Representative, CA-15",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:cc0f64ee-2e9b-4e4a-a26a-63e829af3b0e:profile",
+      "kind": "candidate",
+      "label": "Charles Hoelter — U.S. Representative, CA-15",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:1c438044-691d-43d9-a0a0-f5a3d4e0b0d4:profile",
+      "kind": "candidate",
+      "label": "Catherine Stefani — State Assembly, AD-19",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:55897580-04ff-4fbc-aaf1-553404fe1796:profile",
+      "kind": "candidate",
+      "label": "Philip Louis Wing — State Assembly, AD-19",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:9a041ef9-3cf3-4f23-8ad4-688c01d8bc01:profile",
+      "kind": "candidate",
+      "label": "Mark Nagales — Board of Supervisors, District 5",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:300f5744-6ece-4821-8464-054ba06efc85:profile",
+      "kind": "candidate",
+      "label": "Juslyn Cabrera Manalo — Board of Supervisors, District 5",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:c54defc3-ddeb-49c8-abf0-a6412c434cb3:profile",
+      "kind": "candidate",
+      "label": "Beverly Gerard — County Board of Education, Area 2",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:88474e93-4c36-4e62-a208-bc67c9336d50:profile",
+      "kind": "candidate",
+      "label": "Dana Johnson — County Board of Education, Area 2",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:a576888b-47de-4e12-8432-e2f223782713:profile",
+      "kind": "candidate",
+      "label": "Mike Guingona — Community College Board, Area 2",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:5c71a5d3-4594-4cda-b472-6b8bc6b0f70d:profile",
+      "kind": "candidate",
+      "label": "Jason Holt — Community College Board, Area 2",
+      "group": "Candidates"
+    },
+    {
+      "key": "contest:ca|associate justice of the supreme court|supreme court:office",
+      "kind": "office",
+      "label": "Associate Justice of the Supreme Court",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|governor|california:office",
+      "kind": "office",
+      "label": "Governor",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|u s representative|california:office",
+      "kind": "office",
+      "label": "U.S. Representative",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|member of the state assembly|california:office",
+      "kind": "office",
+      "label": "Member of the State Assembly",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|member board of supervisors|san mateo county:office",
+      "kind": "office",
+      "label": "San Mateo County Board of Supervisors",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|county board of education member|san mateo county board of education:office",
+      "kind": "office",
+      "label": "San Mateo County Board of Education",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|san mateo county community college district member governing board|smc community college district:office",
+      "kind": "office",
+      "label": "San Mateo County Community College District Board",
+      "group": "What this office does"
+    },
+    {
+      "key": "contest:ca|city of daly city member city council|city of daly city:office",
+      "kind": "office",
+      "label": "Daly City City Council",
+      "group": "What this office does"
+    }
+  ]
+}

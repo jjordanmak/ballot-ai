@@ -58,7 +58,8 @@ export default async function BallotPage({ params }: { params: Params }) {
 
   const ballot = result.ballot;
   // Research answers (published, quote-checked) fill in under the curated enrichment.
-  const research = await publishedResearch(researchTargetIds(ballot));
+  const researchIds = researchTargetIds(ballot);
+  const research = await publishedResearch(researchIds);
   const { races, measures } = toRaces(ballot, withResearch(getEnrichment(electionSlug), ballot, research));
   // Tab title stays "City, ST"; the sidebar and header add the ZIP.
   const location = locationLine(ballot.location);
@@ -90,7 +91,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
-    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} initial={feed}>
+    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed}>
       <div className="flex flex-col lg:flex-row">
         <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
         <Sidebar

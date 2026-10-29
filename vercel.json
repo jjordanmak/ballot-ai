@@ -15,7 +15,7 @@
     },
     {
       "path": "/api/cron/research",
-      "schedule": "41 * * * *"
+      "schedule": "* * * * *"
     }
   ]
 }

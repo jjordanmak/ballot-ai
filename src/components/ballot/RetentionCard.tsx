@@ -2,6 +2,7 @@ import type { Race } from "@/data/types";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
 import { COUNTS_VOTES_CAST } from "@/domain/voteNeeded";
 import { NewsFeed } from "@/components/NewsFeed";
+import { RichText } from "@/components/Highlight";
 import { AiLabel, Cite, Researching, SourceList } from "./Citations";
 import { MapYearInfo } from "./MapYearInfo";
 import { Meaning } from "./MeasureCard";
@@ -68,7 +69,7 @@ export function RetentionCard({ race, anchorId }: { race: Race; anchorId?: strin
           <div className="space-y-2 text-[14px] leading-[1.6] text-[var(--color-paper-2)]">
             {bio.map((b, i) => (
               <p key={i}>
-                {b.text}
+                <RichText text={b.text} auto="neutral" />
                 <Cite ids={b.sources} docs={docs} />
               </p>
             ))}

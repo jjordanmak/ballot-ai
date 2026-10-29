@@ -28,7 +28,7 @@ export interface CallResult<T> {
   usage?: Anthropic.Usage;
 }
 
-export const PROMPT_VERSION = "research-2026-10-29.1";
+export const PROMPT_VERSION = "research-2026-10-29.2";
 
 const SYSTEM = `You extract facts for ballot.ai, an independent, nonpartisan voter guide.
 
@@ -55,8 +55,12 @@ function documentsBlock(docs: Doc[]): string {
 const escapeAttr = (s: string) => s.replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]!);
 
 /** One structured extraction. Never throws; a failure comes back as `problem`. */
+import type { Effort } from "./config";
+export type { Effort };
+
 export async function extract<S extends z.ZodType>(opts: {
   model: string;
+  effort?: Effort;
   schema: S;
   task: string;
   docs: Doc[];
@@ -69,7 +73,7 @@ export async function extract<S extends z.ZodType>(opts: {
       max_tokens: 16000,
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: `${documentsBlock(opts.docs)}\n\n${opts.task}` }],
-      output_config: { effort: "medium", format: zodOutputFormat(opts.schema) },
+      output_config: { effort: opts.effort ?? "medium", format: zodOutputFormat(opts.schema) },
     });
     const cost = costMicroUsd(opts.model, res.usage);
     if (res.stop_reason === "refusal") return { data: null, problem: "refusal", costMicroUsd: cost, usage: res.usage };

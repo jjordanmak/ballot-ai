@@ -18,23 +18,72 @@ const PRICES: Record<string, { input: number; output: number; cacheRead: number;
 };
 const FALLBACK_PRICE = { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 };
 
+export type Effort = "low" | "medium" | "high";
+
+/** One model at one effort level: a column on the comparison page. */
+export interface Setting {
+  model: string;
+  effort: Effort;
+}
+
+export const settingId = (s: Setting) => `${s.model}:${s.effort}`;
+
+/** Every model at every effort (owner, 2026-10-29): the comparison's 9 columns. */
+export const DEFAULT_COMPARE: Setting[] = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"].flatMap((model) =>
+  (["low", "medium", "high"] as Effort[]).map((effort) => ({ model, effort })),
+);
+
+export type ResearchKindKey = "measure" | "profile" | "office";
+
 export interface AiConfig {
   enabled: boolean;
-  model: string;
+  /**
+   * compare (default until the owner picks models): only the comparison
+   * set, every setting, results held for review, nothing published.
+   * publish: every target, one setting per kind, published when it passes.
+   */
+  mode: "compare" | "publish";
+  compare: Setting[];
+  /** Publish mode: the setting per kind of item. */
+  publish: Record<ResearchKindKey, Setting>;
   /** Model for the second "does this quote support this sentence?" pass. */
   checkModel: string;
   /** Monthly budget in USD; runs stop when the month's spend reaches it. */
   monthlyBudgetUsd: number;
+  /** Most research jobs running at once across workers. */
+  maxInflight: number;
+  /** Kept for callers that want "the" model (the measure setting's model). */
+  model: string;
+}
+
+function parseSetting(raw: string | undefined, fallback: Setting): Setting {
+  const [model, effort] = (raw ?? "").trim().split(":");
+  if (!model) return fallback;
+  return { model, effort: effort === "low" || effort === "high" ? effort : "medium" };
 }
 
 export function aiConfig(env: Record<string, string | undefined> = process.env): AiConfig {
-  const model = env.ANTHROPIC_DEFAULT_MODEL?.trim() || DEFAULT_MODEL;
+  const base = parseSetting(env.ANTHROPIC_DEFAULT_MODEL, { model: DEFAULT_MODEL, effort: "medium" });
   const budget = Number(env.AI_MONTHLY_BUDGET_USD);
+  const compare = (env.AI_COMPARE ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .map((x) => parseSetting(x, base));
+  const inflight = Number(env.AI_MAX_INFLIGHT);
   return {
     enabled: env.AI_SYNTHESIS_ENABLED === "on" && !!env.ANTHROPIC_API_KEY,
-    model,
-    checkModel: env.ANTHROPIC_EXTRACTION_MODEL?.trim() || model,
+    mode: env.AI_MODE === "publish" ? "publish" : "compare",
+    compare: compare.length ? compare : DEFAULT_COMPARE,
+    publish: {
+      measure: parseSetting(env.ANTHROPIC_MODEL_MEASURE, base),
+      profile: parseSetting(env.ANTHROPIC_MODEL_PROFILE, base),
+      office: parseSetting(env.ANTHROPIC_MODEL_OFFICE, base),
+    },
+    checkModel: env.ANTHROPIC_MODEL_CHECK?.trim() || env.ANTHROPIC_EXTRACTION_MODEL?.trim() || DEFAULT_MODEL,
     monthlyBudgetUsd: Number.isFinite(budget) && budget >= 0 ? budget : 40,
+    maxInflight: Number.isInteger(inflight) && inflight > 0 ? Math.min(inflight, 40) : 12,
+    model: base.model,
   };
 }
 
