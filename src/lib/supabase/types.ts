@@ -1437,10 +1437,15 @@ export type Database = {
         Args: { p_limit: number; p_metric: string; p_period: string }
         Returns: boolean
       }
-      reserve_host_slot: {
-        Args: { p_host: string; p_spacing_ms: number }
-        Returns: number
-      }
+      reserve_host_slot:
+        | {
+            Args: { p_host: string; p_spacing_ms: number }
+            Returns: number
+          }
+        | {
+            Args: { p_host: string; p_max_wait_ms: number; p_spacing_ms: number }
+            Returns: number
+          }
     }
     Enums: {
       [_ in never]: never

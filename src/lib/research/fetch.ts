@@ -79,7 +79,8 @@ async function robotsOk(deps: FetchDeps, url: URL): Promise<boolean> {
 /** Wait for this site's next free slot; false if it's too busy right now. */
 async function takeSlot(deps: FetchDeps, host: string): Promise<boolean> {
   const jitter = Math.floor(Math.random() * 3000);
-  const { data, error } = await deps.db.rpc("reserve_host_slot", { p_host: host, p_spacing_ms: SPACING_MS + jitter });
+  // Past MAX_WAIT_MS the function reserves nothing, so callers that give up don't push the site's queue out (0013).
+  const { data, error } = await deps.db.rpc("reserve_host_slot", { p_host: host, p_spacing_ms: SPACING_MS + jitter, p_max_wait_ms: MAX_WAIT_MS });
   if (error) return false;
   const ms = Number(data ?? 0);
   if (ms > MAX_WAIT_MS) return false;
