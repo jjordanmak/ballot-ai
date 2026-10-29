@@ -46,8 +46,14 @@ describe("resolveBallotForAddress", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const rt = runtime();
     expect(await resolveBallotForAddress("94015", rt)).toEqual({ ok: false, status: "INVALID_ADDRESS" });
-    expect(await resolveBallotForAddress("1 nocoverage Ave", rt)).toEqual({ ok: false, status: "NO_COVERAGE" });
-    expect(await resolveBallotForAddress("1 error Ave", rt)).toEqual({ ok: false, status: "PROVIDER_ERROR" });
+    expect(await resolveBallotForAddress("1 nocoverage Ave", rt)).toMatchObject({ ok: false, status: "NO_COVERAGE" });
+    expect(await resolveBallotForAddress("1 error Ave", rt)).toMatchObject({ ok: false, status: "PROVIDER_ERROR" });
+  });
+
+  it("passes the state's official voter lookup back when there's no ballot, for the cross-street handoff", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const out = await resolveBallotForAddress("Main St and nocoverage Ave", runtime());
+    expect(out).toMatchObject({ ok: false, status: "NO_COVERAGE", administration: { voterLookupUrl: "https://example.org/voter-lookup" } });
   });
 });
 

@@ -18,7 +18,8 @@
       "name": "California",
       "electionAdministrationBody": {
         "name": "Sample Secretary of State",
-        "electionInfoUrl": "https://example.org/elections"
+        "electionInfoUrl": "https://example.org/elections",
+        "electionRegistrationConfirmationUrl": "https://example.org/voter-lookup"
       },
       "local_jurisdiction": {
         "name": "Sample County",

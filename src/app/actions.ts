@@ -2,10 +2,15 @@
 
 import { redirect } from "next/navigation";
 import type { ResolutionStatus } from "@/domain/ballot";
+import { STATE_LOOKUP_FALLBACK } from "@/lib/ballot/copy";
 import { resolveBallotForAddress } from "@/lib/ballot/resolveBallot";
 
 export interface AddressFormState {
   status?: Exclude<ResolutionStatus, "SUCCESS" | "PARTIAL">;
+  /** The input had no house number (cross streets, a description, a city): show the voter-lookup handoff. */
+  noStreetNumber?: boolean;
+  /** Official state voter lookup to hand off to. State-level link, never address-derived detail. */
+  lookup?: { label: string; url: string };
 }
 
 /**
@@ -17,7 +22,15 @@ export async function resolveAddressAction(
   _prev: AddressFormState,
   formData: FormData,
 ): Promise<AddressFormState> {
-  const outcome = await resolveBallotForAddress(formData.get("address"));
+  const raw = formData.get("address");
+  const outcome = await resolveBallotForAddress(raw);
   if (outcome.ok) redirect(`/ballot/${outcome.electionSlug}/${outcome.ballotKey}`);
-  return { status: outcome.status as AddressFormState["status"] };
+  const admin = outcome.administration;
+  return {
+    status: outcome.status as AddressFormState["status"],
+    noStreetNumber: typeof raw === "string" && !/^\s*\d/.test(raw),
+    lookup: admin?.voterLookupUrl
+      ? { label: admin.regionName ? `${admin.regionName} voter lookup` : "Your state's voter lookup", url: admin.voterLookupUrl }
+      : STATE_LOOKUP_FALLBACK,
+  };
 }

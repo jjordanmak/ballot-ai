@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ArrowRight, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowRight, ExternalLink, MapPin, ShieldCheck } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
-import { STATUS_COPY } from "@/lib/ballot/copy";
+import { NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
 import { readyToSuggest } from "@/lib/providers/google-places/ready";
 
 interface Suggestion {
@@ -30,7 +30,10 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
   const session = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const inflight = useRef<AbortController | null>(null);
-  const error = state.status ? STATUS_COPY[state.status] : null;
+  // No ballot and no house number: likely registered by cross streets or a description.
+  const handoff = !!state.noStreetNumber && (state.status === "NO_COVERAGE" || state.status === "INVALID_ADDRESS");
+  const error = state.status ? (handoff ? NO_STREET_NUMBER_COPY : STATUS_COPY[state.status]) : null;
+  const showLookup = !!state.lookup && (handoff || state.status === "NO_COVERAGE");
 
   useEffect(() => () => {
     clearTimeout(timer.current);
@@ -189,6 +192,16 @@ export function AddressForm({ autoFocus = false }: { autoFocus?: boolean }) {
           <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3">
             <p className="text-[14px] text-[var(--color-paper)] font-medium">{error.title}</p>
             <p className="mt-1 text-[13px] leading-[1.55] text-[var(--color-paper-2)]">{error.body}</p>
+            {showLookup && (
+              <a
+                href={state.lookup!.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-[13px] text-[var(--color-paper)] underline hover:text-[var(--color-accent)]"
+              >
+                {state.lookup!.label} <ExternalLink size={12} aria-hidden />
+              </a>
+            )}
           </div>
         )}
       </div>

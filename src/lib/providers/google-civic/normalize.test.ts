@@ -177,7 +177,7 @@ describe("VIP-shaped feeds", () => {
   it("keeps official names verbatim and reports missing measure summaries as info, not partial", () => {
     expect(t("Governor").choices[0].ballotName).toBe("ALEX EXAMPLE");
     expect(v.warnings.filter((w) => w.code === "MEASURE_SUMMARY_MISSING").every((w) => w.severity === "info")).toBe(true);
-    expect(v.administration).toEqual({
+    expect(v.administration).toMatchObject({
       name: "Sample",
       electionInfoUrl: "http://example.org/county",
       ballotInfoUrl: "https://example.org/sos/ballot",

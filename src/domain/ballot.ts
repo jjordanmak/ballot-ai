@@ -207,9 +207,13 @@ export interface BallotWarning {
 
 export interface ElectionAdministration {
   name?: string;
+  /** State (or region) the office serves, e.g. "California". */
+  regionName?: string;
   electionInfoUrl?: string;
   ballotInfoUrl?: string;
   votingLocationFinderUrl?: string;
+  /** Official "check your registration" lookup (by name/birth date), e.g. CA My Voter Status. */
+  voterLookupUrl?: string;
 }
 
 export interface ResolvedBallot {

@@ -6,7 +6,7 @@
  * See docs/architecture/PRIVACY.md.
  */
 import "server-only";
-import { hasBallot, type ResolutionStatus } from "@/domain/ballot";
+import { hasBallot, type ElectionAdministration, type ResolutionStatus } from "@/domain/ballot";
 import { AddressInput } from "@/lib/providers/address";
 import { logEvent } from "@/lib/observability/log";
 import { computeBallotKey } from "./ballotKey";
@@ -16,7 +16,7 @@ import { validateBallot } from "./validate";
 
 export type ResolveOutcome =
   | { ok: true; status: ResolutionStatus; electionSlug: string; ballotKey: string }
-  | { ok: false; status: ResolutionStatus };
+  | { ok: false; status: ResolutionStatus; administration?: ElectionAdministration };
 
 export async function resolveBallotForAddress(
   rawAddress: unknown,
@@ -62,7 +62,7 @@ export async function resolveBallotForAddress(
 
   if (!hasBallot(ballot)) {
     if (ballot.statusDetail) logEvent("ballot.not_resolved", { status: ballot.status, detail: ballot.statusDetail });
-    return { ok: false, status: ballot.status };
+    return { ok: false, status: ballot.status, administration: ballot.administration };
   }
 
   const ballotKey = computeBallotKey(election.id, ballot.districtDescriptors ?? ballot.contests.map((c) => c.division.key));

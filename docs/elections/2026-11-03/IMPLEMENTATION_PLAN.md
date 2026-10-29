@@ -39,7 +39,7 @@
 | P1-5 | Expired `ballot_resolutions` cleanup (Vercel cron) + quota monitoring |
 | P1-6 | Statewide proposition official links (CA SoS Official Voter Information Guide) as durable `measures` |
 | P1-7 | Address autocomplete (owner request 2026-10-28): **built 2026-10-28.** Server-side Google Places API (New) proxy (`/api/address/suggest`, `/api/address/place`), server-only `GOOGLE_PLACES_API_KEY`, session tokens, no logging, same-site only; manual entry keeps working. Verified with simulated Google responses; live check pending on the Vercel preview |
-| P1-8 | Voters registered by cross streets or a description (no house number): Civic can't resolve them (see SOURCE_STRATEGY §6). Options for the owner: point-in-district lookup from a geocoded intersection using official district boundaries (needs our own district data, P3), or a clear handoff to the county's own lookup by name and birth date |
+| P1-8 | Voters registered by cross streets or a description (no house number): **handoff built 2026-10-29.** When input has no house number and no ballot is found, the form says a home street address is needed and links the state's official voter lookup (Civic `electionRegistrationConfirmationUrl`, e.g. CA My Voter Status; national fallback canivote.org). Map-point district lookup is parked as a feature idea (see P3), not planned |
 
 ## P2: after the election / next cycle
 
@@ -53,6 +53,8 @@
 - Resolve PRD open questions 1–4.
 
 ## P3: provider independence
+
+- Feature idea (owner, parked): resolve cross-street / description registrations by geocoding to a map point and checking official district boundaries.
 
 - VIP bulk feed resolver.
 - State and county direct resolvers.

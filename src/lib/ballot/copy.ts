@@ -36,6 +36,20 @@ export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: 
   },
 };
 
+/**
+ * No ballot for input without a house number. Google's ballot data only
+ * matches home street addresses, so voters registered with cross streets or
+ * a description of where they live are sent to their state's official
+ * voter lookup, which finds them by name and date of birth.
+ */
+export const NO_STREET_NUMBER_COPY = {
+  title: "We need a home street address to look up a ballot",
+  body: "Registered with cross streets or a description of where you live instead of a street address? Your state's official voter lookup can find your registration using your name and date of birth, and shows how to reach your county elections office for your sample ballot.",
+};
+
+/** National fallback when the provider didn't name a state election office (NASS "Can I Vote"). */
+export const STATE_LOOKUP_FALLBACK = { label: "Find your state's election office", url: "https://www.canivote.org/" };
+
 export function isResolutionStatus(s: string | undefined): s is ResolutionStatus {
   return !!s && (s === "SUCCESS" || s in STATUS_COPY);
 }

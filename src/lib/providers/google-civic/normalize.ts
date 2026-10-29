@@ -420,8 +420,11 @@ function administration(res: CivicVoterInfoResponse): ElectionAdministration | u
   if (!local && !state) return undefined;
   return {
     name: region?.local_jurisdiction?.name ?? local?.name ?? state?.name ?? region?.name,
+    regionName: region?.name,
     electionInfoUrl: safeUrl(local?.electionInfoUrl) ?? safeUrl(state?.electionInfoUrl),
     ballotInfoUrl: safeUrl(local?.ballotInfoUrl) ?? safeUrl(state?.ballotInfoUrl),
     votingLocationFinderUrl: safeUrl(local?.votingLocationFinderUrl) ?? safeUrl(state?.votingLocationFinderUrl),
+    voterLookupUrl:
+      safeUrl(local?.electionRegistrationConfirmationUrl) ?? safeUrl(state?.electionRegistrationConfirmationUrl),
   };
 }

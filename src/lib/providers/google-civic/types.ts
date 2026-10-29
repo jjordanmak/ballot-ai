@@ -89,6 +89,7 @@ export interface CivicAdministrativeBody {
   ballotInfoUrl?: string;
   votingLocationFinderUrl?: string;
   electionRegistrationUrl?: string;
+  electionRegistrationConfirmationUrl?: string;
 }
 
 export interface CivicAdministrationRegion {

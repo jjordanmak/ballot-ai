@@ -44,7 +44,9 @@ export class FixtureBallotResolver implements BallotResolver {
     const raw = address.reveal();
     for (const [re, status] of SIMULATED) {
       if (re.test(raw)) {
-        return { status, provider: this.id, election, contests: [], location: {}, retrievedAt, expiresAt: retrievedAt, warnings: [] };
+        // Like Civic, a no-ballot answer still names the state election office.
+        const administration = normalizeVoterInfo(sample as CivicVoterInfoResponse, election, retrievedAt).administration;
+        return { status, provider: this.id, election, contests: [], location: {}, administration, retrievedAt, expiresAt: retrievedAt, warnings: [] };
       }
     }
     const n = normalizeVoterInfo(sample as CivicVoterInfoResponse, election, retrievedAt);
