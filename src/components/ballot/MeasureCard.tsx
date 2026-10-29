@@ -4,7 +4,6 @@ import type { MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import { NewsFeed } from "@/components/NewsFeed";
 import { StatusPill } from "@/components/PartyTag";
 import { Cite, SourceList } from "./Citations";
-import { SourceLine } from "./SourceLine";
 
 /**
  * A ballot measure. Identifier, jurisdiction, threshold and ballot responses
@@ -154,8 +153,7 @@ export function MeasureCard({
         </div>
       )}
 
-      <SourceLine sources={contest.sources} />
-      <SourceList docs={docs} />
+      <SourceList docs={docs} provenance={contest.sources} />
     </article>
   );
 }

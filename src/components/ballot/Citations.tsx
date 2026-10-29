@@ -1,12 +1,19 @@
 import { ArrowUpRight } from "lucide-react";
+import type { SourceRef } from "@/domain/ballot";
 import type { SourceDoc } from "@/domain/enrichment";
+import { ProvenanceLine } from "./SourceLine";
 
 /**
  * Inline citation markers + source list. Numbering follows the order of
  * `docs` (first appearance), so markers and the list always agree.
+ *
+ * With a single source there are no inline markers: "[1]" after every
+ * sentence says nothing the one "Source" line below doesn't. Everything is
+ * still cited, at block level. A second source brings the markers back.
  */
 export function Cite({ ids, docs }: { ids: string[] | undefined; docs: Record<string, SourceDoc> }) {
   const order = Object.keys(docs);
+  if (order.length < 2) return null;
   const nums = [...new Set(ids ?? [])].map((id) => ({ id, n: order.indexOf(id) + 1 })).filter((x) => x.n > 0);
   if (!nums.length) return null;
   return (
@@ -27,25 +34,62 @@ export function Cite({ ids, docs }: { ids: string[] | undefined; docs: Record<st
   );
 }
 
-export function SourceList({ docs, title = "Sources" }: { docs: Record<string, SourceDoc>; title?: string }) {
+function DocLink({ d }: { d: SourceDoc }) {
+  return (
+    <>
+      <a href={d.url} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--color-accent)] inline-flex items-center gap-0.5">
+        {d.publisher}: {d.title}
+        <ArrowUpRight size={10} aria-hidden />
+      </a>
+      {d.official && <span className="ml-1.5 text-[var(--color-paper-4)]">(official)</span>}
+      <span className="ml-1.5 text-[var(--color-paper-4)]">· accessed {d.accessed}</span>
+    </>
+  );
+}
+
+/**
+ * One Sources block: where the ballot data came from (`provenance`, when
+ * given), then the researched sources: a single unnumbered line for one
+ * source, a numbered list (matching the inline markers) for several.
+ */
+export function SourceList({
+  docs,
+  title = "Sources",
+  provenance,
+}: {
+  docs: Record<string, SourceDoc>;
+  title?: string;
+  provenance?: SourceRef[];
+}) {
   const entries = Object.entries(docs);
-  if (!entries.length) return null;
+  const hasProvenance = !!provenance?.length;
+  if (!entries.length && !hasProvenance) return null;
+  const label = "font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em]";
   return (
     <div className="mt-8 pt-4 border-t border-[var(--color-ink-3)]">
-      <div className="font-mono-cap text-[9px] text-[var(--color-paper-4)] tracking-[0.16em] mb-2">{title}</div>
-      <ol className="space-y-1">
-        {entries.map(([id, d], i) => (
-          <li key={id} className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
-            <span className="font-mono text-[var(--color-paper-4)] mr-1.5">[{i + 1}]</span>
-            <a href={d.url} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--color-accent)] inline-flex items-center gap-0.5">
-              {d.publisher}: {d.title}
-              <ArrowUpRight size={10} aria-hidden />
-            </a>
-            {d.official && <span className="ml-1.5 text-[var(--color-paper-4)]">(official)</span>}
-            <span className="ml-1.5 text-[var(--color-paper-4)]">· accessed {d.accessed}</span>
-          </li>
-        ))}
-      </ol>
+      <div className={`${label} mb-2`}>{title}</div>
+      {hasProvenance && (
+        <p className="text-[11px] leading-[1.5] text-[var(--color-paper-3)] mb-1">
+          <span className="text-[var(--color-paper-4)]">Ballot data:</span> <ProvenanceLine sources={provenance!} />
+        </p>
+      )}
+      {entries.length === 1 ? (
+        <p className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
+          {hasProvenance && <span className="text-[var(--color-paper-4)]">Explanations: </span>}
+          <DocLink d={entries[0][1]} />
+        </p>
+      ) : (
+        entries.length > 1 && (
+          <ol className="space-y-1">
+            {entries.map(([id, d], i) => (
+              <li key={id} className="text-[11px] leading-[1.5] text-[var(--color-paper-3)]">
+                <span className="font-mono text-[var(--color-paper-4)] mr-1.5">[{i + 1}]</span>
+                <DocLink d={d} />
+              </li>
+            ))}
+          </ol>
+        )
+      )}
     </div>
   );
 }
