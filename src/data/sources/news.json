@@ -1,29 +1,1462 @@
 {
-  "_about": "Approved news sources for the live feed (owner approval pending, 2026-10-29). Fetched by source, not per candidate. scope: national | ca | local (local carries jurisdiction terms the article itself may omit). Feed URLs are confirmed by the collector's first run (feed_source_state.last_status); set enabled=false to drop a source instantly.",
+  "_about": "Approved news sources for the live feed (owner approval pending, 2026-10-29). Fetched by source, not per candidate. scope: national (matches any tracked contest) | state (matches only its own state's contests; the state name counts as context) | local (same, plus jurisdiction terms the article may omit). Inclusion rule: original reporting, a public corrections policy, and no ownership or control by a party, campaign, PAC or litigation group; national outlets are chosen across the political spectrum; every outlet that meets the rule is treated the same. Opinion and sponsored items are held by the automated checks. Excluded: CNN and Reuters (no maintained public RSS), RealClearPolitics (aggregator: links to other outlets' stories), Democracy Docket and similar (run by a litigation or advocacy group). Feed URLs follow each outlet's published feed pattern and are confirmed by the collector's first run (feed_source_state.last_status); failing sources back off automatically, and enabled=false drops a source instantly.",
   "sources": [
-    { "key": "ap-politics", "name": "Associated Press", "url": "https://apnews.com/hub/politics?output=rss", "scope": "national", "enabled": true },
-    { "key": "npr-politics", "name": "NPR", "url": "https://feeds.npr.org/1014/rss.xml", "scope": "national", "enabled": true },
-    { "key": "pbs-politics", "name": "PBS NewsHour", "url": "https://www.pbs.org/newshour/feeds/rss/politics", "scope": "national", "enabled": true },
-    { "key": "nyt-politics", "name": "The New York Times", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml", "scope": "national", "enabled": true },
-    { "key": "wapo-politics", "name": "The Washington Post", "url": "https://feeds.washingtonpost.com/rss/politics", "scope": "national", "enabled": true },
-    { "key": "wsj-politics", "name": "The Wall Street Journal", "url": "https://feeds.content.dowjones.io/public/rss/socialpoliticsfeed", "scope": "national", "enabled": true },
-    { "key": "fox-politics", "name": "Fox News", "url": "https://moxie.foxnews.com/google-publisher/politics.xml", "scope": "national", "enabled": true },
-    { "key": "the-hill-campaign", "name": "The Hill", "url": "https://thehill.com/homenews/campaign/feed/", "scope": "national", "enabled": true },
-    { "key": "politico", "name": "Politico", "url": "https://rss.politico.com/politics-news.xml", "scope": "national", "enabled": true },
-    { "key": "washington-examiner", "name": "Washington Examiner", "url": "https://www.washingtonexaminer.com/section/politics/feed", "scope": "national", "enabled": true },
-
-    { "key": "calmatters", "name": "CalMatters", "url": "https://calmatters.org/feed/", "scope": "ca", "enabled": true },
-    { "key": "latimes-california", "name": "Los Angeles Times", "url": "https://www.latimes.com/california/rss2.0.xml", "scope": "ca", "enabled": true },
-    { "key": "latimes-politics", "name": "Los Angeles Times", "url": "https://www.latimes.com/politics/rss2.0.xml", "scope": "ca", "enabled": true },
-    { "key": "sfchronicle-politics", "name": "San Francisco Chronicle", "url": "https://www.sfchronicle.com/politics/feed/politics-feed.xml", "scope": "ca", "enabled": true },
-    { "key": "sacbee-politics", "name": "The Sacramento Bee", "url": "https://www.sacbee.com/news/politics-government/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true", "scope": "ca", "enabled": true },
-    { "key": "kqed-news", "name": "KQED", "url": "https://www.kqed.org/news/feed", "scope": "ca", "enabled": true },
-    { "key": "ocregister-politics", "name": "Orange County Register", "url": "https://www.ocregister.com/news/politics/feed/", "scope": "ca", "enabled": true },
-    { "key": "sd-union-tribune-politics", "name": "The San Diego Union-Tribune", "url": "https://www.sandiegouniontribune.com/news/politics/feed/", "scope": "ca", "enabled": true },
-    { "key": "politico-california", "name": "Politico California", "url": "https://rss.politico.com/california-playbook.xml", "scope": "ca", "enabled": true },
-
-    { "key": "sm-daily-journal", "name": "San Mateo Daily Journal", "url": "https://www.smdailyjournal.com/search/?f=rss&t=article&c=news/local&l=50&s=start_time&sd=desc", "scope": "local", "jurisdictions": ["San Mateo"], "enabled": true },
-    { "key": "mercury-news-peninsula", "name": "The Mercury News", "url": "https://www.mercurynews.com/location/california/san-mateo-county/feed/", "scope": "local", "jurisdictions": ["San Mateo"], "enabled": true },
-    { "key": "kqed-peninsula", "name": "KQED", "url": "https://www.kqed.org/news/tag/san-mateo-county/feed", "scope": "local", "jurisdictions": ["San Mateo"], "enabled": true }
+    {
+      "key": "ap-politics",
+      "name": "Associated Press",
+      "url": "https://apnews.com/hub/politics?output=rss",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "npr-politics",
+      "name": "NPR",
+      "url": "https://feeds.npr.org/1014/rss.xml",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "pbs-politics",
+      "name": "PBS NewsHour",
+      "url": "https://www.pbs.org/newshour/feeds/rss/politics",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "nyt-politics",
+      "name": "The New York Times",
+      "url": "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "wapo-politics",
+      "name": "The Washington Post",
+      "url": "https://feeds.washingtonpost.com/rss/politics",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "wsj-politics",
+      "name": "The Wall Street Journal",
+      "url": "https://feeds.content.dowjones.io/public/rss/socialpoliticsfeed",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "fox-politics",
+      "name": "Fox News",
+      "url": "https://moxie.foxnews.com/google-publisher/politics.xml",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "the-hill-campaign",
+      "name": "The Hill",
+      "url": "https://thehill.com/homenews/campaign/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "politico",
+      "name": "Politico",
+      "url": "https://rss.politico.com/politics-news.xml",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "washington-examiner",
+      "name": "Washington Examiner",
+      "url": "https://www.washingtonexaminer.com/section/politics/feed",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "calmatters",
+      "name": "CalMatters",
+      "url": "https://calmatters.org/feed/",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "latimes-california",
+      "name": "Los Angeles Times",
+      "url": "https://www.latimes.com/california/rss2.0.xml",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "latimes-politics",
+      "name": "Los Angeles Times",
+      "url": "https://www.latimes.com/politics/rss2.0.xml",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "sfchronicle-politics",
+      "name": "San Francisco Chronicle",
+      "url": "https://www.sfchronicle.com/politics/feed/politics-feed.xml",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "sacbee-politics",
+      "name": "The Sacramento Bee",
+      "url": "https://www.sacbee.com/news/politics-government/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "kqed-news",
+      "name": "KQED",
+      "url": "https://www.kqed.org/news/feed",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "ocregister-politics",
+      "name": "Orange County Register",
+      "url": "https://www.ocregister.com/news/politics/feed/",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "sd-union-tribune-politics",
+      "name": "The San Diego Union-Tribune",
+      "url": "https://www.sandiegouniontribune.com/news/politics/feed/",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "politico-california",
+      "name": "Politico California",
+      "url": "https://rss.politico.com/california-playbook.xml",
+      "scope": "state",
+      "state": "CA",
+      "enabled": true
+    },
+    {
+      "key": "sm-daily-journal",
+      "name": "San Mateo Daily Journal",
+      "url": "https://www.smdailyjournal.com/search/?f=rss&t=article&c=news/local&l=50&s=start_time&sd=desc",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "San Mateo"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "mercury-news-peninsula",
+      "name": "The Mercury News",
+      "url": "https://www.mercurynews.com/location/california/san-mateo-county/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "San Mateo"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "kqed-peninsula",
+      "name": "KQED",
+      "url": "https://www.kqed.org/news/tag/san-mateo-county/feed",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "San Mateo"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "abc-politics",
+      "name": "ABC News",
+      "url": "https://abcnews.go.com/abcnews/politicsheadlines",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "cbs-politics",
+      "name": "CBS News",
+      "url": "https://www.cbsnews.com/latest/rss/politics",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "nbc-politics",
+      "name": "NBC News",
+      "url": "https://feeds.nbcnews.com/nbcnews/public/politics",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "usatoday-news",
+      "name": "USA Today",
+      "url": "https://rssfeeds.usatoday.com/usatoday-newstopstories",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "axios",
+      "name": "Axios",
+      "url": "https://api.axios.com/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "newsnation-politics",
+      "name": "NewsNation",
+      "url": "https://www.newsnationnow.com/politics/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "bloomberg-politics",
+      "name": "Bloomberg",
+      "url": "https://feeds.bloomberg.com/politics/news.rss",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "washington-times-politics",
+      "name": "The Washington Times",
+      "url": "https://www.washingtontimes.com/rss/headlines/news/politics/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "nypost-politics",
+      "name": "New York Post",
+      "url": "https://nypost.com/politics/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "csmonitor-usa",
+      "name": "The Christian Science Monitor",
+      "url": "https://rss.csmonitor.com/feeds/usa",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "the-dispatch",
+      "name": "The Dispatch",
+      "url": "https://thedispatch.com/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "the-19th",
+      "name": "The 19th",
+      "url": "https://19thnews.org/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "votebeat",
+      "name": "Votebeat",
+      "url": "https://www.votebeat.org/arc/outboundfeeds/rss/?outputType=xml",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "stateline",
+      "name": "Stateline",
+      "url": "https://stateline.org/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "bolts",
+      "name": "Bolts",
+      "url": "https://boltsmag.org/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "ballotpedia-news",
+      "name": "Ballotpedia News",
+      "url": "https://news.ballotpedia.org/feed/",
+      "scope": "national",
+      "enabled": true
+    },
+    {
+      "key": "alabama-reflector",
+      "name": "Alabama Reflector",
+      "url": "https://alabamareflector.com/feed/",
+      "scope": "state",
+      "state": "AL",
+      "enabled": true
+    },
+    {
+      "key": "alaska-beacon",
+      "name": "Alaska Beacon",
+      "url": "https://alaskabeacon.com/feed/",
+      "scope": "state",
+      "state": "AK",
+      "enabled": true
+    },
+    {
+      "key": "arizona-mirror",
+      "name": "Arizona Mirror",
+      "url": "https://azmirror.com/feed/",
+      "scope": "state",
+      "state": "AZ",
+      "enabled": true
+    },
+    {
+      "key": "arkansas-advocate",
+      "name": "Arkansas Advocate",
+      "url": "https://arkansasadvocate.com/feed/",
+      "scope": "state",
+      "state": "AR",
+      "enabled": true
+    },
+    {
+      "key": "colorado-newsline",
+      "name": "Colorado Newsline",
+      "url": "https://coloradonewsline.com/feed/",
+      "scope": "state",
+      "state": "CO",
+      "enabled": true
+    },
+    {
+      "key": "florida-phoenix",
+      "name": "Florida Phoenix",
+      "url": "https://floridaphoenix.com/feed/",
+      "scope": "state",
+      "state": "FL",
+      "enabled": true
+    },
+    {
+      "key": "georgia-recorder",
+      "name": "Georgia Recorder",
+      "url": "https://georgiarecorder.com/feed/",
+      "scope": "state",
+      "state": "GA",
+      "enabled": true
+    },
+    {
+      "key": "idaho-capital-sun",
+      "name": "Idaho Capital Sun",
+      "url": "https://idahocapitalsun.com/feed/",
+      "scope": "state",
+      "state": "ID",
+      "enabled": true
+    },
+    {
+      "key": "indiana-capital-chronicle",
+      "name": "Indiana Capital Chronicle",
+      "url": "https://indianacapitalchronicle.com/feed/",
+      "scope": "state",
+      "state": "IN",
+      "enabled": true
+    },
+    {
+      "key": "iowa-capital-dispatch",
+      "name": "Iowa Capital Dispatch",
+      "url": "https://iowacapitaldispatch.com/feed/",
+      "scope": "state",
+      "state": "IA",
+      "enabled": true
+    },
+    {
+      "key": "kansas-reflector",
+      "name": "Kansas Reflector",
+      "url": "https://kansasreflector.com/feed/",
+      "scope": "state",
+      "state": "KS",
+      "enabled": true
+    },
+    {
+      "key": "kentucky-lantern",
+      "name": "Kentucky Lantern",
+      "url": "https://kentuckylantern.com/feed/",
+      "scope": "state",
+      "state": "KY",
+      "enabled": true
+    },
+    {
+      "key": "louisiana-illuminator",
+      "name": "Louisiana Illuminator",
+      "url": "https://lailluminator.com/feed/",
+      "scope": "state",
+      "state": "LA",
+      "enabled": true
+    },
+    {
+      "key": "maine-morning-star",
+      "name": "Maine Morning Star",
+      "url": "https://mainemorningstar.com/feed/",
+      "scope": "state",
+      "state": "ME",
+      "enabled": true
+    },
+    {
+      "key": "maryland-matters",
+      "name": "Maryland Matters",
+      "url": "https://marylandmatters.org/feed/",
+      "scope": "state",
+      "state": "MD",
+      "enabled": true
+    },
+    {
+      "key": "michigan-advance",
+      "name": "Michigan Advance",
+      "url": "https://michiganadvance.com/feed/",
+      "scope": "state",
+      "state": "MI",
+      "enabled": true
+    },
+    {
+      "key": "minnesota-reformer",
+      "name": "Minnesota Reformer",
+      "url": "https://minnesotareformer.com/feed/",
+      "scope": "state",
+      "state": "MN",
+      "enabled": true
+    },
+    {
+      "key": "missouri-independent",
+      "name": "Missouri Independent",
+      "url": "https://missouriindependent.com/feed/",
+      "scope": "state",
+      "state": "MO",
+      "enabled": true
+    },
+    {
+      "key": "daily-montanan",
+      "name": "Daily Montanan",
+      "url": "https://dailymontanan.com/feed/",
+      "scope": "state",
+      "state": "MT",
+      "enabled": true
+    },
+    {
+      "key": "nebraska-examiner",
+      "name": "Nebraska Examiner",
+      "url": "https://nebraskaexaminer.com/feed/",
+      "scope": "state",
+      "state": "NE",
+      "enabled": true
+    },
+    {
+      "key": "nevada-current",
+      "name": "Nevada Current",
+      "url": "https://nevadacurrent.com/feed/",
+      "scope": "state",
+      "state": "NV",
+      "enabled": true
+    },
+    {
+      "key": "new-hampshire-bulletin",
+      "name": "New Hampshire Bulletin",
+      "url": "https://newhampshirebulletin.com/feed/",
+      "scope": "state",
+      "state": "NH",
+      "enabled": true
+    },
+    {
+      "key": "new-jersey-monitor",
+      "name": "New Jersey Monitor",
+      "url": "https://newjerseymonitor.com/feed/",
+      "scope": "state",
+      "state": "NJ",
+      "enabled": true
+    },
+    {
+      "key": "source-nm",
+      "name": "Source NM",
+      "url": "https://sourcenm.com/feed/",
+      "scope": "state",
+      "state": "NM",
+      "enabled": true
+    },
+    {
+      "key": "nc-newsline",
+      "name": "NC Newsline",
+      "url": "https://ncnewsline.com/feed/",
+      "scope": "state",
+      "state": "NC",
+      "enabled": true
+    },
+    {
+      "key": "north-dakota-monitor",
+      "name": "North Dakota Monitor",
+      "url": "https://northdakotamonitor.com/feed/",
+      "scope": "state",
+      "state": "ND",
+      "enabled": true
+    },
+    {
+      "key": "ohio-capital-journal",
+      "name": "Ohio Capital Journal",
+      "url": "https://ohiocapitaljournal.com/feed/",
+      "scope": "state",
+      "state": "OH",
+      "enabled": true
+    },
+    {
+      "key": "oklahoma-voice",
+      "name": "Oklahoma Voice",
+      "url": "https://oklahomavoice.com/feed/",
+      "scope": "state",
+      "state": "OK",
+      "enabled": true
+    },
+    {
+      "key": "oregon-capital-chronicle",
+      "name": "Oregon Capital Chronicle",
+      "url": "https://oregoncapitalchronicle.com/feed/",
+      "scope": "state",
+      "state": "OR",
+      "enabled": true
+    },
+    {
+      "key": "pennsylvania-capital-star",
+      "name": "Pennsylvania Capital-Star",
+      "url": "https://penncapital-star.com/feed/",
+      "scope": "state",
+      "state": "PA",
+      "enabled": true
+    },
+    {
+      "key": "rhode-island-current",
+      "name": "Rhode Island Current",
+      "url": "https://rhodeislandcurrent.com/feed/",
+      "scope": "state",
+      "state": "RI",
+      "enabled": true
+    },
+    {
+      "key": "sc-daily-gazette",
+      "name": "SC Daily Gazette",
+      "url": "https://scdailygazette.com/feed/",
+      "scope": "state",
+      "state": "SC",
+      "enabled": true
+    },
+    {
+      "key": "south-dakota-searchlight",
+      "name": "South Dakota Searchlight",
+      "url": "https://southdakotasearchlight.com/feed/",
+      "scope": "state",
+      "state": "SD",
+      "enabled": true
+    },
+    {
+      "key": "tennessee-lookout",
+      "name": "Tennessee Lookout",
+      "url": "https://tennesseelookout.com/feed/",
+      "scope": "state",
+      "state": "TN",
+      "enabled": true
+    },
+    {
+      "key": "utah-news-dispatch",
+      "name": "Utah News Dispatch",
+      "url": "https://utahnewsdispatch.com/feed/",
+      "scope": "state",
+      "state": "UT",
+      "enabled": true
+    },
+    {
+      "key": "virginia-mercury",
+      "name": "Virginia Mercury",
+      "url": "https://virginiamercury.com/feed/",
+      "scope": "state",
+      "state": "VA",
+      "enabled": true
+    },
+    {
+      "key": "washington-state-standard",
+      "name": "Washington State Standard",
+      "url": "https://washingtonstatestandard.com/feed/",
+      "scope": "state",
+      "state": "WA",
+      "enabled": true
+    },
+    {
+      "key": "west-virginia-watch",
+      "name": "West Virginia Watch",
+      "url": "https://westvirginiawatch.com/feed/",
+      "scope": "state",
+      "state": "WV",
+      "enabled": true
+    },
+    {
+      "key": "wisconsin-examiner",
+      "name": "Wisconsin Examiner",
+      "url": "https://wisconsinexaminer.com/feed/",
+      "scope": "state",
+      "state": "WI",
+      "enabled": true
+    },
+    {
+      "key": "connecticut-mirror",
+      "name": "The Connecticut Mirror",
+      "url": "https://ctmirror.org/feed/",
+      "scope": "state",
+      "state": "CT",
+      "enabled": true
+    },
+    {
+      "key": "spotlight-delaware",
+      "name": "Spotlight Delaware",
+      "url": "https://spotlightdelaware.org/feed/",
+      "scope": "state",
+      "state": "DE",
+      "enabled": true
+    },
+    {
+      "key": "honolulu-civil-beat",
+      "name": "Honolulu Civil Beat",
+      "url": "https://www.civilbeat.org/feed/",
+      "scope": "state",
+      "state": "HI",
+      "enabled": true
+    },
+    {
+      "key": "capitol-news-illinois",
+      "name": "Capitol News Illinois",
+      "url": "https://capitolnewsillinois.com/feed/",
+      "scope": "state",
+      "state": "IL",
+      "enabled": true
+    },
+    {
+      "key": "commonwealth-beacon",
+      "name": "CommonWealth Beacon",
+      "url": "https://commonwealthbeacon.org/feed/",
+      "scope": "state",
+      "state": "MA",
+      "enabled": true
+    },
+    {
+      "key": "mississippi-today",
+      "name": "Mississippi Today",
+      "url": "https://mississippitoday.org/feed/",
+      "scope": "state",
+      "state": "MS",
+      "enabled": true
+    },
+    {
+      "key": "vtdigger",
+      "name": "VTDigger",
+      "url": "https://vtdigger.org/feed/",
+      "scope": "state",
+      "state": "VT",
+      "enabled": true
+    },
+    {
+      "key": "wyofile",
+      "name": "WyoFile",
+      "url": "https://wyofile.com/feed/",
+      "scope": "state",
+      "state": "WY",
+      "enabled": true
+    },
+    {
+      "key": "texas-tribune",
+      "name": "The Texas Tribune",
+      "url": "https://www.texastribune.org/feeds/latest/",
+      "scope": "state",
+      "state": "TX",
+      "enabled": true
+    },
+    {
+      "key": "new-york-focus",
+      "name": "New York Focus",
+      "url": "https://nysfocus.com/feed",
+      "scope": "state",
+      "state": "NY",
+      "enabled": true
+    },
+    {
+      "key": "washington-city-paper",
+      "name": "Washington City Paper",
+      "url": "https://washingtoncitypaper.com/feed/",
+      "scope": "state",
+      "state": "DC",
+      "enabled": true
+    },
+    {
+      "key": "the-51st",
+      "name": "The 51st",
+      "url": "https://51st.news/feed/",
+      "scope": "state",
+      "state": "DC",
+      "enabled": true
+    },
+    {
+      "key": "colorado-sun",
+      "name": "The Colorado Sun",
+      "url": "https://coloradosun.com/feed/",
+      "scope": "state",
+      "state": "CO",
+      "enabled": true
+    },
+    {
+      "key": "nevada-independent",
+      "name": "The Nevada Independent",
+      "url": "https://thenevadaindependent.com/feed",
+      "scope": "state",
+      "state": "NV",
+      "enabled": true
+    },
+    {
+      "key": "spotlight-pa",
+      "name": "Spotlight PA",
+      "url": "https://www.spotlightpa.org/feeds/full.xml",
+      "scope": "state",
+      "state": "PA",
+      "enabled": true
+    },
+    {
+      "key": "wisconsin-watch",
+      "name": "Wisconsin Watch",
+      "url": "https://wisconsinwatch.org/feed/",
+      "scope": "state",
+      "state": "WI",
+      "enabled": true
+    },
+    {
+      "key": "nj-spotlight-news",
+      "name": "NJ Spotlight News",
+      "url": "https://www.njspotlightnews.org/feed/",
+      "scope": "state",
+      "state": "NJ",
+      "enabled": true
+    },
+    {
+      "key": "bridge-michigan",
+      "name": "Bridge Michigan",
+      "url": "https://www.bridgemi.com/rss.xml",
+      "scope": "state",
+      "state": "MI",
+      "enabled": true
+    },
+    {
+      "key": "minnpost",
+      "name": "MinnPost",
+      "url": "https://www.minnpost.com/feed/",
+      "scope": "state",
+      "state": "MN",
+      "enabled": true
+    },
+    {
+      "key": "carolina-public-press",
+      "name": "Carolina Public Press",
+      "url": "https://carolinapublicpress.org/feed/",
+      "scope": "state",
+      "state": "NC",
+      "enabled": true
+    },
+    {
+      "key": "oklahoma-watch",
+      "name": "Oklahoma Watch",
+      "url": "https://oklahomawatch.org/feed/",
+      "scope": "state",
+      "state": "OK",
+      "enabled": true
+    },
+    {
+      "key": "the-frontier",
+      "name": "The Frontier",
+      "url": "https://www.readfrontier.org/feed/",
+      "scope": "state",
+      "state": "OK",
+      "enabled": true
+    },
+    {
+      "key": "searchlight-nm",
+      "name": "Searchlight New Mexico",
+      "url": "https://searchlightnm.org/feed/",
+      "scope": "state",
+      "state": "NM",
+      "enabled": true
+    },
+    {
+      "key": "arizona-capitol-times",
+      "name": "Arizona Capitol Times",
+      "url": "https://azcapitoltimes.com/feed/",
+      "scope": "state",
+      "state": "AZ",
+      "enabled": true
+    },
+    {
+      "key": "signal-ohio",
+      "name": "Signal Ohio",
+      "url": "https://signalohio.org/feed/",
+      "scope": "state",
+      "state": "OH",
+      "enabled": true
+    },
+    {
+      "key": "al-com-politics",
+      "name": "AL.com",
+      "url": "https://www.al.com/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "state",
+      "state": "AL",
+      "enabled": true
+    },
+    {
+      "key": "salt-lake-tribune-politics",
+      "name": "The Salt Lake Tribune",
+      "url": "https://www.sltrib.com/arc/outboundfeeds/rss/category/news/politics/?outputType=xml",
+      "scope": "state",
+      "state": "UT",
+      "enabled": true
+    },
+    {
+      "key": "deseret-news-politics",
+      "name": "Deseret News",
+      "url": "https://www.deseret.com/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "state",
+      "state": "UT",
+      "enabled": true
+    },
+    {
+      "key": "opb-politics",
+      "name": "OPB",
+      "url": "https://www.opb.org/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "state",
+      "state": "OR",
+      "enabled": true
+    },
+    {
+      "key": "the-city-nyc",
+      "name": "THE CITY",
+      "url": "https://www.thecity.nyc/feed/",
+      "scope": "local",
+      "state": "NY",
+      "jurisdictions": [
+        "New York City",
+        "Manhattan",
+        "Brooklyn",
+        "Queens",
+        "Bronx",
+        "Staten Island"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "gothamist",
+      "name": "Gothamist",
+      "url": "https://gothamist.com/feed",
+      "scope": "local",
+      "state": "NY",
+      "jurisdictions": [
+        "New York City"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "ny-daily-news-politics",
+      "name": "New York Daily News",
+      "url": "https://www.nydailynews.com/news/politics/feed/",
+      "scope": "local",
+      "state": "NY",
+      "jurisdictions": [
+        "New York City"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "laist",
+      "name": "LAist",
+      "url": "https://laist.com/index.atom",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "Los Angeles"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "la-daily-news-politics",
+      "name": "Los Angeles Daily News",
+      "url": "https://www.dailynews.com/news/politics/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "Los Angeles"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "press-enterprise-politics",
+      "name": "The Press-Enterprise",
+      "url": "https://www.pe.com/news/politics/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "Riverside",
+        "San Bernardino"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "voice-of-san-diego",
+      "name": "Voice of San Diego",
+      "url": "https://voiceofsandiego.org/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "San Diego"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "san-jose-spotlight",
+      "name": "San José Spotlight",
+      "url": "https://sanjosespotlight.com/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "San Jose",
+        "Santa Clara"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "oaklandside",
+      "name": "The Oaklandside",
+      "url": "https://oaklandside.org/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "Oakland",
+        "Alameda"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "mission-local",
+      "name": "Mission Local",
+      "url": "https://missionlocal.org/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "San Francisco"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "fresnoland",
+      "name": "Fresnoland",
+      "url": "https://fresnoland.org/feed/",
+      "scope": "local",
+      "state": "CA",
+      "jurisdictions": [
+        "Fresno"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "chicago-tribune-politics",
+      "name": "Chicago Tribune",
+      "url": "https://www.chicagotribune.com/news/politics/feed/",
+      "scope": "local",
+      "state": "IL",
+      "jurisdictions": [
+        "Chicago",
+        "Cook"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "block-club-chicago",
+      "name": "Block Club Chicago",
+      "url": "https://blockclubchicago.org/feed/",
+      "scope": "local",
+      "state": "IL",
+      "jurisdictions": [
+        "Chicago"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "dallas-morning-news-politics",
+      "name": "The Dallas Morning News",
+      "url": "https://www.dallasnews.com/arc/outboundfeeds/rss/category/news/politics/?outputType=xml",
+      "scope": "local",
+      "state": "TX",
+      "jurisdictions": [
+        "Dallas"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "fort-worth-report",
+      "name": "Fort Worth Report",
+      "url": "https://fortworthreport.org/feed/",
+      "scope": "local",
+      "state": "TX",
+      "jurisdictions": [
+        "Fort Worth",
+        "Tarrant"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "houston-public-media",
+      "name": "Houston Public Media",
+      "url": "https://www.houstonpublicmedia.org/feed/",
+      "scope": "local",
+      "state": "TX",
+      "jurisdictions": [
+        "Houston",
+        "Harris"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "houston-landing",
+      "name": "Houston Landing",
+      "url": "https://houstonlanding.org/feed/",
+      "scope": "local",
+      "state": "TX",
+      "jurisdictions": [
+        "Houston",
+        "Harris"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "san-antonio-report",
+      "name": "San Antonio Report",
+      "url": "https://sanantonioreport.org/feed/",
+      "scope": "local",
+      "state": "TX",
+      "jurisdictions": [
+        "San Antonio",
+        "Bexar"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "austin-monitor",
+      "name": "Austin Monitor",
+      "url": "https://www.austinmonitor.com/feed/",
+      "scope": "local",
+      "state": "TX",
+      "jurisdictions": [
+        "Austin",
+        "Travis"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "inquirer-politics",
+      "name": "The Philadelphia Inquirer",
+      "url": "https://www.inquirer.com/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "local",
+      "state": "PA",
+      "jurisdictions": [
+        "Philadelphia"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "whyy",
+      "name": "WHYY",
+      "url": "https://whyy.org/feed/",
+      "scope": "local",
+      "state": "PA",
+      "jurisdictions": [
+        "Philadelphia"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "billy-penn",
+      "name": "Billy Penn",
+      "url": "https://billypenn.com/feed/",
+      "scope": "local",
+      "state": "PA",
+      "jurisdictions": [
+        "Philadelphia"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "publicsource",
+      "name": "PublicSource",
+      "url": "https://www.publicsource.org/feed/",
+      "scope": "local",
+      "state": "PA",
+      "jurisdictions": [
+        "Pittsburgh",
+        "Allegheny"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "sun-sentinel-politics",
+      "name": "South Florida Sun Sentinel",
+      "url": "https://www.sun-sentinel.com/news/politics/feed/",
+      "scope": "local",
+      "state": "FL",
+      "jurisdictions": [
+        "Broward",
+        "Palm Beach",
+        "Fort Lauderdale"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "orlando-sentinel-politics",
+      "name": "Orlando Sentinel",
+      "url": "https://www.orlandosentinel.com/news/politics/feed/",
+      "scope": "local",
+      "state": "FL",
+      "jurisdictions": [
+        "Orlando",
+        "Orange"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "tampa-bay-times-politics",
+      "name": "Tampa Bay Times",
+      "url": "https://www.tampabay.com/arc/outboundfeeds/rss/category/news/florida-politics/?outputType=xml",
+      "scope": "local",
+      "state": "FL",
+      "jurisdictions": [
+        "Tampa",
+        "Hillsborough",
+        "Pinellas"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "jacksonville-today",
+      "name": "Jacksonville Today",
+      "url": "https://jaxtoday.org/feed/",
+      "scope": "local",
+      "state": "FL",
+      "jurisdictions": [
+        "Jacksonville",
+        "Duval"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "ajc-politics",
+      "name": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "local",
+      "state": "GA",
+      "jurisdictions": [
+        "Atlanta",
+        "Fulton",
+        "DeKalb",
+        "Cobb",
+        "Gwinnett"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "wabe",
+      "name": "WABE",
+      "url": "https://www.wabe.org/feed/",
+      "scope": "local",
+      "state": "GA",
+      "jurisdictions": [
+        "Atlanta"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "boston-globe-metro",
+      "name": "The Boston Globe",
+      "url": "https://www.bostonglobe.com/arc/outboundfeeds/rss/category/metro/?outputType=xml",
+      "scope": "local",
+      "state": "MA",
+      "jurisdictions": [
+        "Boston"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "boston-herald-politics",
+      "name": "Boston Herald",
+      "url": "https://www.bostonherald.com/news/politics/feed/",
+      "scope": "local",
+      "state": "MA",
+      "jurisdictions": [
+        "Boston"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "arizona-luminaria",
+      "name": "Arizona Luminaria",
+      "url": "https://azluminaria.org/feed/",
+      "scope": "local",
+      "state": "AZ",
+      "jurisdictions": [
+        "Tucson",
+        "Pima"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "bridgedetroit",
+      "name": "BridgeDetroit",
+      "url": "https://www.bridgedetroit.com/feed/",
+      "scope": "local",
+      "state": "MI",
+      "jurisdictions": [
+        "Detroit",
+        "Wayne"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "seattle-times-politics",
+      "name": "The Seattle Times",
+      "url": "https://www.seattletimes.com/seattle-news/politics/feed/",
+      "scope": "local",
+      "state": "WA",
+      "jurisdictions": [
+        "Seattle",
+        "King"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "sahan-journal",
+      "name": "Sahan Journal",
+      "url": "https://sahanjournal.com/feed/",
+      "scope": "local",
+      "state": "MN",
+      "jurisdictions": [
+        "Minneapolis",
+        "St. Paul",
+        "Hennepin",
+        "Ramsey"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "denver-post-politics",
+      "name": "The Denver Post",
+      "url": "https://www.denverpost.com/news/politics/feed/",
+      "scope": "local",
+      "state": "CO",
+      "jurisdictions": [
+        "Denver"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "denverite",
+      "name": "Denverite",
+      "url": "https://denverite.com/feed/",
+      "scope": "local",
+      "state": "CO",
+      "jurisdictions": [
+        "Denver"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "baltimore-banner",
+      "name": "The Baltimore Banner",
+      "url": "https://www.thebaltimorebanner.com/arc/outboundfeeds/rss/?outputType=xml",
+      "scope": "local",
+      "state": "MD",
+      "jurisdictions": [
+        "Baltimore"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "baltimore-sun-politics",
+      "name": "The Baltimore Sun",
+      "url": "https://www.baltimoresun.com/news/politics/feed/",
+      "scope": "local",
+      "state": "MD",
+      "jurisdictions": [
+        "Baltimore"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "stltoday-politics",
+      "name": "St. Louis Post-Dispatch",
+      "url": "https://www.stltoday.com/search/?f=rss&t=article&c=news/local/govt-and-politics&l=50&s=start_time&sd=desc",
+      "scope": "local",
+      "state": "MO",
+      "jurisdictions": [
+        "St. Louis"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "the-beacon-kc",
+      "name": "The Beacon",
+      "url": "https://thebeaconnews.org/feed/",
+      "scope": "local",
+      "state": "MO",
+      "jurisdictions": [
+        "Kansas City",
+        "Jackson"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "oregonian-politics",
+      "name": "The Oregonian",
+      "url": "https://www.oregonlive.com/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "local",
+      "state": "OR",
+      "jurisdictions": [
+        "Portland",
+        "Multnomah"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "review-journal-politics",
+      "name": "Las Vegas Review-Journal",
+      "url": "https://www.reviewjournal.com/news/politics-and-government/feed/",
+      "scope": "local",
+      "state": "NV",
+      "jurisdictions": [
+        "Las Vegas",
+        "Clark"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "mirror-indy",
+      "name": "Mirror Indy",
+      "url": "https://mirrorindy.org/feed/",
+      "scope": "local",
+      "state": "IN",
+      "jurisdictions": [
+        "Indianapolis",
+        "Marion"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "signal-cleveland",
+      "name": "Signal Cleveland",
+      "url": "https://signalcleveland.org/feed/",
+      "scope": "local",
+      "state": "OH",
+      "jurisdictions": [
+        "Cleveland",
+        "Cuyahoga"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "cleveland-com-politics",
+      "name": "cleveland.com",
+      "url": "https://www.cleveland.com/arc/outboundfeeds/rss/category/politics/?outputType=xml",
+      "scope": "local",
+      "state": "OH",
+      "jurisdictions": [
+        "Cleveland",
+        "Cuyahoga"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "nashville-banner",
+      "name": "Nashville Banner",
+      "url": "https://nashvillebanner.com/feed/",
+      "scope": "local",
+      "state": "TN",
+      "jurisdictions": [
+        "Nashville",
+        "Davidson"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "mlk50",
+      "name": "MLK50",
+      "url": "https://mlk50.com/feed/",
+      "scope": "local",
+      "state": "TN",
+      "jurisdictions": [
+        "Memphis",
+        "Shelby"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "urban-milwaukee",
+      "name": "Urban Milwaukee",
+      "url": "https://urbanmilwaukee.com/feed/",
+      "scope": "local",
+      "state": "WI",
+      "jurisdictions": [
+        "Milwaukee"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "the-lens-nola",
+      "name": "The Lens",
+      "url": "https://thelensnola.org/feed/",
+      "scope": "local",
+      "state": "LA",
+      "jurisdictions": [
+        "New Orleans",
+        "Orleans"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "verite-news",
+      "name": "Verite News",
+      "url": "https://veritenews.org/feed/",
+      "scope": "local",
+      "state": "LA",
+      "jurisdictions": [
+        "New Orleans"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "indy-week",
+      "name": "INDY Week",
+      "url": "https://indyweek.com/feed/",
+      "scope": "local",
+      "state": "NC",
+      "jurisdictions": [
+        "Raleigh",
+        "Durham",
+        "Wake"
+      ],
+      "enabled": true
+    },
+    {
+      "key": "investigative-post",
+      "name": "Investigative Post",
+      "url": "https://www.investigativepost.org/feed/",
+      "scope": "local",
+      "state": "NY",
+      "jurisdictions": [
+        "Buffalo",
+        "Erie"
+      ],
+      "enabled": true
+    }
   ]
 }

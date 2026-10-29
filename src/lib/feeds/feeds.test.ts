@@ -79,12 +79,23 @@ describe("feed matcher", () => {
     expect(match("Measure M parcel tax debate", "Jefferson Union trustees defend the tax", national)?.contestIds).toEqual(["measm"]);
     expect(match("Measure M parcel tax debate", "Los Angeles County officials…", national)).toBeNull();
     // A San Mateo outlet implies its own place.
-    expect(match("Measure M parcel tax debate", "Jefferson Union district…", { scope: "local", jurisdictions: ["San Mateo"] })?.contestIds).toEqual(["measm"]);
+    expect(match("Measure M parcel tax debate", "Jefferson Union district…", { scope: "local", state: "CA", jurisdictions: ["San Mateo"] })?.contestIds).toEqual(["measm"]);
   });
 
-  it("counts California as context for California outlets", () => {
-    expect(match("Rob Bonta files suit", "The attorney general…", { scope: "ca" })).toBeNull(); // not tracked
-    expect(match("Becerra outlines plan", "Xavier Becerra released…", { scope: "ca" })?.candidateIds).toEqual(["becerra"]);
+  it("counts the outlet's state as context for state outlets", () => {
+    const ca = { scope: "state" as const, state: "CA" };
+    expect(match("Rob Bonta files suit", "The attorney general…", ca)).toBeNull(); // not tracked
+    expect(match("Becerra outlines plan", "Xavier Becerra released…", ca)?.candidateIds).toEqual(["becerra"]);
+    expect(match("Prop 1 explained", "What the housing bond would do", ca)?.contestIds).toEqual(["prop1"]);
+  });
+
+  it("never matches another state's contests from a state or local outlet", () => {
+    const tx = { scope: "state" as const, state: "TX" };
+    expect(match("Becerra and Hilton spar in governor's debate", "Xavier Becerra said…", tx)).toBeNull();
+    expect(match("Prop 1 explained", "What California's housing bond would do", tx)).toBeNull();
+    expect(match("Measure M parcel tax debate", "Jefferson Union trustees…", { scope: "local", state: "NY", jurisdictions: ["Queens"] })).toBeNull();
+    // A state outlet without a state matches nothing rather than everything.
+    expect(match("Becerra and Hilton spar in governor's debate", "Xavier Becerra said…", { scope: "state" })).toBeNull();
   });
 });
 

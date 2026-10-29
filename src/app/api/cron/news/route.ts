@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { cronAuthorized } from "../_auth";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /** Every 2 minutes (vercel.json): collect news for the active election. */
 export async function GET(req: Request) {

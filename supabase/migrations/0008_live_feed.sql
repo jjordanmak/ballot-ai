@@ -63,6 +63,7 @@ create table public.feed_source_state (
   last_fetched_at  timestamptz,
   last_status      int,
   last_error       text,
+  failures         int not null default 0,          -- consecutive failed fetches (backoff)
   items_seen       int not null default 0
 );
 

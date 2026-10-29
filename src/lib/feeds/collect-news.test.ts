@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkEntry } from "./checks";
-import { collectNews } from "./collect-news";
+import { collectNews, nextDue } from "./collect-news";
 import type { NewsSource } from "./sources";
 
 const NOW = new Date("2026-10-29T12:00:00Z");
@@ -63,7 +63,7 @@ describe("collectNews", () => {
     const { db, inserted, states } = fakeDb(["https://news.test/seen"]);
     const sources: NewsSource[] = [
       { key: "a", name: "Outlet A", url: "https://a.test/feed", scope: "national", enabled: true },
-      { key: "b", name: "Outlet B", url: "https://b.test/feed", scope: "ca", enabled: true },
+      { key: "b", name: "Outlet B", url: "https://b.test/feed", scope: "state", state: "CA", enabled: true },
       { key: "off", name: "Off", url: "https://off.test/feed", scope: "national", enabled: false },
     ];
     const feeds: Record<string, string> = {
@@ -101,5 +101,46 @@ describe("collectNews", () => {
       publish: false,
     });
     expect(inserted).toMatchObject([{ status: "held", held_reason: "publishing paused" }]);
+  });
+});
+
+describe("nextDue", () => {
+  const at = (iso: string) => Date.parse(iso);
+  it("fetches never-seen sources first and spaces tiers apart", () => {
+    expect(nextDue({ scope: "state" }, null)).toBe(0);
+    const last = "2026-10-29T12:00:00Z";
+    expect(nextDue({ scope: "national" }, { last_fetched_at: last, failures: 0 })).toBe(at("2026-10-29T12:01:40Z"));
+    expect(nextDue({ scope: "state" }, { last_fetched_at: last, failures: 0 })).toBe(at("2026-10-29T12:05:40Z"));
+    expect(nextDue({ scope: "local" }, { last_fetched_at: last, failures: 0 })).toBe(at("2026-10-29T12:09:40Z"));
+  });
+  it("backs off failing sources, capped at six hours", () => {
+    const last = "2026-10-29T12:00:00Z";
+    expect(nextDue({ scope: "national" }, { last_fetched_at: last, failures: 3 })).toBe(at("2026-10-29T12:15:40Z"));
+    expect(nextDue({ scope: "state" }, { last_fetched_at: last, failures: 40 })).toBe(at("2026-10-29T17:59:40Z"));
+  });
+});
+
+describe("collectNews scheduling", () => {
+  it("skips sources that aren't due and stops starting fetches when the time budget runs out", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db } = fakeDb();
+    const recent = { source_key: "fresh", last_fetched_at: "2026-10-29T11:59:30Z", failures: 0 };
+    const withState = {
+      from(table: string) {
+        const base = db.from(table);
+        if (table !== "feed_source_state") return base;
+        return { ...base, select: () => ({ ...base.select(), in: async () => ({ data: [recent], error: null }) }) };
+      },
+    };
+    const sources: NewsSource[] = ["fresh", "a", "b", "c"].map((key) => ({ key, name: key, url: `https://${key}.test/feed`, scope: "national", enabled: true }));
+    const fetchImpl = vi.fn(async () => new Response(rss("")));
+    const summary = await collectNews({ db: withState as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch });
+    expect(summary).toMatchObject({ sources: 4, due: 3, deferred: 0, fetched: 3 });
+    expect(fetchImpl).not.toHaveBeenCalledWith("https://fresh.test/feed", expect.anything());
+
+    fetchImpl.mockClear();
+    const out = await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, budgetMs: -1 });
+    expect(out).toMatchObject({ due: 4, deferred: 4 });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

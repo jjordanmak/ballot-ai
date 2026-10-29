@@ -6,6 +6,7 @@ export interface NewsSource extends SourceContext {
   name: string;
   url: string;
   enabled: boolean;
+  note?: string;
 }
 
 /** Approved news sources (src/data/sources/news.json). */

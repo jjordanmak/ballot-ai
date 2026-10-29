@@ -18,13 +18,32 @@ import type { NewsSource } from "./sources";
 
 type Db = SupabaseClient<Database>;
 type FeedInsert = Database["public"]["Tables"]["feed_items"]["Insert"];
+type SourceState = Database["public"]["Tables"]["feed_source_state"]["Row"];
 
 const FETCH_TIMEOUT_MS = 10_000;
-const CONCURRENCY = 6;
+const CONCURRENCY = 16;
+/** Stop starting new fetches after this long, so cron runs (every 2 minutes) never overlap. */
+const DEFAULT_BUDGET_MS = 80_000;
+const MINUTE = 60_000;
+/** How often each tier is fetched. */
+const INTERVAL_MS: Record<NewsSource["scope"], number> = { national: 2 * MINUTE, state: 6 * MINUTE, local: 10 * MINUTE };
+const MAX_BACKOFF_MS = 6 * 60 * MINUTE;
+/** Cron runs drift by a few seconds; don't push a source to the next run over that. */
+const SLACK_MS = 20_000;
+
+/** When a source is next due: its tier interval, doubled for each consecutive failure (capped at 6 hours). */
+export function nextDue(src: Pick<NewsSource, "scope">, prev?: Pick<SourceState, "last_fetched_at" | "failures"> | null): number {
+  if (!prev?.last_fetched_at) return 0;
+  const wait = Math.min(INTERVAL_MS[src.scope] * 2 ** Math.min(prev.failures ?? 0, 10), MAX_BACKOFF_MS);
+  return Date.parse(prev.last_fetched_at) + wait - SLACK_MS;
+}
 const USER_AGENT = "ballot.ai news collector (+https://ballot-ai.vercel.app)";
 
 export interface CollectSummary {
   sources: number;
+  /** Sources due this run, and how many of those the time budget left for the next run. */
+  due: number;
+  deferred: number;
   fetched: number;
   notModified: number;
   failed: string[];
@@ -56,11 +75,12 @@ export async function loadTracked(db: Db, electionId: string): Promise<TrackedCo
   });
 }
 
-async function mapLimit<T>(items: T[], limit: number, fn: (t: T) => Promise<void>) {
+async function mapLimit<T>(items: T[], limit: number, fn: (t: T) => Promise<void>, until = Infinity) {
   const queue = [...items];
   await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, async () => {
-    for (let t = queue.shift(); t; t = queue.shift()) await fn(t);
+    while (queue.length && Date.now() < until) await fn(queue.shift()!);
   }));
+  return queue.length;
 }
 
 export async function collectNews(opts: {
@@ -70,13 +90,15 @@ export async function collectNews(opts: {
   now?: Date;
   fetchImpl?: typeof fetch;
   publish?: boolean;
+  budgetMs?: number;
 }): Promise<CollectSummary> {
   const { db, electionId } = opts;
   const now = opts.now ?? new Date();
   const fetchImpl = opts.fetchImpl ?? fetch;
   const publish = opts.publish ?? true;
   const sources = opts.sources.filter((s) => s.enabled);
-  const summary: CollectSummary = { sources: sources.length, fetched: 0, notModified: 0, failed: [], entries: 0, matched: 0, published: 0, held: 0 };
+  const until = Date.now() + (opts.budgetMs ?? DEFAULT_BUDGET_MS);
+  const summary: CollectSummary = { sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], entries: 0, matched: 0, published: 0, held: 0 };
 
   const tracked = await loadTracked(db, electionId);
   if (!tracked.length) return summary;
@@ -84,9 +106,16 @@ export async function collectNews(opts: {
 
   const { data: states } = await db.from("feed_source_state").select("*").in("source_key", sources.map((s) => s.key));
   const stateByKey = new Map((states ?? []).map((s) => [s.source_key, s]));
+  // Only sources that are due, most overdue (or never fetched) first.
+  const due = sources
+    .map((src) => ({ src, at: nextDue(src, stateByKey.get(src.key)) }))
+    .filter((d) => d.at <= now.getTime())
+    .sort((a, b) => a.at - b.at)
+    .map((d) => d.src);
+  summary.due = due.length;
   const rows = new Map<string, FeedInsert>();
 
-  await mapLimit(sources, CONCURRENCY, async (src) => {
+  summary.deferred = await mapLimit(due, CONCURRENCY, async (src) => {
     const prev = stateByKey.get(src.key);
     const headers: Record<string, string> = { "user-agent": USER_AGENT, accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5" };
     if (prev?.etag) headers["if-none-match"] = prev.etag;
@@ -141,6 +170,7 @@ export async function collectNews(opts: {
             last_fetched_at: now.toISOString(),
             last_status: status,
             last_error: null,
+            failures: 0,
             items_seen: seen,
           });
         return;
@@ -156,9 +186,10 @@ export async function collectNews(opts: {
       last_fetched_at: now.toISOString(),
       last_status: status || null,
       last_error: error,
+      failures: error ? (prev?.failures ?? 0) + 1 : 0,
       items_seen: prev?.items_seen ?? 0,
     });
-  });
+  }, until);
 
   // Skip URLs already stored, then insert the rest.
   const urls = [...rows.keys()];

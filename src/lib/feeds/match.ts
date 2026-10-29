@@ -26,7 +26,10 @@ export interface TrackedContest {
 }
 
 export interface SourceContext {
-  scope: "national" | "ca" | "local";
+  /** National outlets match every tracked contest; state and local outlets only their own state's. */
+  scope: "national" | "state" | "local";
+  /** USPS code; required for state and local outlets. Its name counts as implied context. */
+  state?: string;
   /** Places a local outlet covers; count as context the article may not repeat. */
   jurisdictions?: string[];
 }
@@ -60,7 +63,17 @@ const OFFICE_SYNONYMS: [RegExp, string[]][] = [
   [/justice|court/, ["justice", "court", "retention", "supreme court", "court of appeal"]],
 ];
 
-const STATE_NAMES: Record<string, string> = { CA: "california" };
+export const STATE_NAMES: Record<string, string> = {
+  AL: "alabama", AK: "alaska", AZ: "arizona", AR: "arkansas", CA: "california", CO: "colorado",
+  CT: "connecticut", DE: "delaware", DC: "district of columbia", FL: "florida", GA: "georgia", HI: "hawaii",
+  ID: "idaho", IL: "illinois", IN: "indiana", IA: "iowa", KS: "kansas", KY: "kentucky",
+  LA: "louisiana", ME: "maine", MD: "maryland", MA: "massachusetts", MI: "michigan", MN: "minnesota",
+  MS: "mississippi", MO: "missouri", MT: "montana", NE: "nebraska", NV: "nevada", NH: "new hampshire",
+  NJ: "new jersey", NM: "new mexico", NY: "new york", NC: "north carolina", ND: "north dakota", OH: "ohio",
+  OK: "oklahoma", OR: "oregon", PA: "pennsylvania", RI: "rhode island", SC: "south carolina", SD: "south dakota",
+  TN: "tennessee", TX: "texas", UT: "utah", VT: "vermont", VA: "virginia", WA: "washington",
+  WV: "west virginia", WI: "wisconsin", WY: "wyoming",
+};
 const GENERIC_PLACE_WORDS = /\b(county|of|city|town|district|unified|high school|elementary|school|community college|college|trustee area \w+|\d+(st|nd|rd|th)|congressional|assembly|supervisorial|\d{4}|the)\b/g;
 const SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
 
@@ -102,6 +115,7 @@ function measureIds(title: string): string[] {
 interface CompiledCandidate {
   id: string;
   contestId: string;
+  state?: string;
   variants: string[];
   context: string[];
   needed: number;
@@ -109,6 +123,7 @@ interface CompiledCandidate {
 
 interface CompiledMeasure {
   contestId: string;
+  state?: string;
   ids: string[];
   places: string[];
 }
@@ -124,7 +139,7 @@ export function buildMatcher(contests: TrackedContest[]) {
     const place = placeTerm(c.divisionName);
     const stateName = c.state ? STATE_NAMES[c.state] : undefined;
     if (c.kind === "measure") {
-      measures.push({ contestId: c.id, ids: measureIds(c.title), places: [place, stateName].filter((x): x is string => !!x) });
+      measures.push({ contestId: c.id, state: c.state, ids: measureIds(c.title), places: [place, stateName].filter((x): x is string => !!x) });
       continue;
     }
     for (const k of c.candidates) {
@@ -138,6 +153,7 @@ export function buildMatcher(contests: TrackedContest[]) {
       candidates.push({
         id: k.id,
         contestId: c.id,
+        state: c.state,
         variants,
         context: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...ELECTION_TERMS, ...opponents].filter(Boolean))],
         needed: shared || shortest <= 9 ? 2 : 1,
@@ -147,8 +163,11 @@ export function buildMatcher(contests: TrackedContest[]) {
 
   return function match(title: string, summary: string, source: SourceContext): MatchResult | null {
     const text = ` ${normalizeForMatch(`${title} ${summary}`)} `;
+    const national = source.scope === "national";
+    // A state or local outlet's "Smith" is about that state's Smith, never another state's.
+    const inScope = (state?: string) => national || (!!source.state && state === source.state);
     const implied = [
-      ...(source.scope !== "national" ? ["california"] : []),
+      ...(!national && source.state && STATE_NAMES[source.state] ? [STATE_NAMES[source.state]] : []),
       ...(source.jurisdictions ?? []).map((j) => normalizeForMatch(j)),
     ];
     const inContext = (term: string) => has(text, term) || implied.includes(term);
@@ -157,6 +176,7 @@ export function buildMatcher(contests: TrackedContest[]) {
     const terms = new Set<string>();
 
     for (const k of candidates) {
+      if (!inScope(k.state)) continue;
       const name = k.variants.find((v) => has(text, v));
       if (!name) continue;
       const ctx = k.context.filter(inContext);
@@ -167,6 +187,7 @@ export function buildMatcher(contests: TrackedContest[]) {
       ctx.slice(0, 3).forEach((t) => terms.add(t));
     }
     for (const m of measures) {
+      if (!inScope(m.state)) continue;
       const id = m.ids.find((i) => has(text, i));
       if (!id) continue;
       const place = m.places.find(inContext);

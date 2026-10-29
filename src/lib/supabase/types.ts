@@ -125,6 +125,7 @@ export type Database = {
       feed_source_state: {
         Row: {
           etag: string | null
+          failures: number
           items_seen: number
           last_error: string | null
           last_fetched_at: string | null
@@ -134,6 +135,7 @@ export type Database = {
         }
         Insert: {
           etag?: string | null
+          failures?: number
           items_seen?: number
           last_error?: string | null
           last_fetched_at?: string | null
@@ -143,6 +145,7 @@ export type Database = {
         }
         Update: {
           etag?: string | null
+          failures?: number
           items_seen?: number
           last_error?: string | null
           last_fetched_at?: string | null

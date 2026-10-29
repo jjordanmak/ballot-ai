@@ -30,11 +30,38 @@ Statewide propositions are stored once in `measures` (`division_key = ocd-divisi
 
 For states outside California, Civic data is shown with its own `sources`. There is no enrichment beyond what Civic supplies. Every ballot links to the state or county election office (from Civic `state[].electionAdministrationBody` when present).
 
-## 5. Fabrication guard
+## 5. Live news sources (nationwide)
+
+`src/data/sources/news.json` lists the approved outlets (owner approval pending). About 160 sources in three scopes:
+
+- **National (26).** Wire services, networks and national papers chosen across the political spectrum, plus election and state-policy specialists that cover down-ballot races (Votebeat, Stateline, Bolts, Ballotpedia News). They can match any tracked contest.
+- **State (77).** At least one statewide newsroom for every state and DC. The base is the States Newsroom network and its partners (Texas Tribune, CalMatters, Mississippi Today, VTDigger and others), plus other nonprofit statehouse newsrooms and major papers' politics feeds. A state outlet only matches its own state's contests, and the state name counts as context.
+- **Local (56).** Newsrooms in the largest metros plus San Mateo County. They match only their state's contests, and their city or county names count as context.
+
+**Inclusion rule:**
+- Original reporting, a public corrections policy, and no ownership or control by a party, campaign, PAC or litigation group.
+- Every outlet that meets the rule is treated the same.
+- Opinion and sponsored items are held by the automated checks.
+
+**Excluded:**
+- CNN and Reuters, which have no maintained public RSS.
+- RealClearPolitics, which aggregates other outlets' stories.
+- Groups such as Democracy Docket, which is run by a litigation group.
+
+**Fetching:**
+- National outlets are fetched every 2 minutes, state outlets every 6 and local outlets every 10.
+- A failing feed backs off, doubling each time up to 6 hours.
+- Each run stops starting fetches after 80 seconds.
+
+**Feed URLs** follow each outlet's published feed pattern. They couldn't be fetched from the build sandbox, so the collector's first run confirms them (`feed_source_state.last_status`).
+
+**Coverage outside California** begins when someone there looks up a ballot: that registers the contests the collectors track. More county-level outlets are added as usage shows where voters are.
+
+## 6. Fabrication guard
 
 No contest, candidate, or measure is ever added from memory or general knowledge. Every durable row needs a fetched, citable source URL and a verification timestamp.
 
-## 6. Findings from the Daly City reference ballot (2026-10-28)
+## 7. Findings from the Daly City reference ballot (2026-10-28)
 
 - **Google Civic / VIP omitted every judicial retention contest** (2 Supreme Court, 11 First District Court of Appeal). `src/lib/ballot/officialRecords.ts` now adds certified retention contests for any California county from the SoS certified list. Each addition is cited and carries a `PROVIDER_GAP` warning.
 - **VIP sends statewide contests with the county as "district"** and sends measures as `ballot-measure` with title-only data. The normalizer handles both.
