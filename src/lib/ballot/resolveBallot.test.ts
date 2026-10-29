@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { FixtureBallotResolver } from "@/lib/providers/fixture";
+import { NoDurableRegistry } from "./durable";
 import { FixtureElectionSource } from "./elections";
 import { MemoryBallotStore } from "./store";
 import { resolveBallotForAddress } from "./resolveBallot";
@@ -12,6 +13,7 @@ function runtime(): BallotRuntime & { store: MemoryBallotStore } {
     elections: new FixtureElectionSource(),
     resolver: new FixtureBallotResolver(),
     store: new MemoryBallotStore(),
+    durable: new NoDurableRegistry(),
   };
 }
 

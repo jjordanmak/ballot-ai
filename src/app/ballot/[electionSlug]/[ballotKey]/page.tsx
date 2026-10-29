@@ -8,6 +8,8 @@ import { RaceHeader } from "@/components/RaceHeader";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { CandidatesHeader } from "@/components/CandidatesHeader";
 import { DistrictLine } from "@/components/ballot/DistrictLine";
+import { LastUpdated } from "@/components/ballot/LastUpdated";
+import { LiveFeedProvider } from "@/components/ballot/LiveFeed";
 import { MeasureCard } from "@/components/ballot/MeasureCard";
 import { Researching } from "@/components/ballot/Citations";
 import type { Race } from "@/data/types";
@@ -16,6 +18,7 @@ import { formatElectionDate, locationLabel, locationLine, STATUS_COPY } from "@/
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { loadBallot } from "@/lib/ballot/loadBallot";
 import { toRaces, type MeasureView } from "@/lib/ballot/toRaces";
+import { discoveredLinks, initialFeed, type DiscoveredLink } from "@/lib/feeds/read";
 import { districtsFrom } from "@/domain/districts";
 
 // Reads a short-lived, address-free resolution per request.
@@ -50,6 +53,11 @@ export default async function BallotPage({ params }: { params: Params }) {
   // Tab title stays "City, ST"; the sidebar and header add the ZIP.
   const location = locationLine(ballot.location);
   const onBallot = new Set(districtsFrom([], ballot.contests).map((d) => d.kind));
+  const contestIds = ballot.contests.flatMap((c) => (c.durableId ? [c.durableId] : []));
+  const electionId = ballot.election?.id ?? "";
+  const candidateIds = races.flatMap((r) => r.candidates.flatMap((c) => (c.feed?.candidateId ? [c.feed.candidateId] : [])));
+  const [feed, links] = await Promise.all([initialFeed(electionId, contestIds), discoveredLinks(candidateIds)]);
+  addDiscoveredLinks(races, links);
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
   const measureGroups = MEASURE_GROUPS.map((g) => ({ ...g, items: measures.filter((m) => m.statewide === g.statewide) })).filter(
@@ -60,100 +68,120 @@ export default async function BallotPage({ params }: { params: Params }) {
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
-    <div className="flex flex-col lg:flex-row">
-      <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
-      <Sidebar
-        races={navRaces}
-        productName="ballot.ai"
-        location={location}
-        electionName={electionName}
-        electionDate={electionDate}
-        footer={`Live data · ${races.length} races · ${measures.length} measures`}
-      />
-
-      <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
-        <Cover
+    <LiveFeedProvider electionId={electionId} contestIds={contestIds} initial={feed}>
+      <div className="flex flex-col lg:flex-row">
+        <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
+        <Sidebar
+          races={navRaces}
+          productName="ballot.ai"
           location={location}
           electionName={electionName}
           electionDate={electionDate}
-          raceCount={races.length}
-          measureCount={measures.length}
-          candidateCount={totalCandidates}
-          retrievedAt={ballot.retrievedAt}
-          districtLine={
-            <DistrictLine
-              county={ballot.location.county}
-              state={ballot.location.state}
-              districts={ballot.districts ?? []}
-              onBallot={onBallot}
-            />
-          }
-        >
-          <Notices ballot={ballot} officialUrl={officialUrl} />
-        </Cover>
+          footer={`Live data · ${races.length} races · ${measures.length} measures`}
+        />
 
-        {races.map((race, i) => (
-          <section key={race.id} id={`race-${race.id}`} className="scroll-mt-4 pt-16" data-race-id={race.id}>
-            <RaceHeader race={race} index={i + 1} />
-            {race.issues.length > 0 && !race.unopposed ? (
-              <ComparisonTable race={race} />
-            ) : (
-              race.candidates.length > 1 && <SideBySidePending />
-            )}
-            <CandidatesHeader
-              profileCandidates={race.candidates}
-              activeCount={race.candidates.length}
-              suspendedCount={0}
-              raceId={race.id}
-              unopposed={race.unopposed}
-              coverageNote="Every candidate on your ballot for this office has a profile. Sections fill in as we research them; every item links to its source, and nothing is published without one."
-            />
-          </section>
-        ))}
+        <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
+          <Cover
+            location={location}
+            electionName={electionName}
+            electionDate={electionDate}
+            raceCount={races.length}
+            measureCount={measures.length}
+            candidateCount={totalCandidates}
+            retrievedAt={ballot.retrievedAt}
+            districtLine={
+              <DistrictLine
+                county={ballot.location.county}
+                state={ballot.location.state}
+                districts={ballot.districts ?? []}
+                onBallot={onBallot}
+              />
+            }
+          >
+            <Notices ballot={ballot} officialUrl={officialUrl} />
+          </Cover>
 
-        {measureGroups.map((g, gi) => (
-          <section key={g.id} id={`race-${g.id}`} className="scroll-mt-4 pt-16" data-race-id={g.id}>
-            <header className="pb-8 border-b border-[var(--color-ink-3)] mb-10">
-              <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2 mb-6">
-                <span className="race-number text-[var(--color-accent)] tabular-nums">
-                  {String(races.length + gi + 1).padStart(2, "0")}
+          {races.map((race, i) => (
+            <section key={race.id} id={`race-${race.id}`} className="scroll-mt-4 pt-16" data-race-id={race.id}>
+              <RaceHeader race={race} index={i + 1} />
+              {race.issues.length > 0 && !race.unopposed ? (
+                <ComparisonTable race={race} />
+              ) : (
+                race.candidates.length > 1 && <SideBySidePending />
+              )}
+              <CandidatesHeader
+                profileCandidates={race.candidates}
+                activeCount={race.candidates.length}
+                suspendedCount={0}
+                raceId={race.id}
+                unopposed={race.unopposed}
+                coverageNote="Every candidate on your ballot for this office has a profile. Sections fill in as we research them; every item links to its source, and nothing is published without one."
+              />
+            </section>
+          ))}
+
+          {measureGroups.map((g, gi) => (
+            <section key={g.id} id={`race-${g.id}`} className="scroll-mt-4 pt-16" data-race-id={g.id}>
+              <header className="pb-8 border-b border-[var(--color-ink-3)] mb-10">
+                <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2 mb-6">
+                  <span className="race-number text-[var(--color-accent)] tabular-nums">
+                    {String(races.length + gi + 1).padStart(2, "0")}
+                  </span>
+                  {g.eyebrow}
                 </span>
-                {g.eyebrow}
-              </span>
-              <h2 className="font-display text-[40px] sm:text-[50px] xl:text-[64px] leading-[0.95] tracking-[-0.025em]">
-                {g.title}
-              </h2>
-              <div className="mt-5 font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
-                <ListChecks size={12} className="text-[var(--color-accent)]" />
-                {g.items.length} {g.items.length === 1 ? "measure" : "measures"} on your ballot
+                <h2 className="font-display text-[40px] sm:text-[50px] xl:text-[64px] leading-[0.95] tracking-[-0.025em]">
+                  {g.title}
+                </h2>
+                <div className="mt-5 font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
+                  <ListChecks size={12} className="text-[var(--color-accent)]" />
+                  {g.items.length} {g.items.length === 1 ? "measure" : "measures"} on your ballot
+                </div>
+              </header>
+              <div className="space-y-5">
+                {g.items.map((mv) => (
+                  <MeasureCard
+                    key={mv.contest.id}
+                    contest={mv.contest}
+                    enrichment={mv.enrichment}
+                    docs={mv.sourceDocs}
+                    officialGuideUrl={officialUrl}
+                    anchorId={`candidate-${g.id}-${mv.contest.id}`}
+                  />
+                ))}
               </div>
-            </header>
-            <div className="space-y-5">
-              {g.items.map((mv) => (
-                <MeasureCard
-                  key={mv.contest.id}
-                  contest={mv.contest}
-                  enrichment={mv.enrichment}
-                  docs={mv.sourceDocs}
-                  officialGuideUrl={officialUrl}
-                  anchorId={`candidate-${g.id}-${mv.contest.id}`}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+            </section>
+          ))}
 
-        <footer className="mt-20 pt-6 border-t border-[var(--color-ink-3)] text-[12px] leading-[1.6] text-[var(--color-paper-3)] max-w-2xl">
-          ballot.ai is independent and nonpartisan. Which contests and candidates appear comes from official election data
-          (sources listed on each race). Researched content is cited item by item. Your county elections office is the
-          official source for your ballot.
-        </footer>
-      </main>
-    </div>
+          <footer className="mt-20 pt-6 border-t border-[var(--color-ink-3)] text-[12px] leading-[1.6] text-[var(--color-paper-3)] max-w-2xl">
+            ballot.ai is independent and nonpartisan. Which contests and candidates appear comes from official election data
+            (sources listed on each race). Researched content is cited item by item. Your county elections office is the
+            official source for your ballot.
+          </footer>
+        </main>
+      </div>
+    </LiveFeedProvider>
   );
 }
 
 /** Same heading shape as ComparisonTable; shown until issue positions are researched and cited. */
+/**
+ * X accounts the daily link check found on a candidate's own campaign site,
+ * cited to that page. Links from official filings take precedence.
+ */
+function addDiscoveredLinks(races: Race[], links: DiscoveredLink[]) {
+  const byCandidate = new Map(links.filter((l) => l.kind === "x").map((l) => [l.contest_candidate_id, l]));
+  for (const c of races.flatMap((r) => r.candidates)) {
+    const found = c.feed?.candidateId ? byCandidate.get(c.feed.candidateId) : undefined;
+    if (!found || !c.general || c.general.links?.some((l) => l.kind === "x")) continue;
+    const sid = `campaign-site-${found.contest_candidate_id}`;
+    c.general.sourceDocs = {
+      ...c.general.sourceDocs,
+      [sid]: { title: "Campaign website", publisher: c.name, url: found.verified_from, official: false, accessed: found.checked_at.slice(0, 10) },
+    };
+    c.general.links = [...(c.general.links ?? []), { kind: "x", url: found.url, sources: [sid] }];
+  }
+}
+
 function SideBySidePending() {
   return (
     <section className="mt-16 pt-8">
@@ -241,15 +269,7 @@ function Cover({
         <Stat label="Races on your ballot" value={String(raceCount)} />
         <Stat label="Candidates" value={String(candidateCount)} />
         <Stat label="Measures" value={String(measureCount)} />
-        <Stat
-          label="Ballot data retrieved"
-          value={new Date(retrievedAt).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            timeZone: "America/Los_Angeles",
-            timeZoneName: "short",
-          })}
-        />
+        <LastUpdated fallback={retrievedAt} />
       </div>
       {children}
     </header>

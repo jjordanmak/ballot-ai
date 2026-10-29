@@ -64,6 +64,7 @@ Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript strict · Supabas
 - DB column was renamed `current_role` → `current_position` (Postgres reserved word). TS still uses `currentRole`; the mapper in `src/lib/db/getBallot.ts` translates.
 - (Archive view) The Update button is **Realtime-driven**: disabled until a row changes in `candidates`/`races`/`endorsements`/`polls`. Don't make it always-clickable.
 - News updates push via Supabase Realtime separately — don't use the Update button for news.
+- (Nov 3 ballot page) **No Update button.** New feed items appear live through one Realtime channel per page (`src/components/ballot/LiveFeed.tsx`); "Last updated" is when the newest item appeared on this ballot (`ingested_at`), falling back to the ballot's retrieved time. Items auto-publish when they pass the automated checks in `src/lib/feeds/` — there is no manual queue.
 - Suspended candidates render with a red status pill, NOT yellow/orange.
 
 ---

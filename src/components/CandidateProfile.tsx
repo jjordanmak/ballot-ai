@@ -179,6 +179,9 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
         />
       </button>
 
+      {/* Official links sit just under the header button (links can't nest inside it). */}
+      {candidate.general && <OfficialLinks general={candidate.general} />}
+
       {/* COLLAPSIBLE BODY */}
       <div
         className="grid transition-[grid-template-rows] duration-400 ease-out"
@@ -825,7 +828,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
     return (
       <div className="pt-8 space-y-4">
         <Researching what="This candidate's profile is" />
-        {g.campaignUrl && <CampaignLink url={g.campaignUrl} />}
+        {candidate.feed && <NewsFeed items={[]} fallbackAvatar={candidate.headshot} feed={candidate.feed} hideWhenEmpty />}
       </div>
     );
   }
@@ -837,11 +840,6 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
         <div className="rounded-xl bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] p-6 sm:p-8">
           <SectionHeading title="Their platform" icon={<Megaphone size={13} />} />
           <CitedList items={g.platform} docs={docs} empty="Platform" large />
-          {g.campaignUrl && (
-            <div className="mt-5">
-              <CampaignLink url={g.campaignUrl} />
-            </div>
-          )}
         </div>
       </section>
 
@@ -1003,7 +1001,11 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
         )}
       </Section>
 
-      <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} candidateDbId={`${raceId}__${candidate.id}`} />
+      {candidate.feed ? (
+        <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} feed={candidate.feed} />
+      ) : (
+        <NewsFeed items={candidate.news} fallbackAvatar={candidate.headshot} candidateDbId={`${raceId}__${candidate.id}`} />
+      )}
 
       <SourceList docs={docs} />
     </div>
@@ -1081,16 +1083,36 @@ function CitedPillar({
   );
 }
 
-function CampaignLink({ url }: { url: string }) {
+/**
+ * Official campaign site and X account, each from an official filing (SoS
+ * voter guide, county roster) or the ballot data. Aligned with the name column.
+ */
+function OfficialLinks({ general }: { general: NonNullable<Candidate["general"]> }) {
+  const campaign =
+    general.links?.find((l) => l.kind === "campaign") ?? (general.campaignUrl ? { url: general.campaignUrl, sources: [] } : undefined);
+  const x = general.links?.find((l) => l.kind === "x");
+  if (!campaign && !x) return null;
+  const handle = x ? x.url.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, "") : "";
+  const link = "inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]";
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]"
-    >
-      Campaign website <ExternalLink size={11} aria-hidden />
-    </a>
+    <div className="-mt-2 sm:-mt-5 px-5 pb-5 sm:pl-[168px] sm:pr-8 sm:pb-7 flex flex-wrap items-center gap-x-5 gap-y-1 bg-[var(--color-ink-1)]">
+      {campaign && (
+        <span>
+          <a href={campaign.url} target="_blank" rel="noopener noreferrer" className={link}>
+            Campaign website <ExternalLink size={11} aria-hidden />
+          </a>
+          <Cite ids={campaign.sources} docs={general.sourceDocs} />
+        </span>
+      )}
+      {x && (
+        <span>
+          <a href={x.url} target="_blank" rel="noopener noreferrer" className={link}>
+            @{handle} on X <ExternalLink size={11} aria-hidden />
+          </a>
+          <Cite ids={x.sources} docs={general.sourceDocs} />
+        </span>
+      )}
+    </div>
   );
 }
 

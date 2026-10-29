@@ -13,12 +13,15 @@ import type { BallotResolver } from "@/lib/providers/types";
 import { logEvent } from "@/lib/observability/log";
 import { FixtureElectionSource, SupabaseElectionSource, type ElectionSource } from "./elections";
 import { MemoryBallotStore, SupabaseBallotStore, type BallotStore } from "./store";
+import { NoDurableRegistry, SupabaseDurableRegistry, type DurableRegistry } from "./durable";
 
 export interface BallotRuntime {
   mode: "fixture" | "google-civic";
   elections: ElectionSource;
   resolver: BallotResolver;
   store: BallotStore;
+  /** Persists contests/candidates for live feeds; a no-op without Supabase. */
+  durable: DurableRegistry;
 }
 
 const g = globalThis as unknown as { __ballotRuntime?: BallotRuntime };
@@ -36,12 +39,14 @@ export function getBallotRuntime(): BallotRuntime {
           elections: new FixtureElectionSource(),
           resolver: new FixtureBallotResolver(),
           store: new MemoryBallotStore(),
+          durable: new NoDurableRegistry(),
         }
       : {
           mode,
           elections: new SupabaseElectionSource(),
           resolver: new CompositeBallotResolver([new GoogleCivicBallotResolver()]),
           store: liveStore(),
+          durable: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VERCEL ? new SupabaseDurableRegistry() : new NoDurableRegistry(),
         };
   return g.__ballotRuntime;
 }

@@ -17,7 +17,8 @@ import {
   Instagram,
   Facebook,
 } from "lucide-react";
-import type { NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
+import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
+import { useFeedItems } from "./ballot/LiveFeed";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 const TYPE_META: Record<
@@ -134,14 +135,22 @@ export function NewsFeed({
   fallbackAvatar,
   raceId,
   candidateDbId,
+  feed,
+  hideWhenEmpty,
 }: {
   items: NewsItem[] | undefined;
   fallbackAvatar?: string;
+  /** Archive: subscribe to news_items for this race / candidate. */
   raceId?: string;
   candidateDbId?: string;
+  /** Address-first ballot: read live feed_items from the page's LiveFeedProvider. */
+  feed?: FeedTarget;
+  hideWhenEmpty?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [liveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
+  const fromFeed = useFeedItems(feed);
+  const [archiveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
+  const liveItems = fromFeed ?? archiveItems;
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
 
@@ -150,6 +159,7 @@ export function NewsFeed({
   }, [items]);
 
   useEffect(() => {
+    if (feed) return; // the page's LiveFeedProvider owns the subscription
     const filter = candidateDbId
       ? `candidate_id=eq.${candidateDbId}`
       : raceId
@@ -186,7 +196,7 @@ export function NewsFeed({
     return () => {
       sb.removeChannel(channel);
     };
-  }, [candidateDbId, raceId]);
+  }, [candidateDbId, raceId, feed]);
 
   const updateAffordance = () => {
     const el = scrollRef.current;
@@ -220,6 +230,7 @@ export function NewsFeed({
   const sorted = liveItems
     .slice()
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  if (hideWhenEmpty && !sorted.length) return null;
 
   return (
     <section>

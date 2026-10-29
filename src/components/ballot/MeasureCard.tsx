@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import type { Contest } from "@/domain/ballot";
 import type { MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
+import { NewsFeed } from "@/components/NewsFeed";
 import { StatusPill } from "@/components/PartyTag";
 import { Cite, SourceList } from "./Citations";
 import { SourceLine } from "./SourceLine";
@@ -144,6 +145,12 @@ export function MeasureCard({
         >
           Official measure information <ExternalLink size={12} aria-hidden />
         </a>
+      )}
+
+      {contest.durableId && (
+        <div className="mt-8">
+          <NewsFeed items={[]} feed={{ contestId: contest.durableId }} hideWhenEmpty />
+        </div>
       )}
 
       <SourceLine sources={contest.sources} />

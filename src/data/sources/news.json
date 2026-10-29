@@ -1,0 +1,29 @@
+{
+  "_about": "Approved news sources for the live feed (owner approval pending, 2026-10-29). Fetched by source, not per candidate. scope: national | ca | local (local carries jurisdiction terms the article itself may omit). Feed URLs are confirmed by the collector's first run (feed_source_state.last_status); set enabled=false to drop a source instantly.",
+  "sources": [
+    { "key": "ap-politics", "name": "Associated Press", "url": "https://apnews.com/hub/politics?output=rss", "scope": "national", "enabled": true },
+    { "key": "npr-politics", "name": "NPR", "url": "https://feeds.npr.org/1014/rss.xml", "scope": "national", "enabled": true },
+    { "key": "pbs-politics", "name": "PBS NewsHour", "url": "https://www.pbs.org/newshour/feeds/rss/politics", "scope": "national", "enabled": true },
+    { "key": "nyt-politics", "name": "The New York Times", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml", "scope": "national", "enabled": true },
+    { "key": "wapo-politics", "name": "The Washington Post", "url": "https://feeds.washingtonpost.com/rss/politics", "scope": "national", "enabled": true },
+    { "key": "wsj-politics", "name": "The Wall Street Journal", "url": "https://feeds.content.dowjones.io/public/rss/socialpoliticsfeed", "scope": "national", "enabled": true },
+    { "key": "fox-politics", "name": "Fox News", "url": "https://moxie.foxnews.com/google-publisher/politics.xml", "scope": "national", "enabled": true },
+    { "key": "the-hill-campaign", "name": "The Hill", "url": "https://thehill.com/homenews/campaign/feed/", "scope": "national", "enabled": true },
+    { "key": "politico", "name": "Politico", "url": "https://rss.politico.com/politics-news.xml", "scope": "national", "enabled": true },
+    { "key": "washington-examiner", "name": "Washington Examiner", "url": "https://www.washingtonexaminer.com/section/politics/feed", "scope": "national", "enabled": true },
+
+    { "key": "calmatters", "name": "CalMatters", "url": "https://calmatters.org/feed/", "scope": "ca", "enabled": true },
+    { "key": "latimes-california", "name": "Los Angeles Times", "url": "https://www.latimes.com/california/rss2.0.xml", "scope": "ca", "enabled": true },
+    { "key": "latimes-politics", "name": "Los Angeles Times", "url": "https://www.latimes.com/politics/rss2.0.xml", "scope": "ca", "enabled": true },
+    { "key": "sfchronicle-politics", "name": "San Francisco Chronicle", "url": "https://www.sfchronicle.com/politics/feed/politics-feed.xml", "scope": "ca", "enabled": true },
+    { "key": "sacbee-politics", "name": "The Sacramento Bee", "url": "https://www.sacbee.com/news/politics-government/?widgetName=rssfeed&widgetContentId=712015&getXmlFeed=true", "scope": "ca", "enabled": true },
+    { "key": "kqed-news", "name": "KQED", "url": "https://www.kqed.org/news/feed", "scope": "ca", "enabled": true },
+    { "key": "ocregister-politics", "name": "Orange County Register", "url": "https://www.ocregister.com/news/politics/feed/", "scope": "ca", "enabled": true },
+    { "key": "sd-union-tribune-politics", "name": "The San Diego Union-Tribune", "url": "https://www.sandiegouniontribune.com/news/politics/feed/", "scope": "ca", "enabled": true },
+    { "key": "politico-california", "name": "Politico California", "url": "https://rss.politico.com/california-playbook.xml", "scope": "ca", "enabled": true },
+
+    { "key": "sm-daily-journal", "name": "San Mateo Daily Journal", "url": "https://www.smdailyjournal.com/search/?f=rss&t=article&c=news/local&l=50&s=start_time&sd=desc", "scope": "local", "jurisdictions": ["San Mateo"], "enabled": true },
+    { "key": "mercury-news-peninsula", "name": "The Mercury News", "url": "https://www.mercurynews.com/location/california/san-mateo-county/feed/", "scope": "local", "jurisdictions": ["San Mateo"], "enabled": true },
+    { "key": "kqed-peninsula", "name": "KQED", "url": "https://www.kqed.org/news/tag/san-mateo-county/feed", "scope": "local", "jurisdictions": ["San Mateo"], "enabled": true }
+  ]
+}

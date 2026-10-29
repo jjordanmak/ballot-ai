@@ -133,7 +133,7 @@ export function UpdateBar() {
   );
 }
 
-function formatLastUpdate(lastUpdate: Date | null, now: Date | null) {
+export function formatLastUpdate(lastUpdate: Date | null, now: Date | null) {
   if (!lastUpdate) return "—";
   const time = lastUpdate.toLocaleTimeString("en-US", {
     hour: "numeric",

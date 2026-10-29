@@ -62,6 +62,10 @@ Allowed fields are timestamp, provider, status, latency, contest count, state co
 - Location context is shown as "Daly City, CA", never the street.
 - Links are shareable: the ballot key points to a geography, not a person, and it expires.
 
-## 8. QA
+## 8. Live feeds
+
+Collectors (`src/lib/feeds/`, `/api/cron/*`) work from the election's durable contests and candidates and approved public sources. They never receive an address, ballot key or location. `feed_items` and `candidate_links` hold only public article and campaign data. Ballot pages read them with the anon key; RLS hides held items.
+
+## 9. QA
 
 `BALLOT_QA_ADDRESS_94015` (and any other QA address) is read from the environment only by `scripts/qa-resolve.ts`. The output fixtures and reports contain only normalized, address-free data. CI never has access to QA addresses.

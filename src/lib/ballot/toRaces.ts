@@ -85,6 +85,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
       issues: Object.fromEntries(
         Object.entries(ce?.issues ?? {}).map(([k, v]) => [k, { stance: v.text, source: sourceLabel(bundle.sources, v.sources[0]) }]),
       ),
+      feed: ch.durableId ? { candidateId: ch.durableId } : undefined,
       general: {
         ...(ce ?? {}),
         campaignUrl: ch.urls.campaign ?? ce?.campaignUrl,
@@ -128,6 +129,7 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle): Race {
     candidates,
     navLabel: c.contestType === "retention" ? "Retention · Yes / No" : undefined,
     group: CATEGORY_LABEL[c.category],
+    feed: c.durableId ? { contestId: c.durableId } : undefined,
     general: {
       enrichment: e,
       sourceDocs: docs,
@@ -144,7 +146,7 @@ function retentionQuestion(c: Contest, candidates: Candidate[]): string {
 }
 
 /** Official proper-case name when researched; otherwise a readable form of the ballot name. */
-function displayName(c: Contest, ch: Contest["choices"][number], bundle: EnrichmentBundle): string {
+export function displayName(c: Contest, ch: Contest["choices"][number], bundle: EnrichmentBundle): string {
   return bundle.candidates?.[candidateKey(c, ch)]?.displayName ?? readableName(ch.ballotName);
 }
 
@@ -202,6 +204,7 @@ function candidateSourceIds(ce: CandidateEnrichment | undefined): string[] {
   add(ce.endorsements);
   add(ce.funding);
   add(ce.headshot);
+  add(ce.links);
   return ids;
 }
 

@@ -105,6 +105,8 @@ export const CATEGORY_LABEL: Record<ContestCategory, string> = {
 
 export interface CandidateChoice {
   id: string;
+  /** contest_candidates.id once persisted; feeds and links attach to it. */
+  durableId?: string;
   /** Exactly as provided by the authoritative source. Never normalized for display. */
   ballotName: string;
   party?: string;
@@ -142,6 +144,8 @@ export interface Measure {
 
 export interface Contest {
   id: string;
+  /** contests.id once persisted; feeds attach to it. */
+  durableId?: string;
   kind: "candidate" | "measure";
   contestType: ContestType;
   /** Raw provider type, kept for debugging/unknown-type reporting. */

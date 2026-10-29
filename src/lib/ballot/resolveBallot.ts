@@ -10,6 +10,7 @@ import { hasBallot, type ElectionAdministration, type ResolutionStatus } from "@
 import { AddressInput } from "@/lib/providers/address";
 import { logEvent } from "@/lib/observability/log";
 import { computeBallotKey } from "./ballotKey";
+import { getEnrichment } from "./enrichment";
 import { supplementWithOfficialRecords } from "./officialRecords";
 import { getBallotRuntime, type BallotRuntime } from "./runtime";
 import { validateBallot } from "./validate";
@@ -75,6 +76,7 @@ export async function resolveBallotForAddress(
 
   const ballotKey = computeBallotKey(election.id, ballot.districtDescriptors ?? ballot.contests.map((c) => c.division.key));
   ballot.ballotKey = ballotKey;
+  await runtime.durable.register(ballot, getEnrichment(election.slug));
   await runtime.store.save(ballotKey, ballot);
   return { ok: true, status: ballot.status, electionSlug: election.slug, ballotKey };
 }

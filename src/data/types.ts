@@ -85,6 +85,14 @@ export interface Candidate {
    */
   ballotName?: string;
   general?: GeneralProfile;
+  /** Live feed target (contest_candidates.id) on the address-first ballot. */
+  feed?: FeedTarget;
+}
+
+/** Which live feed items a news carousel shows: a race's or a candidate's. */
+export interface FeedTarget {
+  contestId?: string;
+  candidateId?: string;
 }
 
 /** Cited profile content plus the resolved sources it references. */
@@ -198,6 +206,8 @@ export interface Race {
   navLabel?: string;
   /** Jurisdiction heading the race is listed under in the sidebar/mobile nav (e.g. "Federal"). */
   group?: string;
+  /** Live feed target (contests.id) on the address-first ballot. */
+  feed?: FeedTarget;
   /**
    * Address-first ballot (Nov 2026+): cited race content and its sources.
    * When present, the race header renders in "general" mode (no hardcoded

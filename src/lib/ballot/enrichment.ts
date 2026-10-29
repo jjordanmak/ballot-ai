@@ -13,9 +13,14 @@ export function getEnrichment(electionSlug: string): EnrichmentBundle {
   const merged: EnrichmentBundle = { election: electionSlug, sources: {}, contests: {}, candidates: {}, measures: {} };
   for (const b of BUNDLES[electionSlug] ?? []) {
     Object.assign(merged.sources, b.sources);
-    Object.assign(merged.contests!, b.contests);
-    Object.assign(merged.candidates!, b.candidates);
-    Object.assign(merged.measures!, b.measures);
+    mergeEntries(merged.contests!, b.contests);
+    mergeEntries(merged.candidates!, b.candidates);
+    mergeEntries(merged.measures!, b.measures);
   }
   return merged;
+}
+
+/** Bundles can each describe part of the same entry (e.g. official facts + official links): merge field by field. */
+function mergeEntries<T extends object>(into: Record<string, T>, from: Record<string, T> | undefined) {
+  for (const [key, entry] of Object.entries(from ?? {})) into[key] = { ...into[key], ...entry };
 }

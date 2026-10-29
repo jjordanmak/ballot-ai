@@ -21,6 +21,137 @@ export type Database = {
   }
   public: {
     Tables: {
+      candidate_links: {
+        Row: {
+          checked_at: string
+          contest_candidate_id: string
+          id: string
+          kind: string
+          url: string
+          verified_from: string
+        }
+        Insert: {
+          checked_at?: string
+          contest_candidate_id: string
+          id?: string
+          kind: string
+          url: string
+          verified_from: string
+        }
+        Update: {
+          checked_at?: string
+          contest_candidate_id?: string
+          id?: string
+          kind?: string
+          url?: string
+          verified_from?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_links_contest_candidate_id_fkey"
+            columns: ["contest_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "contest_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_items: {
+        Row: {
+          candidate_ids: string[]
+          checked_at: string | null
+          contest_ids: string[]
+          election_id: string
+          excerpt: string | null
+          held_reason: string | null
+          id: string
+          image_url: string | null
+          ingested_at: string
+          match: Json
+          payload: Json
+          published_at: string
+          publisher: string
+          source_key: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          candidate_ids?: string[]
+          checked_at?: string | null
+          contest_ids?: string[]
+          election_id: string
+          excerpt?: string | null
+          held_reason?: string | null
+          id?: string
+          image_url?: string | null
+          ingested_at?: string
+          match?: Json
+          payload?: Json
+          published_at: string
+          publisher: string
+          source_key: string
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          candidate_ids?: string[]
+          checked_at?: string | null
+          contest_ids?: string[]
+          election_id?: string
+          excerpt?: string | null
+          held_reason?: string | null
+          id?: string
+          image_url?: string | null
+          ingested_at?: string
+          match?: Json
+          payload?: Json
+          published_at?: string
+          publisher?: string
+          source_key?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      feed_source_state: {
+        Row: {
+          etag: string | null
+          items_seen: number
+          last_error: string | null
+          last_fetched_at: string | null
+          last_modified: string | null
+          last_status: number | null
+          source_key: string
+        }
+        Insert: {
+          etag?: string | null
+          items_seen?: number
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_modified?: string | null
+          last_status?: number | null
+          source_key: string
+        }
+        Update: {
+          etag?: string | null
+          items_seen?: number
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_modified?: string | null
+          last_status?: number | null
+          source_key?: string
+        }
+        Relationships: []
+      }
       api_usage: {
         Row: {
           count: number
@@ -180,6 +311,7 @@ export type Database = {
       }
       contest_candidates: {
         Row: {
+          display_name: string | null
           ballot_name: string
           campaign_url: string | null
           contest_id: string
@@ -195,6 +327,7 @@ export type Database = {
           source_id: string | null
         }
         Insert: {
+          display_name?: string | null
           ballot_name: string
           campaign_url?: string | null
           contest_id: string
@@ -210,6 +343,7 @@ export type Database = {
           source_id?: string | null
         }
         Update: {
+          display_name?: string | null
           ballot_name?: string
           campaign_url?: string | null
           contest_id?: string

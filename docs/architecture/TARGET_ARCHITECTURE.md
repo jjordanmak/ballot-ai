@@ -45,6 +45,7 @@ Official docs / sources ─► extraction (Claude where useful) ─► schema + 
 | Durable records | `src/lib/db/` | domain, supabase | New fetchers for contests/measures/sources/overrides. The existing archive fetchers stay |
 | Application service | `src/lib/ballot/` | providers, db, domain | `resolveBallot`, `loadBallot`, status → copy mapping |
 | Observability | `src/lib/observability/` | — | Redacting logger + `resolution_events` writer |
+| Feeds | `src/lib/feeds/` | domain, supabase | News collection (RSS/Atom), matcher, automated checks, retraction recheck, X-link discovery. Runs only from `/api/cron/*`; never sees an address |
 | AI (P2) | `src/lib/ai/` | domain | Central model config. Offline pipeline only |
 | UI | `src/app/`, `src/components/` | domain, application service | Never imports providers |
 
@@ -59,7 +60,8 @@ Official docs / sources ─► extraction (Claude where useful) ─► schema + 
 7. **Elections are data.** The `elections` table carries a slug, status, and provider external IDs. The Civic election ID is discovered by date via `/elections`. An optional `GOOGLE_CIVIC_ELECTION_ID` overrides it.
 8. **AI off the hot path.** Page loads never call an LLM. See [AI_ARCHITECTURE](./AI_ARCHITECTURE.md).
 9. **Archive, don't delete.** The June primary experience moves to `/archive/{electionId}/{zip}` on the existing tables and components.
-10. **Rendering.** The landing page is static or ISR. The ballot page is dynamic RSC reading from Supabase (fast single-row read). Provider calls happen only inside the server action.
+10. **Live content.** Vercel Cron runs collectors (`/api/cron/news` every 2 minutes, `/api/cron/news-recheck` daily). Items matched to durable contests and candidates that pass the automated checks publish to `feed_items` with no manual step; held items are kept only for audit. Ballot pages subscribe once to `feed_items` for their election and filter by contest id client-side. There is no Update button on the November page.
+11. **Rendering.** The landing page is static or ISR. The ballot page is dynamic RSC reading from Supabase (fast single-row read). Provider calls happen only inside the server action.
 
 ## 4. Routes
 
@@ -69,6 +71,7 @@ Official docs / sources ─► extraction (Claude where useful) ─► schema + 
 | `/ballot/[electionSlug]/[ballotKey]` | RSC, `noindex` | Renders a stored resolution. Expired → re-enter address |
 | `/archive/[electionId]/[zip]` | RSC | June 2026 primary prototype (existing UI) |
 | `/ballot/[zip]/[electionId]` (legacy) | redirect | → `/archive/[electionId]/[zip]` when the first segment is 5 digits |
+| `/api/cron/news`, `/api/cron/news-recheck` | route handlers, `CRON_SECRET` bearer | Collect news; retract dead links and find X links daily. Vercel runs crons on production deployments only |
 | `/api/zip/[zip]` | **removed from UI** | Kept temporarily, scheduled for removal ([MIGRATION_PLAN](./MIGRATION_PLAN.md)) |
 
 ## 5. Scaling path

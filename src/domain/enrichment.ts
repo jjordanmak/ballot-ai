@@ -74,6 +74,8 @@ export interface CandidateEnrichment {
   ballotDesignation?: Cited;
   /** Campaign website from an official filing, when the provider has none. */
   campaignUrl?: string;
+  /** Official campaign site / X account, each from an official filing (e.g. the SoS voter guide contact block). */
+  links?: { kind: "campaign" | "x"; url: string; sources: string[] }[];
   currentRole?: Cited;
   platform?: Cited[];
   background?: Cited[];

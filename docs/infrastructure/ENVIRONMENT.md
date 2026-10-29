@@ -18,7 +18,8 @@
 | `ANTHROPIC_API_KEY` | Offline enrichment (P2) | **server/scripts only** | opt | ✗ | P2 | future |
 | `ANTHROPIC_DEFAULT_MODEL` / `ANTHROPIC_EXTRACTION_MODEL` | Model overrides ([AI_ARCHITECTURE](../architecture/AI_ARCHITECTURE.md) §4) | server only | opt | opt | opt | future |
 | `GNEWS_API_KEY`, `NEWSDATA_API_KEY` | News ingestion (spec only, unused) | server only | — | — | — | unused |
-| `CRON_SECRET` | Protects future `/api/cron/*` routes | server only | — | — | — | future |
+| `CRON_SECRET` | Bearer secret for `/api/cron/*` (Vercel sends it automatically on cron runs). Generate a long random value | server only | opt | ✓ (to call the route by hand) | ✓ | **new, required for crons** |
+| `FEEDS_PUBLISH` | `off` stores matched items as held instead of publishing them (kill switch). Unset = publish | server only | opt | opt | opt | new, optional |
 
 ## 2. Where to set them
 

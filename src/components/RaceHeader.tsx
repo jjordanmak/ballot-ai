@@ -119,7 +119,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
 
       {/* Race-level "In the news" carousel */}
       <div className="mt-12">
-        <NewsFeed items={race.news} raceId={race.id} />
+        {race.feed ? <NewsFeed items={race.news} feed={race.feed} /> : <NewsFeed items={race.news} raceId={race.id} />}
       </div>
 
       {g && <SourceList docs={g.sourceDocs} title="Sources for this race" />}
