@@ -6,6 +6,8 @@ export interface NewsSource extends SourceContext {
   name: string;
   url: string;
   enabled: boolean;
+  /** Why a source is turned off (e.g. the publisher blocks automated readers). */
+  disabledReason?: string;
   note?: string;
 }
 

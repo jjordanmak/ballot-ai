@@ -13,6 +13,7 @@ import type { Database } from "@/lib/supabase/types";
 import { canonicalUrl } from "./canonical";
 import { checkEntry } from "./checks";
 import { buildMatcher, isStateLevelDivision, type TrackedContest } from "./match";
+import { discoverFeed } from "./discover";
 import { looksLikeFeed, parseFeed } from "./parse";
 import { safeFetch, type Resolver } from "./safeFetch";
 import type { NewsSource } from "./sources";
@@ -22,7 +23,7 @@ type FeedInsert = Database["public"]["Tables"]["feed_items"]["Insert"];
 type SourceState = Database["public"]["Tables"]["feed_source_state"]["Row"];
 type SourceStateInsert = Database["public"]["Tables"]["feed_source_state"]["Insert"];
 
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 15_000;
 const CONCURRENCY = 16;
 /** Stop starting new fetches after this long, so cron runs (every 2 minutes) never overlap. */
 const DEFAULT_BUDGET_MS = 80_000;
@@ -34,10 +35,23 @@ const MAX_BACKOFF_MS = 6 * 60 * MINUTE;
 const SLACK_MS = 20_000;
 
 /** When a source is next due: its tier interval, doubled for each consecutive failure (capped at 6 hours). */
-export function nextDue(src: Pick<NewsSource, "scope">, prev?: Pick<SourceState, "last_fetched_at" | "failures"> | null): number {
+export function nextDue(
+  src: Pick<NewsSource, "scope">,
+  prev?: Pick<SourceState, "last_fetched_at" | "failures"> & { retry_at?: string | null } | null,
+): number {
   if (!prev?.last_fetched_at) return 0;
   const wait = Math.min(INTERVAL_MS[src.scope] * 2 ** Math.min(prev.failures ?? 0, 10), MAX_BACKOFF_MS);
-  return Date.parse(prev.last_fetched_at) + wait - SLACK_MS;
+  const due = Date.parse(prev.last_fetched_at) + wait - SLACK_MS;
+  // A publisher's Retry-After is honored when it asks for longer than the backoff.
+  return prev.retry_at ? Math.max(due, Date.parse(prev.retry_at)) : due;
+}
+
+/** Retry-After as seconds or an HTTP date → ISO time, capped at a day. */
+export function retryAfter(header: string | null, now: Date): string | null {
+  if (!header) return null;
+  const secs = /^\d+$/.test(header.trim()) ? Number(header.trim()) : (Date.parse(header) - now.getTime()) / 1000;
+  if (!Number.isFinite(secs) || secs <= 0) return null;
+  return new Date(now.getTime() + Math.min(secs, 86_400) * 1000).toISOString();
 }
 const USER_AGENT = "ballot.ai news collector (+https://ballot-ai.vercel.app)";
 
@@ -49,6 +63,8 @@ export interface CollectSummary {
   fetched: number;
   notModified: number;
   failed: string[];
+  /** Sources whose moved feed was found on the outlet's own site this run. */
+  discovered: string[];
   entries: number;
   matched: number;
   published: number;
@@ -141,7 +157,7 @@ export async function collectNews(opts: {
   const publish = opts.publish ?? true;
   const sources = opts.sources.filter((s) => s.enabled);
   const until = Date.now() + (opts.budgetMs ?? DEFAULT_BUDGET_MS);
-  const summary: CollectSummary = { sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], entries: 0, matched: 0, published: 0, held: 0, released: 0 };
+  const summary: CollectSummary = { sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], discovered: [], entries: 0, matched: 0, published: 0, held: 0, released: 0 };
 
   summary.released = await releaseHeld(db, electionId, now, publish);
   const tracked = await loadTracked(db, electionId);
@@ -164,87 +180,118 @@ export async function collectNews(opts: {
 
   summary.deferred = await mapLimit(due, CONCURRENCY, async (src) => {
     const prev = stateByKey.get(src.key);
-    const headers: Record<string, string> = { "user-agent": USER_AGENT, accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5" };
-    if (prev?.etag) headers["if-none-match"] = prev.etag;
-    if (prev?.last_modified) headers["if-modified-since"] = prev.last_modified;
+    // A feed found by discovery replaces the listed URL until it fails too.
+    let url = prev?.resolved_url ?? src.url;
     let status = 0;
     let error: string | null = null;
-    try {
-      const res = await safeFetch(
-        src.url,
-        { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: "no-store" },
-        { fetchImpl: opts.fetchImpl, resolve: opts.resolve },
-      );
-      status = res.status;
-      if (res.status === 304) {
-        summary.notModified++;
-      } else if (!res.ok) {
-        error = `HTTP ${res.status}`;
-      } else if (!looksLikeFeed(res.text ?? "")) {
-        // A 200 that isn't RSS/Atom (moved feed, HTML page) is a failure, so it backs off and shows up.
-        error = "not a feed";
-      } else {
-        summary.fetched++;
-        const entries = parseFeed(res.text ?? "");
-        summary.entries += entries.length;
-        for (const e of entries) {
-          const url = canonicalUrl(e.link);
-          if (!url) continue;
-          const verdict = checkEntry(e, now);
-          if (verdict.status === "skip") continue;
-          const m = match(e.title, e.summary, src);
-          if (!m) continue;
-          const existing = rows.get(url);
-          if (existing) {
-            // Same article from another source: keep every contest either one matched.
-            existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), ...m.contestIds])];
-            existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...m.candidateIds])];
-            continue;
+    let retryAt: string | null = null;
+    let tried = false;
+    for (;;) {
+      const headers: Record<string, string> = { "user-agent": USER_AGENT, accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5" };
+      // Conditional headers belong to the URL they came from.
+      if (!tried && prev?.etag) headers["if-none-match"] = prev.etag;
+      if (!tried && prev?.last_modified) headers["if-modified-since"] = prev.last_modified;
+      let body: string | undefined;
+      error = null;
+      try {
+        const res = await safeFetch(
+          url,
+          { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: "no-store" },
+          { fetchImpl: opts.fetchImpl, resolve: opts.resolve },
+        );
+        status = res.status;
+        body = res.text;
+        if (res.status === 304) {
+          summary.notModified++;
+        } else if (!res.ok) {
+          error = `HTTP ${res.status}`;
+          if (res.status === 429 || res.status === 503) retryAt = retryAfter(res.headers.get("retry-after"), now);
+        } else if (!looksLikeFeed(res.text ?? "")) {
+          // A 200 that isn't RSS/Atom (moved feed, HTML page) is a failure, so it backs off and shows up.
+          error = "not a feed";
+        } else {
+          summary.fetched++;
+          const entries = parseFeed(res.text ?? "");
+          summary.entries += entries.length;
+          for (const e of entries) {
+            const link = canonicalUrl(e.link);
+            if (!link) continue;
+            const verdict = checkEntry(e, now);
+            if (verdict.status === "skip") continue;
+            const m = match(e.title, e.summary, src);
+            if (!m) continue;
+            const existing = rows.get(link);
+            if (existing) {
+              // Same article from another source: keep every contest either one matched.
+              existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), ...m.contestIds])];
+              existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...m.candidateIds])];
+              continue;
+            }
+            summary.matched++;
+            const held = verdict.status === "held" ? verdict.reason : !publish ? "publishing paused" : null;
+            rows.set(link, {
+              election_id: electionId,
+              type: "news",
+              source_key: src.key,
+              publisher: src.name,
+              title: e.title.slice(0, 300),
+              excerpt: e.summary ? e.summary.slice(0, 280) : null,
+              url: link,
+              image_url: e.image && /^https:\/\//.test(e.image) ? e.image : null,
+              published_at: (e.published ?? now).toISOString(),
+              status: held ? "held" : "published",
+              held_reason: held,
+              contest_ids: m.contestIds,
+              candidate_ids: m.candidateIds,
+              match: { terms: m.terms },
+            });
           }
-          summary.matched++;
-          const held = verdict.status === "held" ? verdict.reason : !publish ? "publishing paused" : null;
-          rows.set(url, {
-            election_id: electionId,
-            type: "news",
+          nextStates.push({
             source_key: src.key,
-            publisher: src.name,
-            title: e.title.slice(0, 300),
-            excerpt: e.summary ? e.summary.slice(0, 280) : null,
-            url,
-            image_url: e.image && /^https:\/\//.test(e.image) ? e.image : null,
-            published_at: (e.published ?? now).toISOString(),
-            status: held ? "held" : "published",
-            held_reason: held,
-            contest_ids: m.contestIds,
-            candidate_ids: m.candidateIds,
-            match: { terms: m.terms },
+            etag: res.headers.get("etag"),
+            last_modified: res.headers.get("last-modified"),
+            last_fetched_at: now.toISOString(),
+            last_status: status,
+            last_error: null,
+            failures: 0,
+            items_seen: entries.length,
+            resolved_url: url === src.url ? null : url,
+            retry_at: null,
           });
+          return;
         }
-        nextStates.push({
-          source_key: src.key,
-          etag: res.headers.get("etag"),
-          last_modified: res.headers.get("last-modified"),
-          last_fetched_at: now.toISOString(),
-          last_status: status,
-          last_error: null,
-          failures: 0,
-          items_seen: entries.length,
-        });
-        return;
+      } catch (e) {
+        error = e instanceof Error ? e.name : "fetch failed";
       }
-    } catch (e) {
-      error = e instanceof Error ? e.name : "fetch failed";
+      // Moved feed: look for the outlet's own advertised feed once, then retry with it.
+      const moved = error === "not a feed" || status === 404 || status === 410;
+      if (!moved || tried || Date.now() > until) break;
+      tried = true;
+      const found = await discoverFeed(src.url, error === "not a feed" ? body : undefined, {
+        fetchImpl: opts.fetchImpl,
+        resolve: opts.resolve,
+        userAgent: USER_AGENT,
+        timeoutMs: FETCH_TIMEOUT_MS,
+      });
+      if (!found || found === url) {
+        error = "no feed advertised";
+        break;
+      }
+      summary.discovered.push(`${src.key}: ${found}`);
+      url = found;
     }
     if (error) summary.failed.push(`${src.key}: ${error}`);
     nextStates.push({
       source_key: src.key,
-      etag: prev?.etag ?? null,
-      last_modified: prev?.last_modified ?? null,
+      etag: tried ? null : (prev?.etag ?? null),
+      last_modified: tried ? null : (prev?.last_modified ?? null),
       last_fetched_at: now.toISOString(),
       last_status: status || null,
       last_error: error,
       failures: error ? (prev?.failures ?? 0) + 1 : 0,
       items_seen: prev?.items_seen ?? 0,
+      resolved_url: tried ? null : (prev?.resolved_url ?? null),
+      retry_at: retryAt,
     });
   }, until);
 
@@ -263,7 +310,7 @@ export async function collectNews(opts: {
   if (nextStates.length) await db.from("feed_source_state").upsert(nextStates);
   summary.published = fresh.filter((r) => r.status === "published").length;
   summary.held = fresh.length - summary.published;
-  logEvent("feeds.news", { ...summary, failed: summary.failed.join("; ") });
+  logEvent("feeds.news", { ...summary, failed: summary.failed.join("; "), discovered: summary.discovered.join("; ") });
   return summary;
 }
 
