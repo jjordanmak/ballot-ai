@@ -9,6 +9,7 @@ import type { CandidateEnrichment, EnrichmentBundle, MeasureEnrichment, SourceDo
 import type { Candidate, Party, Race } from "@/data/types";
 import { rankedChoiceRule } from "@/domain/rankedChoice";
 import { raceVoteNeeded } from "@/domain/voteNeeded";
+import { divisionLabel } from "@/domain/districtMaps";
 import { normalizeForMatch, readableName } from "@/domain/text";
 import { candidateKey, contestKey, measureKey } from "./enrichmentKeys";
 
@@ -109,7 +110,8 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
     id: c.id,
     // Two retention contests can share an office title; name the justice.
     office: c.contestType === "retention" && c.choices.length === 1 ? `${c.title}: ${candidates[0].name}` : c.title,
-    jurisdiction: c.division.name || "",
+    ...divisionLabel(c, state),
+    retention: c.contestType === "retention" && c.choices.length === 1,
     format: formatLabel(c, state),
     // Retention contests show the official ballot question when nothing richer is researched.
     formatExplainer:

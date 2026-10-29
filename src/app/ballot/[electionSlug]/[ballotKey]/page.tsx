@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import type { ReactNode } from "react";
-import { Columns3, ExternalLink, Info, ListChecks, Mail, MapPin } from "lucide-react";
+import { Columns3, ExternalLink, Info, ListChecks, Mail, MapPin, Scale } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -12,6 +12,7 @@ import { DistrictLine } from "@/components/ballot/DistrictLine";
 import { LastUpdated } from "@/components/ballot/LastUpdated";
 import { LiveFeedProvider } from "@/components/ballot/LiveFeed";
 import { MeasureCard } from "@/components/ballot/MeasureCard";
+import { RetentionCard } from "@/components/ballot/RetentionCard";
 import { Researching } from "@/components/ballot/Citations";
 import type { Race } from "@/data/types";
 import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
@@ -72,7 +73,15 @@ export default async function BallotPage({ params }: { params: Params }) {
   })).filter(
     (g) => g.items.length > 0,
   );
-  const navRaces = [...races, ...measureGroups.map((g) => measuresNavRace(g.id, g.title, g.items))];
+  // Retention questions (Yes/No on one judge) read like measures: one group of cards after the races.
+  const contestRaces = races.filter((r) => !r.retention);
+  const retentionRaces = races.filter((r) => r.retention);
+  const navRaces = [
+    ...contestRaces,
+    ...(retentionRaces.length ? [retentionNavRace(retentionRaces)] : []),
+    ...measureGroups.map((g) => measuresNavRace(g.id, g.title, g.items)),
+  ];
+  const groupOffset = contestRaces.length + (retentionRaces.length ? 1 : 0);
   const officialUrl = ballot.administration?.electionInfoUrl ?? ballot.administration?.ballotInfoUrl;
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
@@ -110,7 +119,7 @@ export default async function BallotPage({ params }: { params: Params }) {
             <Notices ballot={ballot} officialUrl={officialUrl} />
           </Cover>
 
-          {races.map((race, i) => (
+          {contestRaces.map((race, i) => (
             <section key={race.id} id={`race-${race.id}`} className="scroll-mt-4 pt-16" data-race-id={race.id}>
               <RaceHeader race={race} index={i + 1} />
               {race.issues.length > 0 && !race.unopposed ? (
@@ -129,12 +138,37 @@ export default async function BallotPage({ params }: { params: Params }) {
             </section>
           ))}
 
+          {retentionRaces.length > 0 && (
+            <section id={`race-${RETENTION_ID}`} className="scroll-mt-4 pt-16" data-race-id={RETENTION_ID}>
+              <header className="pb-8 border-b border-[var(--color-ink-3)] mb-10">
+                <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2 mb-6">
+                  <span className="race-number text-[var(--color-accent)] tabular-nums">
+                    {String(contestRaces.length + 1).padStart(2, "0")}
+                  </span>
+                  Courts
+                </span>
+                <h2 className="font-display text-[40px] sm:text-[50px] xl:text-[64px] leading-[0.95] tracking-[-0.025em]">
+                  {RETENTION_TITLE}
+                </h2>
+                <div className="mt-5 font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2 tracking-[0.16em]">
+                  <Scale size={12} className="text-[var(--color-accent)]" />
+                  {retentionRaces.length} {retentionRaces.length === 1 ? "judge" : "judges"} on your ballot · Yes or No on each
+                </div>
+              </header>
+              <div className="space-y-5">
+                {retentionRaces.map((race) => (
+                  <RetentionCard key={race.id} race={race} anchorId={`candidate-${RETENTION_ID}-${race.id}`} />
+                ))}
+              </div>
+            </section>
+          )}
+
           {measureGroups.map((g, gi) => (
             <section key={g.id} id={`race-${g.id}`} className="scroll-mt-4 pt-16" data-race-id={g.id}>
               <header className="pb-8 border-b border-[var(--color-ink-3)] mb-10">
                 <span className="font-mono-cap text-[11px] text-[var(--color-paper-3)] flex items-center gap-2 mb-6">
                   <span className="race-number text-[var(--color-accent)] tabular-nums">
-                    {String(races.length + gi + 1).padStart(2, "0")}
+                    {String(groupOffset + gi + 1).padStart(2, "0")}
                   </span>
                   {g.eyebrow}
                 </span>
@@ -203,6 +237,19 @@ function SideBySidePending() {
       <Researching what="The issue-by-issue comparison is" />
     </section>
   );
+}
+
+const RETENTION_ID = "retention";
+const RETENTION_TITLE = "Judges up for retention";
+
+/** Retention questions in the nav: one pseudo race, one row per judge. */
+function retentionNavRace(races: Race[]): Race {
+  return {
+    ...measuresNavRace(RETENTION_ID, RETENTION_TITLE, []),
+    group: CATEGORY_LABEL.judicial,
+    navLabel: `${races.length} ${races.length === 1 ? "judge" : "judges"} · Yes / No`,
+    candidates: races.map((r) => ({ ...r.candidates[0], id: r.id })),
+  };
 }
 
 function measuresNavRace(id: string, office: string, measures: MeasureView[]): Race {

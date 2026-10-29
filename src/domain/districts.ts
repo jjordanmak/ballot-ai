@@ -8,7 +8,7 @@ export const AT_LARGE_STATES = new Set(["AK", "DE", "ND", "SD", "VT", "WY"]);
 const SENATE = /\bsenat/i;
 
 /** Which district a contest is for, from its category, division scope and title. */
-function contestKind(c: Contest): DistrictKind | undefined {
+export function contestKind(c: Contest): DistrictKind | undefined {
   const t = c.title ?? "";
   const scope = c.division?.scope?.toLowerCase();
   if (/Board of Equalization/i.test(t)) return "board_of_equalization";

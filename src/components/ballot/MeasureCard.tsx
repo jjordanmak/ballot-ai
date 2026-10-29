@@ -2,9 +2,11 @@ import { ChevronRight, ExternalLink } from "lucide-react";
 import type { Contest } from "@/domain/ballot";
 import type { MeasureEnrichment, SourceDoc } from "@/domain/enrichment";
 import { NewsFeed } from "@/components/NewsFeed";
-import { COUNTS_VOTES_CAST, measureVoteNeeded } from "@/domain/voteNeeded";
+import { COUNTS_VOTES_CAST, measureVoteNeeded, type VoteNeeded } from "@/domain/voteNeeded";
 import { IMPACT_QUESTIONS, impactAnswers } from "@/lib/ballot/measureImpact";
+import { divisionLabel } from "@/domain/districtMaps";
 import { Cite, SourceList } from "./Citations";
+import { MapYearInfo } from "./MapYearInfo";
 
 /**
  * A ballot measure. Identifier, jurisdiction, threshold and ballot responses
@@ -38,27 +40,29 @@ export function MeasureCard({
   const showEyebrow = !!m?.identifier && !!title;
   const officialLink = e?.officialUrl || m?.url;
   const hasSummary = !!(e?.summary || m?.brief);
+  const where = divisionLabel(contest, state);
 
   return (
     <article
       id={anchorId ?? `contest-${contest.id}`}
       className="scroll-mt-32 rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 sm:p-8"
     >
-      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-1">
+        <div className="min-w-0 flex-1">
           {showEyebrow && (
             <div className="font-mono-cap text-[11px] tracking-[0.16em] text-[var(--color-accent)]">{m!.identifier}</div>
           )}
           <h3 className="mt-1 font-display text-[22px] sm:text-[28px] leading-[1.15] tracking-[-0.02em] text-balance">
             {heading}
           </h3>
-          {contest.division.name && <p className="mt-1 text-[13px] text-[var(--color-paper-3)]">{contest.division.name}</p>}
         </div>
+        {where.jurisdiction && (
+          <p className="sm:mt-1.5 sm:text-right text-[13px] text-[var(--color-paper-3)] flex items-center gap-1.5 sm:justify-end">
+            {where.jurisdiction}
+            <MapYearInfo note={where.jurisdictionNote} id={`map-note-${contest.id}`} />
+          </p>
+        )}
       </header>
-      <p className="mt-3 text-[13px] text-[var(--color-paper-2)]" title={COUNTS_VOTES_CAST}>
-        <span className="font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)] mr-2">Passes with</span>
-        <span className={voteNeeded.verified ? "" : "text-[var(--color-paper-3)]"}>{voteNeeded.text}</span>
-      </p>
 
       {e?.summary ? (
         <p className="mt-5 text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty max-w-3xl">
@@ -68,6 +72,13 @@ export function MeasureCard({
       ) : m?.brief ? (
         <p className="mt-5 text-[15px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">{m.brief}</p>
       ) : null}
+
+      <p
+        className={`mt-3 text-[15px] leading-[1.65] text-pretty max-w-3xl ${voteNeeded.verified ? "text-[var(--color-paper-2)]" : "text-[var(--color-paper-3)]"}`}
+        title={COUNTS_VOTES_CAST}
+      >
+        {passesWith(voteNeeded)}
+      </p>
 
       {(e?.yesMeans || e?.noMeans) && (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
@@ -191,7 +202,7 @@ export function MeasureCard({
   );
 }
 
-function Meaning({
+export function Meaning({
   label,
   item,
   docs,
@@ -211,4 +222,11 @@ function Meaning({
       </p>
     </div>
   );
+}
+
+/** "Passes with more than half of the votes cast on this measure." Unverified rules keep their own wording. */
+export function passesWith(v: VoteNeeded): string {
+  if (!v.verified) return `Vote needed: ${v.text.charAt(0).toLowerCase()}${v.text.slice(1)}`;
+  const t = v.text.replace(/\.$/, "");
+  return `Passes with ${/^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t}.`;
 }

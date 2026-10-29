@@ -4,6 +4,7 @@ import { RichBlock, RichText } from "./Highlight";
 import { partyDot } from "./PartyTag";
 import { NewsFeed } from "./NewsFeed";
 import { LivePoll } from "./ballot/LivePoll";
+import { MapYearInfo } from "./ballot/MapYearInfo";
 import { SuspendedList } from "./SuspendedList";
 import { Cite, Researching, SourceList } from "./ballot/Citations";
 import type { Cited, SourceDoc } from "@/domain/enrichment";
@@ -28,6 +29,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
             {String(index).padStart(2, "0")}
           </span>
           {race.jurisdiction}
+          <MapYearInfo note={race.jurisdictionNote} id={`map-note-${race.id}`} />
         </span>
       </div>
 

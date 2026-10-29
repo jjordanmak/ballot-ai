@@ -7,6 +7,7 @@
  * collision-prone names need two pieces of context. A measure needs its
  * identifier plus its jurisdiction. Pure and unit-tested.
  */
+import { splitMapYear } from "@/domain/districtMaps";
 import { normalizeForMatch } from "@/domain/text";
 
 export interface TrackedCandidate {
@@ -107,7 +108,7 @@ export function nameVariants(name: string): string[] {
 
 /** "County of San Mateo" → "san mateo"; "Jefferson Union High School District" → "jefferson union". */
 export function placeTerm(divisionName: string): string {
-  return normalizeForMatch(divisionName).replace(GENERIC_PLACE_WORDS, " ").replace(/\s+/g, " ").trim();
+  return normalizeForMatch(splitMapYear(divisionName).name).replace(GENERIC_PLACE_WORDS, " ").replace(/\s+/g, " ").trim();
 }
 
 function officeTerms(title: string): string[] {

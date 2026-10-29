@@ -187,6 +187,10 @@ export interface Race {
   office: string;
   /** Subtitle, e.g. "California Statewide" */
   jurisdiction: string;
+  /** Explains a map year split off the jurisdiction ("… District - 2022"). */
+  jurisdictionNote?: { text: string; source?: { name: string; url: string } };
+  /** Judicial retention (Yes/No on one judge): rendered as a measure-style card. */
+  retention?: boolean;
   /** Race format, e.g. "Top-Two Open Primary" */
   format: string;
   /** Brief format explainer */

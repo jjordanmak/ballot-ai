@@ -56,6 +56,9 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 ### Vote needed and measure questions
 - Every race shows what it takes to win on its count line ("Vote for 1 of 2 candidates · Most votes wins"); every measure shows "Passes with …" naming the share **and its base** ("of the votes cast on this measure" / "of all ballots cast in the election"). Unverified rules say so; never guessed (`src/domain/voteNeeded.ts`).
 - Measures carry "What it means for you": the same six questions, same order, on every measure (`src/lib/ballot/measureImpact.ts`), answered only from official nonpartisan analyses, cited; unanswered → "Not addressed in the official analysis". No green/red for Yes/No.
+- Measure card header: title block left, jurisdiction right (wraps under the title on narrow screens). "Passes with …." is a plain sentence in the summary's type style, right after the summary.
+- Judicial retention (Yes/No on one judge) renders as a measure-style card (`RetentionCard`), grouped after the races under "Judges up for retention": official question, "Retained if …", what Yes/No mean, a cited "About the judge", one Sources block. No comparison table or candidate profile.
+- District names drop the provider's map year ("19th Assembly District - 2022" → "19th Assembly District"); an ⓘ tooltip explains which map it is from the cited registry `src/data/official/district-maps.json` (what changed, when, end date only if the law sets one). Unlisted years say only "District lines from the map labeled YYYY in the official ballot data."
 
 ### Supplementary tints
 Used for data encoding (section pillars, news item types) — never as primary surface backgrounds.
