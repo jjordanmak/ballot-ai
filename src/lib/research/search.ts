@@ -8,6 +8,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd } from "@/lib/ai/config";
+import { searchTask } from "@/lib/ai/prompts";
 
 export type SearchKind = "person" | "office" | "measure";
 
@@ -60,13 +61,12 @@ export async function searchUrls(opts: {
 }): Promise<SearchResult> {
   const c = opts.client ?? (client ??= new Anthropic({ maxRetries: 2, timeout: 120_000 }));
   const model = opts.model || process.env.ANTHROPIC_SEARCH_MODEL?.trim() || "claude-haiku-5-5";
-  const where = opts.kind === "person" ? "official .gov pages and the person's Ballotpedia page" : "official .gov pages";
   const ask = (m: string, tool: "web_search_20250305" | "web_search_20260209") =>
     c.messages.create({
       model: m,
       max_tokens: 2000,
       tools: [{ type: tool, name: "web_search", max_uses: 3 }],
-      messages: [{ role: "user", content: `Find ${where} about: ${opts.query}. Search, then reply "done". Do not summarize anything.` }],
+      messages: [{ role: "user", content: searchTask(opts.kind, opts.query) }],
     });
   try {
     let used = model;

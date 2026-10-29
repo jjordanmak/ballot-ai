@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advertisedFeeds } from "./discover";
+import { advertisedFeeds, siteOf } from "./discover";
 
 const page = (links: string) => `<html><head>${links}</head><body></body></html>`;
 
@@ -23,6 +23,14 @@ describe("advertisedFeeds", () => {
         `<link rel="stylesheet" href="/style.css"><link rel="alternate" hreflang="es" href="/es/">`,
     );
     expect(advertisedFeeds(html, "https://example.com/", "https://example.com/feed")).toEqual([]);
+  });
+
+  it("accepts the outlet's own feed subdomain (rss.wbur.org, ww2.kqed.org)", () => {
+    const html = page(`<link rel="alternate" type="application/rss+xml" title="RSS" href="https://rss.wbur.org/news/rss"/>`);
+    expect(advertisedFeeds(html, "https://www.wbur.org/news", "https://www.wbur.org/news")).toEqual(["https://rss.wbur.org/news/rss"]);
+    expect(siteOf("ww2.kqed.org")).toBe(siteOf("www.kqed.org"));
+    expect(siteOf("news.bbc.co.uk")).toBe("bbc.co.uk");
+    expect(siteOf("evil-wbur.org")).not.toBe(siteOf("www.wbur.org"));
   });
 
   it("returns nothing for a page with no feed links", () => {

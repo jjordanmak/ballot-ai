@@ -15,7 +15,7 @@ const measure = (summary: string) => ({ kind: "measure" as const, answers: { sum
 describe("buildComparison", () => {
   it("lines up every setting for an item, flags differing fields, and sums each setting", () => {
     const cells = new Map<string, CellInput>([
-      ["measure:m1:measure@claude-haiku-5-5:low", { stateKey: "", payload: measure("Borrows <mark>$10 billion</mark> for schools."), run: { costMicroUsd: 3000, seconds: 4, rejected: [{ field: "taxes", reason: "quote not found" }] } }],
+      ["measure:m1:measure@claude-haiku-5-5:low", { stateKey: "", payload: measure("Borrows <mark>$10 billion</mark> for schools."), run: { costMicroUsd: 3000, seconds: 4, rejected: [{ field: "taxes", reason: "quote not found" }], usage: { input_tokens: 3000, cache_read_input_tokens: 1000 } } }],
       ["measure:m1:measure@claude-sonnet-5-5:medium", { stateKey: "", payload: measure("Borrows $10 billion for schools"), run: { costMicroUsd: 90_000, seconds: 12 } }],
       ["measure:m1:measure@claude-opus-5-5:high", { stateKey: "", outcome: "no documents" }],
     ]);
@@ -26,8 +26,8 @@ describe("buildComparison", () => {
     expect(item.differing).toEqual([]);
     expect(item.cells[0].fields.summary[0]).toMatchObject({ quote: "q", source: src });
     expect(item.cells[0].rejected).toEqual([{ field: "taxes", reason: "quote not found" }]);
-    expect(summary[0]).toMatchObject({ setting: "claude-haiku-5-5:low", done: 1, costMicroUsd: 3000, avgSeconds: 4, kept: 1, blank: 8, rejectedByReason: { "quote not found": 1 } });
-    expect(summary[2]).toMatchObject({ done: 0, costMicroUsd: 0, avgSeconds: null });
+    expect(summary[0]).toMatchObject({ setting: "claude-haiku-5-5:low", done: 1, costMicroUsd: 3000, avgSeconds: 4, kept: 1, blank: 8, rejectedByReason: { "quote not found": 1 }, cachedShare: 0.25 });
+    expect(summary[2]).toMatchObject({ done: 0, costMicroUsd: 0, avgSeconds: null, cachedShare: null });
   });
 
   it("flags a field the settings answer differently", () => {

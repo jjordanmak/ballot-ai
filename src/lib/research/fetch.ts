@@ -103,6 +103,7 @@ export async function getDocument(
   url: string,
   meta: { official: boolean; publisher?: string; sourceType?: string; allowPdf?: boolean },
   maxAgeMs = REREAD_AFTER_MS,
+  opts: { needHtml?: boolean } = {},
 ): Promise<FetchOutcome> {
   const { db, now } = deps;
   const { data: existing } = await db.from("sources").select("id, content_text, title, fetched_at, metadata").eq("url", url).maybeSingle();
@@ -121,8 +122,9 @@ export async function getDocument(
 
   const prior = (existing?.metadata ?? {}) as { etag?: string; lastModified?: string };
   const headers: Record<string, string> = { "user-agent": USER_AGENT, accept: "text/html, application/xhtml+xml, application/pdf;q=0.9, */*;q=0.5" };
-  if (existing?.content_text && prior.etag) headers["if-none-match"] = prior.etag;
-  if (existing?.content_text && prior.lastModified) headers["if-modified-since"] = prior.lastModified;
+  // A caller that needs the page's links asks without conditions (a 304 has no body to read them from).
+  if (existing?.content_text && prior.etag && !opts.needHtml) headers["if-none-match"] = prior.etag;
+  if (existing?.content_text && prior.lastModified && !opts.needHtml) headers["if-modified-since"] = prior.lastModified;
 
   let res;
   try {

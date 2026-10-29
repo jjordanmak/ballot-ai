@@ -32,7 +32,7 @@ import { billingPeriod } from "@/lib/usage/quota";
 import type { Resolver } from "@/lib/feeds/safeFetch";
 import { logEvent } from "@/lib/observability/log";
 import compareSet from "@/data/research/compare-set.json";
-import { focusText, getDocument, type Fetched, type FetchDeps } from "./fetch";
+import { focusText, getDocument, REREAD_AFTER_MS, type Fetched, type FetchDeps } from "./fetch";
 import { ballotpediaCampaignSite, searchUrls } from "./search";
 import { buildTargets, pdfHostOk, taskFor, type ContestRow, type Target, type TargetPage } from "./targets";
 import { findLinkEntries } from "./text";
@@ -163,51 +163,91 @@ interface SearchCache {
   urls: string[];
   campaign?: string | null;
   followed?: string[];
+  /** When the search ran (kept a week). */
+  searchedAt?: string;
+  /** When the document set was last gathered (shared while the stored pages are fresh). */
   at: string;
 }
 
-/** Search once per target (shared by every setting in compare mode), cached for a week. */
-async function searchFor(deps: ResearchDeps & { now: Date }, t: Target): Promise<{ cache: SearchCache | null; cost: number; wait?: boolean }> {
-  if (!t.search) return { cache: null, cost: 0 };
+/** Waits for a busy site before running anyway with what's there. */
+const MAX_BUSY_WAITS = 10;
+const SHARED_LOCK_MS = 240_000;
+
+/**
+ * The document set is gathered once per target and shared by every setting
+ * (compare mode), so every column reads exactly the same documents: one job
+ * searches, reads the pages and follows their links, then records what it
+ * used; the others wait for it and read the same stored copies.
+ */
+async function prepareShared(
+  deps: ResearchDeps & { now: Date },
+  t: Target,
+): Promise<{ cache: SearchCache | null; owner: boolean; cost: number; wait?: boolean }> {
   const key = `${t.key}#search`;
   const { db, now } = deps;
   const { data: row } = await db.from("research_state").select("discovered, locked_until").eq("key", key).maybeSingle();
   const cached = row?.discovered as SearchCache | null | undefined;
-  if (cached && now.getTime() - Date.parse(cached.at) < SEARCH_TTL_MS) return { cache: cached, cost: 0 };
-  // Another setting's job is searching right now: try again shortly.
-  if (row?.locked_until && Date.parse(row.locked_until) > now.getTime()) return { cache: null, cost: 0, wait: true };
+  if (cached && now.getTime() - Date.parse(cached.at) < REREAD_AFTER_MS) return { cache: cached, owner: false, cost: 0 };
+  // Another setting's job is gathering right now: try again shortly.
+  if (row?.locked_until && Date.parse(row.locked_until) > now.getTime()) return { cache: null, owner: false, cost: 0, wait: true };
   await db
     .from("research_state")
-    .upsert({ key, target: { kind: "search", of: t.key } as Json, next_check_at: "2999-01-01T00:00:00Z", locked_until: new Date(now.getTime() + 120_000).toISOString() }, { onConflict: "key" });
+    .upsert({ key, target: { kind: "documents", of: t.key } as Json, next_check_at: "2999-01-01T00:00:00Z", locked_until: new Date(now.getTime() + SHARED_LOCK_MS).toISOString() }, { onConflict: "key" });
+  const searchedAt = cached?.searchedAt ?? cached?.at;
+  if (!t.search || (cached && searchedAt && now.getTime() - Date.parse(searchedAt) < SEARCH_TTL_MS)) {
+    return { cache: cached ?? null, owner: true, cost: 0 };
+  }
   const res = await searchUrls({ kind: t.search.kind, query: t.search.query, mustMention: t.search.mustMention, client: deps.client });
-  const cache: SearchCache = { urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], at: now.toISOString() };
-  await db.from("research_state").update({ discovered: cache as unknown as Json, locked_until: null, updated_at: now.toISOString() }).eq("key", key);
-  return { cache, cost: res.costMicroUsd };
+  return { cache: { urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], searchedAt: now.toISOString(), at: now.toISOString() }, owner: true, cost: res.costMicroUsd };
+}
+
+async function releaseShared(db: Db, t: Target, now: Date, cache: SearchCache | null) {
+  await db
+    .from("research_state")
+    .update({ ...(cache ? { discovered: cache as unknown as Json } : {}), locked_until: null, updated_at: now.toISOString() })
+    .eq("key", `${t.key}#search`);
 }
 
 const isGovHost = (u: string) => /(^|\.)gov$/i.test(new URL(u).hostname);
 const isBallotpedia = (u: string) => /(^|\.)ballotpedia\.org$/i.test(new URL(u).hostname);
 
 /** Every document for a target, politely fetched; long ones narrowed to the passages about it. */
-async function gatherDocuments(deps: ResearchDeps & { now: Date }, t: Target, cache: SearchCache | null): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[] }> {
+async function gatherDocuments(
+  deps: ResearchDeps & { now: Date },
+  t: Target,
+  cache: SearchCache | null,
+  owner = true,
+): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; busy: number }> {
   const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
   const got: { f: Fetched; page: TargetPage }[] = [];
   const seen = new Set<string>();
   let campaign = cache?.campaign ?? null;
   const followed: string[] = [];
-  const read = async (page: TargetPage) => {
+  let busy = 0;
+  const read = async (page: TargetPage, needHtml = false) => {
     if (seen.has(page.url)) return null;
     seen.add(page.url);
-    const r = await getDocument(fdeps, page.url, { official: page.official, publisher: page.publisher, allowPdf: page.allowPdf, sourceType: page.official ? "official" : isBallotpedia(page.url) ? "civic" : "campaign" });
-    if ("skipped" in r) return null;
+    const r = await getDocument(
+      fdeps,
+      page.url,
+      { official: page.official, publisher: page.publisher, allowPdf: page.allowPdf, sourceType: page.official ? "official" : isBallotpedia(page.url) ? "civic" : "campaign" },
+      needHtml ? 0 : undefined,
+      { needHtml },
+    );
+    if ("skipped" in r) {
+      if (r.skipped === "busy") busy++;
+      return null;
+    }
     got.push({ f: r, page });
     return r;
   };
 
   // 1. Registry pages (official guides, county page, campaign site from an official filing), and the links they point to.
   const follow: TargetPage[] = [];
+  // The job gathering the shared set reads the pages afresh when it has no list of links to follow yet.
+  const needHtml = owner && t.follow.length > 0 && !cache?.followed?.length;
   for (const p of t.pages) {
-    const r = await read(p);
+    const r = await read(p, needHtml);
     if (!r?.html || !t.follow.length) continue;
     const links = findLinkEntries(r.html, r.url, t.follow);
     // Links that name this target (e.g. "Measure Z") first.
@@ -242,7 +282,7 @@ async function gatherDocuments(deps: ResearchDeps & { now: Date }, t: Target, ca
       meta: { url: f.url, title: f.title, publisher: page.publisher ?? new URL(f.url).hostname, official: page.official, fetchedAt: f.fetchedAt },
     });
   }
-  return { docs, campaign, followed };
+  return { docs, campaign, followed, busy };
 }
 
 function inputHash(t: Target, setting: Setting, docs: FetchedDoc[]): string {
@@ -286,20 +326,32 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
   const setting = stored.setting;
   let spent = 0;
 
-  const search = await searchFor(d, t);
-  spent += search.cost;
-  if (search.wait) {
+  const shared = await prepareShared(d, t);
+  spent += shared.cost;
+  if (shared.wait) {
     await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000, failures: state.failures });
     return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
   }
-  const { docs, campaign, followed } = await gatherDocuments(d, t, search.cache);
-  if (t.search && (campaign !== (search.cache?.campaign ?? null) || followed.length)) {
-    await db
-      .from("research_state")
-      .update({ discovered: { ...(search.cache ?? { urls: [], at: now.toISOString() }), campaign, followed: followed.length ? followed : search.cache?.followed ?? [] } as unknown as Json })
-      .eq("key", `${t.key}#search`);
+  const { docs, campaign, followed, busy } = await gatherDocuments(d, t, shared.cache, shared.owner);
+  await recordSpend(db, now, shared.cost);
+  // A site was too busy to read right now: wait and try again rather than run on fewer documents
+  // (after a few tries, run with what's there).
+  const busyWaits = state.failures ?? 0;
+  if (busy && busyWaits < MAX_BUSY_WAITS) {
+    // Keep the search; mark the document set stale so the next job gathers it again.
+    if (shared.owner) await releaseShared(db, t, now, shared.cache ? { ...shared.cache, searchedAt: shared.cache.searchedAt ?? shared.cache.at, at: new Date(0).toISOString() } : null);
+    await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000 + Math.floor(Math.random() * 60_000), failures: busyWaits + 1 });
+    return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
   }
-  await recordSpend(db, now, search.cost);
+  if (shared.owner) {
+    await releaseShared(db, t, now, {
+      urls: shared.cache?.urls ?? [],
+      campaign,
+      followed: followed.length ? followed : shared.cache?.followed ?? [],
+      searchedAt: shared.cache?.searchedAt ?? shared.cache?.at,
+      at: now.toISOString(),
+    });
+  }
   if (!docs.length) {
     await finishState(db, stateKey, now, { outcome: "no documents", afterMs: RECHECK_MS });
     return { key: stateKey, outcome: "no documents", spentMicroUsd: spent };

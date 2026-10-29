@@ -101,7 +101,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
 function Summary({ rows, hidden, hrefFor }: { rows: SettingSummary[]; hidden: Set<string>; hrefFor: (s: string) => string }) {
   return (
     <section className="mb-6 overflow-x-auto rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)]">
-      <table className="w-full min-w-[760px] text-left text-sm">
+      <table className="w-full min-w-[860px] text-left text-sm">
         <thead className="text-paper-3">
           <tr className="border-b border-[var(--color-ink-3)]">
             <th className="px-3 py-2 font-normal">Setting</th>
@@ -112,6 +112,7 @@ function Summary({ rows, hidden, hrefFor }: { rows: SettingSummary[]; hidden: Se
             <th className="px-3 py-2 font-normal">Answers kept</th>
             <th className="px-3 py-2 font-normal">Rejected, by reason</th>
             <th className="px-3 py-2 font-normal">Left blank</th>
+            <th className="px-3 py-2 font-normal">Input from cache</th>
             <th className="px-3 py-2 font-normal">Column</th>
           </tr>
         </thead>
@@ -132,6 +133,7 @@ function Summary({ rows, hidden, hrefFor }: { rows: SettingSummary[]; hidden: Se
                   .join(", ") || "none"}
               </td>
               <td className="px-3 py-2">{r.blank}</td>
+              <td className="px-3 py-2">{r.cachedShare === null ? "—" : `${Math.round(r.cachedShare * 100)}%`}</td>
               <td className="px-3 py-2">
                 <Link href={hrefFor(r.setting)} className="text-paper-2 underline decoration-[var(--color-ink-4)] hover:text-paper">
                   {hidden.has(r.setting) ? "show" : "hide"}
