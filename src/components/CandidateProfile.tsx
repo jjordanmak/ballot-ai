@@ -542,7 +542,8 @@ function TimelineSection({
           render at reduced opacity so the cycle-relevant context is visually
           dominant. */}
       <div className="relative">
-        <div ref={scrollRef} className="overflow-x-auto scrollbar-hide">
+        {/* Horizontal only: citation cards float over the page (CiteMarker), never inside this row. */}
+        <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden scrollbar-hide">
           <div className="relative flex items-stretch min-w-min pt-2 pb-1">
             <div
               aria-hidden
@@ -714,13 +715,13 @@ type EndorsementItem = { name: string; category: string; sources?: string[]; quo
 function EndorsementColumns({
   endorsements,
   docs,
-  twoByTwo,
+  stacked,
 }: {
   endorsements: EndorsementItem[];
   /** Nov 3: each endorsement is cited. */
   docs?: Record<string, SourceDoc>;
-  /** Nov 3: the 4 categories as 2 rows of 2 (owner, 2026-10-30). */
-  twoByTwo?: boolean;
+  /** Nov 3: the 4 categories stacked in one column, to the right of Key Priorities | Key Stances (owner, 2026-10-30). */
+  stacked?: boolean;
 }) {
   const grouped = ENDORSEMENT_ORDER.reduce<Record<EndorsementCategory, EndorsementItem[]>>(
     (acc, cat) => {
@@ -763,16 +764,18 @@ function EndorsementColumns({
   ];
   const visible: EndorsementCategory[] = [
     ...REQUIRED,
-    ...(!twoByTwo && grouped["Newspapers & Media"].length > 0 ? (["Newspapers & Media"] as const) : []),
+    ...(!stacked && grouped["Newspapers & Media"].length > 0 ? (["Newspapers & Media"] as const) : []),
   ];
 
   return (
     // 2x2 on small screens, 4-up on large. Newspapers/Media expands to a 5th
     // column on xl+ when populated.
     <div
-      className={`grid gap-x-8 gap-y-6 grid-cols-1 sm:grid-cols-2 ${
-        twoByTwo ? "" : visible.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
-      }`}
+      className={
+        stacked
+          ? "grid gap-x-8 gap-y-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1"
+          : `grid gap-x-8 gap-y-6 grid-cols-1 sm:grid-cols-2 ${visible.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"}`
+      }
     >
       {visible.map((cat) => {
         const items = grouped[cat];
@@ -957,19 +960,25 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Key Priorities | Key Stances | Endorsements (owner, 2026-10-30: endorsements to the right). Below lg, endorsements take the full row. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <CitedPillar title="Key Priorities" icon={<Flag size={12} />} items={g.priorities} docs={docs} tint={TINT.priorities} limited={limited.has("priorities")} />
         <CitedPillar title="Key Stances" icon={<ListChecks size={12} />} items={g.stances} docs={docs} tint={TINT.stances} limited={limited.has("stances")} />
+        {/* Confirmed, named, cited. */}
+        <div className="md:col-span-2 lg:col-span-1 min-w-0">
+          <div className="font-mono-cap text-[10px] text-[var(--color-paper-2)] mb-3 flex items-center gap-2">
+            <span className="text-[var(--color-accent)]">
+              <Award size={12} />
+            </span>
+            <span>Endorsements</span>
+          </div>
+          {g.endorsements?.length ? (
+            <EndorsementColumns endorsements={g.endorsements} docs={docs} stacked />
+          ) : (
+            <Empty limited={limited.has("endorsements")} what="Endorsements" />
+          )}
+        </div>
       </div>
-
-      {/* Endorsements in the slot Key Strengths and Key Criticisms used to hold: confirmed, named, cited. */}
-      <Section title="Endorsements" icon={<Award size={13} />}>
-        {g.endorsements?.length ? (
-          <EndorsementColumns endorsements={g.endorsements} docs={docs} twoByTwo />
-        ) : (
-          <Empty limited={limited.has("endorsements")} what="Endorsements" />
-        )}
-      </Section>
 
       {/* Might fit if you… — the candidate's own cited positions as voter priorities. Never highlighted. */}
       <section>

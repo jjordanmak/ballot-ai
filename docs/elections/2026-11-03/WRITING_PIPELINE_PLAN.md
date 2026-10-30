@@ -98,8 +98,9 @@ The June prototype is viewable at `/archive/ca-2026-primary/<zip>` on previews o
    - **Education:** a short code-written list underneath.
 4. **Key Priorities | Key Stances**: the 2 pillar columns, in June's style: short noun phrases, no "Says…" in front, and no topic label in front of a stance.
    - Both keep their tooltips (`PILLAR_TOOLTIPS`, `CandidateProfile.tsx`), which do the attribution.
-5. **Endorsements**: in the slot where Key Strengths and Key Criticisms used to be, as 2 rows of 2: Elected Officials | Unions, then Advocacy & Industry | Local Leaders.
+5. **Endorsements**: to the right of Key Priorities | Key Stances (owner, 2026-10-30, round 2 notes), the 4 categories stacked: Elected Officials, Unions, Advocacy & Industry, Local Leaders.
    - Only confirmed, cited, named endorsements: no "soft endorsement", no unnamed "leadership".
+   - Sources: news, Ballotpedia, or the campaign's own endorsements page (round 3 follows it from the campaign site).
 6. **Might fit if you…**: as above.
 7. **Timeline**: offices, past elections and results, key decisions and track-record events, and this election (debates, primary result, Nov 3).
 
@@ -113,7 +114,8 @@ The June prototype is viewable at `/archive/ca-2026-primary/<zip>` on previews o
 - **Context:** what's happening in this race: an open or contested seat, the field, and what voters say they care about.
 - **Why it matters:** what the office controls, and the conditions that make this cycle different (a budget shortfall, gas prices, an insurance crisis). No lines that are true of every office in every state and year.
 - **What's at stake:** the decisions the next officeholder will face here and now. Not a list of candidate platforms.
-- **The big picture:** the race in general: its format (e.g. top-2), partisan history, and the state of the state as it bears on the role. No polls.
+- **The big picture:** where the race fits: the office's recent history, how the candidates got here (primary results), and what's been happening in the campaign. The format only if it shaped this race. No polls.
+- **Candidates in the intro** (owner, 2026-10-30, round 2 notes: "the Governor big picture section is basically all about Hilton"): each section names every candidate the same number of times, or none. One candidate's fact gets a matching fact for the others or is written without names; no identity milestones ("would be the first…"), no one campaign's issue on its own, no résumé lines (those belong in the profile). Code counts the mentions; an unbalanced section goes to the repair pass, which adds the counterpart or rewrites without names; only if that fails is the extra mention dropped.
 
 ## How trust works for synthesized text
 **Every sentence must pass all 5 checks.** A sentence that fails gets one repair attempt, then it is dropped. A section left empty shows "Limited documented information in reviewed sources" (PRD).
@@ -136,6 +138,13 @@ The June prototype is viewable at `/archive/ca-2026-primary/<zip>` on previews o
      - unattributed claims of motive;
      - "critics say".
 5. **Parity.** Every candidate in a race gets the same sections. A missing section shows the "Limited documented information" line; nothing is padded.
+
+**Round 3 (owner, 2026-10-30: "How do we navigate cases like this where the information and content is true and relevant but there's no immediate source to cite?"):** a current condition still needs a source, so ballot.ai looks harder before dropping it:
+- **The verifier judges the facts, not the explanation.** A clause that connects facts or says why they matter to a voter, adding no new number, name, event or cause, never makes a sentence unsupported.
+- **Split instead of drop.** In race intros and measures, the repair pass splits a sentence that joins a cited fact with an unstated explanation: the fact keeps its refs (`<id>`), the explanation goes uncited (`<id>+1`) and is kept only with its fact.
+- **Re-cite from every document.** The repair pass may cite any document in the item's set, not only the one first cited.
+- **The source finder.** Sentences still unsupported (not those dropped for wording) get one web search per item (`searchUrls` kind `claim`, 1 search; .gov, Ballotpedia and vetted news only; never for measures). Up to 3 found pages are read politely and narrowed; one call re-cites the sentences from them, and each goes through every check again. Runs record `metadata.finder` (pages tried, sentences rescued).
+- **No repetition.** A prose or list sentence whose content words are mostly in an earlier one (in any section) goes to the repair pass, then is dropped if it still repeats.
 
 **Allowed vs not:**
 - **Allowed:** insights that follow from cited facts ("The next governor will oversee a $X budget [1] and appoint judges [2]").

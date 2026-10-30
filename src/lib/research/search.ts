@@ -12,7 +12,8 @@ import { siteOf } from "@/lib/feeds/discover";
 import { NEWS_SOURCES } from "@/lib/feeds/sources";
 import { searchTask } from "@/lib/ai/prompts";
 
-export type SearchKind = "person" | "office" | "measure" | "race";
+/** "claim": the source finder (owner, 2026-10-30), looking for sources for sentences the writer's documents didn't support. */
+export type SearchKind = "person" | "office" | "measure" | "race" | "claim";
 
 export interface SearchResult {
   urls: string[];
@@ -60,8 +61,8 @@ export function keepUrls(kind: SearchKind, results: { url: string; title: string
     if (u.protocol !== "https:" && u.protocol !== "http:") continue;
     const h = u.hostname;
     const person = kind === "person";
-    // Race intros: .gov, vetted news and the race's Ballotpedia page; no Wikipedia.
-    const race = kind === "race";
+    // Race intros and the source finder: .gov, vetted news and Ballotpedia; no Wikipedia.
+    const race = kind === "race" || kind === "claim";
     const allowed = isGov(h) || (person && (isBallotpedia(h) || isWikipedia(h) || isVettedNews(h))) || (race && (isBallotpedia(h) || isVettedNews(h)));
     if (!allowed) continue;
     // Ballotpedia, Wikipedia and news results must be about this person, not a list or someone else.
@@ -90,6 +91,8 @@ export async function searchUrls(opts: {
   query: string;
   mustMention?: string[];
   model?: string;
+  /** Searches the tool may run (default 3; the source finder runs 1). */
+  maxUses?: number;
   client?: Pick<Anthropic, "messages">;
 }): Promise<SearchResult> {
   const c = opts.client ?? (client ??= new Anthropic({ maxRetries: 2, timeout: 120_000 }));
@@ -98,7 +101,7 @@ export async function searchUrls(opts: {
     c.messages.create({
       model: m,
       max_tokens: 2000,
-      tools: [{ type: tool, name: "web_search", max_uses: 3 }],
+      tools: [{ type: tool, name: "web_search", max_uses: opts.maxUses ?? 3 }],
       messages: [{ role: "user", content: searchTask(opts.kind, opts.query) }],
     });
   try {

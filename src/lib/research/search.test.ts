@@ -31,6 +31,11 @@ describe("keepUrls", () => {
     ]);
   });
 
+  it("the source finder: .gov, Ballotpedia and vetted news, never Wikipedia or other sites", () => {
+    expect(keepUrls("claim", [...results, { url: "https://www.example.com/x", title: "x" }]).some((u) => /wikipedia|example\.com/.test(u))).toBe(false);
+    expect(keepUrls("claim", results)).toContain("https://calmatters.org/politics/2026/10/ann-bee-profile/");
+  });
+
   it("never keeps outlets outside the vetted news list", () => {
     expect(keepUrls("person", [{ url: "https://www.example.com/ann-bee", title: "Ann Bee news" }], ["Bee"])).toEqual([]);
   });
