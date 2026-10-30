@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ResolvedBallot } from "@/domain/ballot";
+import type { ElectionRef } from "@/domain/ballot";
+import { normalizeVoterInfo } from "@/lib/providers/google-civic/normalize";
+import type { CivicVoterInfoResponse } from "@/lib/providers/google-civic/types";
 import { supplementWithOfficialRecords } from "./officialRecords";
 
 function ballot(location: ResolvedBallot["location"], contests: ResolvedBallot["contests"] = []): ResolvedBallot {
@@ -45,3 +48,44 @@ describe("supplementWithOfficialRecords (CA 2026 judicial retention)", () => {
     expect(again.contests).toHaveLength(13);
   });
 });
+
+describe("supplementWithOfficialRecords with the provider's own retention questions", () => {
+  const election: ElectionRef = { id: "us-2026-11-03-general", slug: "2026-11-03", name: "General Election", date: "2026-11-03", externalIds: {} };
+  // How Orange County's feed sends them: one referendum per judge, under the county, with no county in the address result.
+  const referendum = (title: string) => ({ type: "Referendum", referendumTitle: title, district: { name: "Orange County", scope: "countywide" } });
+  const civic = {
+    contests: [
+      { type: "General", office: "Governor", district: { name: "California", scope: "statewide" }, candidates: [{ name: "Riley Example" }] },
+      referendum("For Associate Justice of the Supreme Court, KELLI M. EVANS"),
+      referendum("For Associate Justice, Court of Appeal, Fourth District, Division Three, THOMAS A. DELANEY"),
+      referendum("For Associate Justice, Court of Appeal, Fourth District, Division One, LISA RODRIGUEZ"),
+    ],
+  } as unknown as CivicVoterInfoResponse;
+
+  it("treats each referendum-shaped retention question as that judge's retention contest", () => {
+    const n = normalizeVoterInfo(civic, election, "2026-10-30T00:00:00.000Z");
+    const judges = n.contests.filter((c) => c.contestType === "retention");
+    expect(judges.map((c) => [c.kind, c.category, c.title, c.choices[0].ballotName])).toEqual([
+      ["candidate", "judicial", "Associate Justice of the Supreme Court", "KELLI M. EVANS"],
+      ["candidate", "judicial", "Associate Justice, Court of Appeal, Fourth District, Division Three", "THOMAS A. DELANEY"],
+      ["candidate", "judicial", "Associate Justice, Court of Appeal, Fourth District, Division One", "LISA RODRIGUEZ"],
+    ]);
+    expect(n.contests.some((c) => c.kind === "measure")).toBe(false);
+  });
+
+  it("replaces them with the certified contests, places the rest of the court's judges, and adds no duplicates", () => {
+    const n = normalizeVoterInfo(civic, election, "2026-10-30T00:00:00.000Z");
+    const b = supplementWithOfficialRecords(ballot({ state: "CA", city: "Placentia", zip: "92870" }, n.contests));
+    const judges = b.contests.filter((c) => c.category === "judicial");
+    // Both Supreme Court justices, and Fourth District judges only where the provider showed them (the county is unknown).
+    expect(judges.map((c) => c.choices[0].ballotName).sort()).toEqual(["JOSHUA GROBAN", "KELLI M. EVANS", "LISA RODRIGUEZ", "THOMAS A. DELANEY"]);
+    expect(judges.every((c) => c.verification?.status === "verified" && c.division.key.startsWith("ca:court:"))).toBe(true);
+    expect(new Set(judges.map((c) => c.id)).size).toBe(4);
+    // Same contest id as on any other ballot with that judge.
+    const daly = supplementWithOfficialRecords(ballot({ state: "CA", county: "San Mateo County" }));
+    expect(daly.contests.find((c) => c.choices[0].ballotName === "KELLI M. EVANS")!.id).toBe(judges.find((c) => c.choices[0].ballotName === "KELLI M. EVANS")!.id);
+    // One warning per court, not one per judge.
+    expect(b.warnings.filter((w) => w.code === "PROVIDER_GAP" && w.severity === "warn").length).toBeLessThanOrEqual(6);
+  });
+});
+

@@ -120,16 +120,19 @@ function normalizeContest(
   warnings: BallotWarning[],
   stateCode: string | undefined,
 ): Contest {
+  // Some counties send each judge's retention question as a referendum
+  // ("For Associate Justice, …, NAME"); it is a retention contest for that judge.
+  const retention = !c.candidates?.length ? retentionQuestion(c.referendumTitle || c.ballotTitle || c.office || "") : null;
   // VIP feeds send measures as "ballot-measure"; Civic docs say "Referendum".
-  const isMeasure = /^(referendum|ballot[- ]?measure|measure|proposition|initiative)$/i.test(c.type ?? "") ||
-    (!c.candidates?.length && !!c.referendumTitle);
-  let contestType = mapContestType(c.type, isMeasure);
+  const isMeasure = !retention && (/^(referendum|ballot[- ]?measure|measure|proposition|initiative)$/i.test(c.type ?? "") ||
+    (!c.candidates?.length && !!c.referendumTitle));
+  let contestType = retention ? "retention" : mapContestType(c.type, isMeasure);
   const parsed = isMeasure ? parseMeasureTitle(c.referendumTitle || c.ballotTitle || c.office || "") : undefined;
   const title = (isMeasure
     ? parsed!.identifier || c.referendumSubtitle || parsed!.remainder || c.ballotTitle || c.office
-    : c.office || c.ballotTitle) ?? "";
+    : retention?.office ?? (c.office || c.ballotTitle)) ?? "";
 
-  const category = categorizeContest({
+  const category = retention ? "judicial" : categorizeContest({
     kind: isMeasure ? "measure" : "candidate",
     scope: c.district?.scope,
     roles: c.roles,
@@ -151,7 +154,8 @@ function normalizeContest(
     "ct",
     election.id,
     division.key,
-    normalizeForMatch(isMeasure ? parsed!.identifier || title : title),
+    // One retention question per judge, often under the same office title.
+    normalizeForMatch(isMeasure ? parsed!.identifier || title : retention ? `${title} ${retention.name}` : title),
   );
 
   if (!c.district) {
@@ -181,7 +185,7 @@ function normalizeContest(
   const numberElected = countField(c.numberElected, "numberElected", id, warnings);
   const voteFor = countField(c.numberVotingFor, "numberVotingFor", id, warnings);
 
-  const choices = isMeasure ? [] : mapCandidates(c.candidates ?? [], id, sources, warnings);
+  const choices = isMeasure ? [] : mapCandidates(retention ? [{ name: retention.name }] : (c.candidates ?? []), id, sources, warnings);
   if (!isMeasure && choices.length === 0) {
     warnings.push({ code: "CONTEST_WITHOUT_CHOICES", severity: "warn", contestId: id });
   }
@@ -204,7 +208,7 @@ function normalizeContest(
     contestType,
     rawType: c.type,
     title: title || measure?.identifier || "",
-    ballotTitle: c.ballotTitle,
+    ballotTitle: c.ballotTitle ?? (retention ? c.referendumTitle : undefined),
     division,
     category,
     numberElected,
@@ -219,6 +223,30 @@ function normalizeContest(
     measure,
     sources,
   };
+}
+
+/**
+ * A judge's retention question sent as a referendum, in the forms counties
+ * and states print it:
+ * - "For Associate Justice, Court of Appeal, Fourth District, Division One, LISA RODRIGUEZ" (California)
+ * - "Shall Judge Mary Smith of the Missouri Court of Appeals, Western District, be retained in office?"
+ * - "Shall Mary Smith be retained as Judge of the District Court?"
+ * Returns the office and the judge's name as printed, or null.
+ */
+export function retentionQuestion(text: string): { office: string; name: string } | null {
+  const t = text.replace(/\s+/g, " ").trim();
+  const isName = (n: string) => /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.'’ -]{2,60}$/.test(n) && n.trim().split(" ").length >= 2 && n.trim().split(" ").length <= 6;
+  const judicial = /\b(justice|judge|court)\b/i;
+  // "For …" also heads ordinary measures ("For the Court Facilities Bond, Measure C"): the office must name a judge's seat.
+  let m = /^for (.+), ([^,]+)$/i.exec(t);
+  if (m && /\b(justice|judge)\b/i.test(m[1]) && isName(m[2]) && !/^(measure|proposition|prop|question|issue)\b/i.test(m[2])) {
+    return { office: m[1].trim(), name: m[2].trim() };
+  }
+  m = /^shall (?:(?:chief |associate |presiding )?(?:judge|justice) )?(.+?) (?:of|on) the (.+?),? be retained\b/i.exec(t);
+  if (m && judicial.test(m[2]) && isName(m[1])) return { office: m[2].trim(), name: m[1].trim() };
+  m = /^shall (.+?) be retained (?:in office )?as (.+?)\??$/i.exec(t);
+  if (m && judicial.test(m[2]) && isName(m[1])) return { office: m[2].trim().replace(/^an? /i, ""), name: m[1].trim() };
+  return null;
 }
 
 function mapContestType(t: string | undefined, isMeasure: boolean): ContestType {

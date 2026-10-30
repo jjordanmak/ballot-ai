@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Contest, ElectionRef } from "@/domain/ballot";
 import sample from "../fixture/sample-voterinfo.json";
 import { districtsFrom } from "@/domain/districts";
-import { normalizeVoterInfo, safeUrl } from "./normalize";
+import { normalizeVoterInfo, retentionQuestion, safeUrl } from "./normalize";
 import type { CivicVoterInfoResponse } from "./types";
 
 const election: ElectionRef = {
@@ -60,6 +60,23 @@ describe("normalizeVoterInfo", () => {
     const r = byTitle("Supreme Court");
     expect(r.contestType).toBe("retention");
     expect(r.choices[0].ballotName).toBe("Justice Quinn Sample");
+  });
+
+  it("reads judges' retention questions sent as referendums, in California's and other states' wording", () => {
+    expect(retentionQuestion("For Associate Justice, Court of Appeal, Fourth District, Division One, LISA RODRIGUEZ")).toEqual({
+      office: "Associate Justice, Court of Appeal, Fourth District, Division One",
+      name: "LISA RODRIGUEZ",
+    });
+    expect(retentionQuestion("Shall Judge Mary Q. Smith of the Missouri Court of Appeals, Western District, be retained in office?")).toEqual({
+      office: "Missouri Court of Appeals, Western District",
+      name: "Mary Q. Smith",
+    });
+    expect(retentionQuestion("Shall Pat Doe be retained as Judge of the District Court?")).toEqual({ office: "Judge of the District Court", name: "Pat Doe" });
+    // Ordinary measures stay measures.
+    expect(retentionQuestion("For the Library Parcel Tax, Measure L")).toBeNull();
+    expect(retentionQuestion("For the Court Facilities Bond, Measure C")).toBeNull();
+    expect(retentionQuestion("Proposition 1")).toBeNull();
+    expect(retentionQuestion("Shall the county court fees be raised?")).toBeNull();
   });
 
   it("maps referenda to measures with identifiers and threshold", () => {

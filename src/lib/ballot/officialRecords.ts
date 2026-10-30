@@ -3,8 +3,15 @@
  * certified for this voter's geography that the ballot provider omitted
  * (e.g. Google Civic returned no judicial retention contests for the
  * 2026-11-03 California ballot). Higher-priority official data fills the
- * gap; it never overrides or removes provider contests. Each addition is
- * cited and flagged with a PROVIDER_GAP warning. See SOURCE_STRATEGY.md §2.
+ * gap. Each addition is cited and flagged with a PROVIDER_GAP warning. See
+ * SOURCE_STRATEGY.md §2.
+ *
+ * When the provider does list a judge's retention contest (some counties
+ * send them as referendums, under the county's name), that is the same
+ * contest: the certified record replaces it in place, so every ballot shares
+ * one contest per judge with the official wording, court and source. The
+ * provider listing the judge also places a county-scoped record when the
+ * provider gave no county. Nothing else is overridden or removed.
  */
 import type { CandidateChoice, Contest, ResolvedBallot, SourceRef } from "@/domain/ballot";
 import { stableId } from "@/domain/ids";
@@ -36,6 +43,8 @@ export function supplementWithOfficialRecords(ballot: ResolvedBallot): ResolvedB
   const county = ballot.location.county?.replace(/\s+county$/i, "").trim();
 
   const added: Contest[] = [];
+  let upgraded = 0;
+  const unplaced = new Set<string>();
   for (const file of FILES[slug] ?? []) {
     const source: SourceRef = {
       provider: "durable",
@@ -47,16 +56,31 @@ export function supplementWithOfficialRecords(ballot: ResolvedBallot): ResolvedB
     };
     for (const r of file.contests) {
       if (r.appliesTo.state !== state || !r.justice) continue;
+      const at = providerIndex(ballot.contests, r.justice);
+      if (at >= 0) {
+        ballot.contests[at] = toContest(r, ballot.election!.id, source, file.source.publisher);
+        upgraded++;
+        continue;
+      }
+      if (ballot.contests.some((c) => c.id === toContestId(r, ballot.election!.id))) continue;
       if (r.appliesTo.counties) {
         if (!county) {
-          ballot.warnings.push({ code: "PROVIDER_GAP", severity: "warn", detail: `county unknown; cannot place ${r.court} retention contests` });
+          unplaced.add(r.court);
           continue;
         }
         if (!r.appliesTo.counties.some((c) => normalizeForMatch(c) === normalizeForMatch(county))) continue;
       }
-      if (alreadyPresent(ballot.contests, r.justice)) continue;
       added.push(toContest(r, ballot.election!.id, source, file.source.publisher));
     }
+  }
+  // Courts the provider listed no judge for and whose counties can't be checked.
+  for (const court of unplaced) {
+    if (!ballot.contests.some((c) => c.division.key.endsWith(`:court:${normalizeForMatch(court)}`))) {
+      ballot.warnings.push({ code: "PROVIDER_GAP", severity: "warn", detail: `county unknown; cannot place ${court} retention contests` });
+    }
+  }
+  if (upgraded) {
+    ballot.warnings.push({ code: "PROVIDER_GAP", severity: "info", detail: `${upgraded} judicial retention contest(s) replaced with the certified list of candidates` });
   }
   if (!added.length) return ballot;
 
@@ -73,13 +97,20 @@ export function supplementWithOfficialRecords(ballot: ResolvedBallot): ResolvedB
   return ballot;
 }
 
-function alreadyPresent(contests: Contest[], justice: string): boolean {
+/** The provider's own contest for this judge (not one added from official records), or -1. */
+function providerIndex(contests: Contest[], justice: string): number {
   const key = normalizeForMatch(justice);
-  return contests.some((c) => c.category === "judicial" && c.choices.some((ch) => normalizeForMatch(ch.ballotName) === key));
+  return contests.findIndex(
+    (c) => c.category === "judicial" && c.verification?.status !== "verified" && c.choices.some((ch) => normalizeForMatch(ch.ballotName) === key),
+  );
+}
+
+function toContestId(r: RetentionRecord, electionId: string): string {
+  return stableId("ct", electionId, "official-retention", r.office, r.justice!);
 }
 
 function toContest(r: RetentionRecord, electionId: string, source: SourceRef, publisher: string): Contest {
-  const id = stableId("ct", electionId, "official-retention", r.office, r.justice!);
+  const id = toContestId(r, electionId);
   const choice: CandidateChoice = {
     id: stableId("cd", id, r.justice!),
     ballotName: r.justice!,
