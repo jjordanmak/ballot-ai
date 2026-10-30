@@ -20,6 +20,7 @@ import {
 import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
 import { useFeedItems, useFeedPaging, useRenderedAt } from "./ballot/LiveFeed";
 import { FEED_PAGE } from "@/lib/feeds/paging";
+import { NewsTags } from "./NewsTags";
 
 const TYPE_META: Record<
   NewsItemType,
@@ -443,6 +444,7 @@ function NewsCard({
               {item.excerpt}
             </div>
           )}
+          <NewsTags mentions={item.mentions} topics={item.topics} />
         </>
       )}
     </Element>

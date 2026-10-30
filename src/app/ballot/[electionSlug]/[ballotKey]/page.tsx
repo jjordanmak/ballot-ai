@@ -77,6 +77,8 @@ export default async function BallotPage({ params, searchParams }: { params: Par
   const contestIds = ballot.contests.flatMap((c) => (c.durableId ? [c.durableId] : []));
   const electionId = ballot.election?.id ?? "";
   const candidateIds = races.flatMap((r) => r.candidates.flatMap((c) => (c.feed?.candidateId ? [c.feed.candidateId] : [])));
+  // News cards name the candidates a story mentions, as printed here and in ballot order.
+  const candidateNames = Object.fromEntries(races.flatMap((r) => r.candidates.flatMap((c) => (c.feed?.candidateId ? [[c.feed.candidateId, c.name]] : []))));
   const [feed, links] = await Promise.all([initialFeed(electionId, contestIds), discoveredLinks(candidateIds)]);
   const renderedAt = requestTime();
   addDiscoveredLinks(races, links);
@@ -102,7 +104,7 @@ export default async function BallotPage({ params, searchParams }: { params: Par
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
-    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed} renderedAt={renderedAt}>
+    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed} renderedAt={renderedAt} candidateNames={candidateNames}>
       <div className="flex flex-col lg:flex-row">
         <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
         <Sidebar

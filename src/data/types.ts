@@ -146,6 +146,10 @@ export interface NewsItem {
   /** ISO timestamp preferred for live feeds (sortable, formatable).
    * For scaffolded data, a human string like "May 5, 2026" is also OK. */
   date: string;
+  /** Candidates the matcher found in the story, as named on the ballot, in ballot order. */
+  mentions?: string[];
+  /** Up to two subject labels from a fixed list (`src/lib/feeds/topics.ts`). */
+  topics?: string[];
   /** Required for type === "social" — drives the embed-style card. */
   social?: {
     platform: SocialPlatform;
