@@ -38,6 +38,8 @@ export interface FeedRow {
 interface FeedState {
   rows: Map<string, FeedRow>;
   contestIds: Set<string>;
+  /** The server's clock when it rendered this page, so time-relative text hydrates identically. */
+  renderedAt?: number;
 }
 
 const FeedContext = createContext<FeedState | null>(null);
@@ -48,6 +50,7 @@ export function LiveFeedProvider({
   contestIds,
   researchIds,
   initial,
+  renderedAt,
   children,
 }: {
   electionId: string;
@@ -57,6 +60,8 @@ export function LiveFeedProvider({
   /** Research target ids on this ballot (measures, candidates, offices). */
   researchIds?: string[];
   initial: FeedRow[];
+  /** Server time (ms) of this render; see `useRenderedAt`. */
+  renderedAt?: number;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -114,7 +119,7 @@ export function LiveFeedProvider({
     };
   }, [electionId, state, ids, refetch, research, router]);
 
-  const value = useMemo(() => ({ rows, contestIds: ids }), [rows, ids]);
+  const value = useMemo(() => ({ rows, contestIds: ids, renderedAt }), [rows, ids, renderedAt]);
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;
 }
 
@@ -161,4 +166,9 @@ export function useLatestUpdate(): Date | undefined {
     for (const r of ctx?.rows.values() ?? []) max = Math.max(max, Date.parse(r.ingested_at) || 0);
     return max ? new Date(max) : undefined;
   }, [ctx]);
+}
+
+/** When the server rendered this page; undefined outside a provider. Use only before mount, then the browser's clock. */
+export function useRenderedAt(): number | undefined {
+  return useContext(FeedContext)?.renderedAt;
 }

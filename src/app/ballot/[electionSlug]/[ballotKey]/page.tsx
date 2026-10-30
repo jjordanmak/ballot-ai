@@ -34,6 +34,11 @@ type Params = Promise<{ electionSlug: string; ballotKey: string }>;
 /** Metadata and the page read the same stored ballot once per request. */
 const loadBallot = cache(loadStoredBallot);
 
+/** This request's server time: news dates hydrate against it (React #418), then the browser's clock takes over. */
+function requestTime() {
+  return Date.now();
+}
+
 const MEASURE_GROUPS = [
   { id: "measures-state", statewide: true, title: "Statewide measures", eyebrow: "Statewide" },
   { id: "measures-local", statewide: false, title: "Local measures", eyebrow: "County, city and district" },
@@ -67,6 +72,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const electionId = ballot.election?.id ?? "";
   const candidateIds = races.flatMap((r) => r.candidates.flatMap((c) => (c.feed?.candidateId ? [c.feed.candidateId] : [])));
   const [feed, links] = await Promise.all([initialFeed(electionId, contestIds), discoveredLinks(candidateIds)]);
+  const renderedAt = requestTime();
   addDiscoveredLinks(races, links);
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
@@ -90,7 +96,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
-    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed}>
+    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed} renderedAt={renderedAt}>
       <div className="flex flex-col lg:flex-row">
         <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
         <Sidebar
