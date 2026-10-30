@@ -47,12 +47,20 @@ describe("CandidateProfile header", () => {
     expect(header).not.toContain("<a ");
   });
 
-  it("still shows the cited role, ballot designation and links under the header", () => {
+  it("shows the cited role, ballot designation and links in the body; links carry no marker", () => {
     const html = text(renderToString(<CandidateProfile candidate={candidate} raceId="r" />));
-    expect(html).toContain("Ballot designation: <span");
-    expect(html).toContain("State Senator/Attorney");
-    expect(html).toContain('aria-label="Source 1: Secretary of State"');
-    expect(html).toContain('aria-label="Source 2: County Elections"');
-    expect(html).toContain("Campaign website");
+    const body = html.slice(html.indexOf("</button>", html.indexOf("aria-expanded")));
+    expect(body).toContain("Ballot designation: <span");
+    expect(body).toContain("State Senator/Attorney");
+    expect(body).toContain('aria-label="Source 1: Secretary of State"');
+    expect(body).toContain('aria-label="Source 2: County Elections"');
+    const links = body.slice(body.indexOf("Campaign website"), body.indexOf("Campaign website") + 600);
+    expect(links).not.toContain("aria-label=\"Source");
+  });
+
+  it("doesn't repeat a role that matches the ballot designation", () => {
+    const same = { ...candidate, currentRole: "Attorney", general: { ...candidate.general!, currentRole: { text: "Attorney", sources: ["county"] }, ballotDesignation: { text: "attorney", sources: ["sos"] } } } as Candidate;
+    const html = text(renderToString(<CandidateProfile candidate={same} raceId="r" />));
+    expect(html.match(/>Attorney</gi) ?? []).toHaveLength(1);
   });
 });
