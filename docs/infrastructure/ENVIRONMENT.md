@@ -24,7 +24,7 @@
 | `ANTHROPIC_MODEL_MEASURE` / `ANTHROPIC_MODEL_PROFILE` / `ANTHROPIC_MODEL_OFFICE` / `ANTHROPIC_MODEL_RACE` | Publish-mode `model[:effort]` for measures, judges/candidates, office descriptions and race intros (default: `ANTHROPIC_DEFAULT_MODEL`, medium) | server only | ✗ | opt | opt | new, optional |
 | `ANTHROPIC_MODEL_REVIEW` | The neutrality reviewer and the race fairness pass, `model[:effort]` (default `claude-haiku-5-5:medium`) | server only | ✗ | opt | opt | new, optional |
 | `AI_HIGHLIGHTS` | `off` strips every `<mark>` from written prose at read time (the highlight off switch) | server only | ✗ | opt | opt | new, optional |
-| `ANTHROPIC_MODEL_CHECK` / `ANTHROPIC_SEARCH_MODEL` | Quote-support checker (`model[:effort]`, default `claude-haiku-5-5:medium`; prose claims only); the search step that finds URLs (default `claude-haiku-5-5`) | server only | ✗ | opt | opt | new, optional |
+| `ANTHROPIC_MODEL_CHECK` / `ANTHROPIC_SEARCH_MODEL` | Quote-support checker (`model[:effort]`, default `claude-haiku-5-5:high`; prose claims and written sentences); the search step that finds URLs (default `claude-haiku-5-5`) | server only | ✗ | opt | opt | new, optional |
 | `AI_CHECK_COMPARE` | Compare mode: other checker settings that judge the same prose claims, for calibration (default `claude-haiku-5-5:high,claude-sonnet-5-5:low`) | server only | ✗ | opt | opt | new, optional |
 | `AI_MAX_INFLIGHT` | Most research jobs running at once (default 12, max 40) | server only | ✗ | opt | opt | new, optional |
 | `GNEWS_API_KEY`, `NEWSDATA_API_KEY`, `NEWSAPI_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_BEARER_TOKEN` | Not read by any code. News comes from approved outlets' public RSS feeds and polls from Wikipedia, neither needing a key | server only | — | — | — | unused |

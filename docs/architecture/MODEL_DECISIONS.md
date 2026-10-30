@@ -34,7 +34,7 @@
 | 3 | Finding a person's facts (education, positions, platform; judges and candidates) | | | `ANTHROPIC_MODEL_PROFILE` | Fields only; code checks every name and year and writes every line |
 | 4 | ~~Writing the short bio from those facts~~ | | | — | Replaced by row 14 (the writer produces Background directly) |
 | 5 | What gets selected (rules in `PERSON_RULES`) | | | edit the rules, not a model | Use each column's "Left out" list to see each model's judgment |
-| 6 | Quote-support checker (prose claims only) | | medium | `ANTHROPIC_MODEL_CHECK` (`model:effort`) | Calibration: `AI_CHECK_COMPARE` judges the same claims in compare mode |
+| 6 | Quote-support checker (prose claims only) | Haiku | high | `ANTHROPIC_MODEL_CHECK` (`model:effort`) | Same setting as row 16 (2026-10-30) |
 | 7 | Effort level per item | | | the `:effort` suffix on 1, 3, 10 (e.g. `claude-haiku-5-5:high`) | |
 | 8 | Monthly budget and how many jobs run at once | | | `AI_MONTHLY_BUDGET_USD` (default 40), `AI_MAX_INFLIGHT` (default 12) | Keep the budget below the Console workspace limit |
 | 9 | Anything to leave off | | | | e.g. priorities, if no setting does them reliably |
@@ -44,7 +44,7 @@
 | 13 | Race intros (Context, Why it matters, What's at stake, The big picture) | | | `ANTHROPIC_MODEL_RACE` | Writing pipeline |
 | 14 | Profiles: In Brief, Background, Key Priorities, Key Stances, Might fit, Timeline, Endorsements (and the lists) | | | `ANTHROPIC_MODEL_PROFILE` | One call per person writes all sections; replaces rows 3–4 |
 | 15 | Measures: plain-language synthesis of the official analysis | | | `ANTHROPIC_MODEL_MEASURE` | Replaces rows 1–2; official sources only |
-| 16 | Verifier ("does this follow from these excerpts?") | | | `ANTHROPIC_MODEL_CHECK` | Choose among Haiku medium, Haiku high, Sonnet low from the calibration data |
+| 16 | Verifier ("does this follow from these excerpts?") | Haiku | high | `ANTHROPIC_MODEL_CHECK` (code default since 2026-10-30) | **Decided 2026-10-30.** Calibration on 435 claims: Haiku high agreed with Haiku medium on 97%, Sonnet low on 91%. In 24 sampled disagreements, Sonnet low rejected about 8 plainly supported claims; Haiku high caught a detail Haiku medium let through ("in San Mateo County") and accepted 2 supported claims medium rejected |
 | 17 | Neutrality reviewer and race fairness pass | | | `ANTHROPIC_MODEL_REVIEW` | Default Haiku medium |
 | 18 | Highlights in written prose | | | `AI_HIGHLIGHTS` (`off` strips them) | After the highlight workshop |
 

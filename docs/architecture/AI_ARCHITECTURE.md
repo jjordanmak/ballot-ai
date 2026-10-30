@@ -94,7 +94,7 @@ The research pipeline exists, runs in the app (never in a Claude Code session), 
 
   Wikipedia is a finder only: its reference links are followed, and it is never cited. Measures and offices stay official-only.
 - **Diagnostics:** every page tried, and why any was skipped, is in `synthesis_runs.metadata.tried` and shown on `/internal/compare`.
-- **Checker:** Haiku at medium effort by default. Haiku at low effort wrongly rejected supported claims in the first comparison. In compare mode the settings in `AI_CHECK_COMPARE` also judge every prose claim, for calibration.
+- **Checker:** Haiku at high effort by default (owner, 2026-10-30, from the calibration data in MODEL_DECISIONS.md row 16). In compare mode the settings in `AI_CHECK_COMPARE` also judge every prose claim, for calibration.
 
 **Prompts and caching (owner, 2026-10-29).**
 - **One file:** every prompt lives in `src/lib/ai/prompts.ts`, with one `PROMPT_VERSION` and a snapshot test, so wording changes are deliberate.

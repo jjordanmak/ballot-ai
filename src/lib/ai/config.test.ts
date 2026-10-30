@@ -24,6 +24,12 @@ describe("settings and writing rounds", () => {
     expect(isSettingId("gpt:medium")).toBe(false);
   });
 
+  it("the verifier runs Haiku high unless the env names another setting (owner, 2026-10-30)", () => {
+    expect(aiConfig({})).toMatchObject({ checkModel: "claude-haiku-5-5", checkEffort: "high" });
+    expect(aiConfig({ ANTHROPIC_EXTRACTION_MODEL: "claude-haiku-5-5" })).toMatchObject({ checkEffort: "high" });
+    expect(aiConfig({ ANTHROPIC_MODEL_CHECK: "claude-sonnet-5-5:low" })).toMatchObject({ checkModel: "claude-sonnet-5-5", checkEffort: "low" });
+  });
+
   it("the highlight off switch", () => {
     expect(aiConfig({}).highlights).toBe(true);
     expect(aiConfig({ AI_HIGHLIGHTS: "off" }).highlights).toBe(false);

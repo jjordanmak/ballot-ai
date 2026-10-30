@@ -56,7 +56,7 @@ export interface AiConfig {
   review: Setting;
   /** Highlights in synthesized prose (`AI_HIGHLIGHTS=off` strips them at read time). */
   highlights: boolean;
-  /** Model for the second "does this quote support this sentence?" pass (prose claims only). */
+  /** The verifier: "does this follow from its excerpts?" (`ANTHROPIC_MODEL_CHECK`, default Haiku high). */
   checkModel: string;
   checkEffort: Effort;
   /** Compare mode: other checker settings that judge the same claims, for calibration (`AI_CHECK_COMPARE`). */
@@ -108,8 +108,10 @@ export function aiConfig(env: Record<string, string | undefined> = process.env):
     review: parseSetting(env.ANTHROPIC_MODEL_REVIEW, { model: DEFAULT_MODEL, effort: "medium" }),
     highlights: env.AI_HIGHLIGHTS !== "off",
     ...(() => {
-      // Haiku at low effort rejected plainly supported claims in the first comparison (2026-10-29): medium by default.
-      const check = parseSetting(env.ANTHROPIC_MODEL_CHECK?.trim() || env.ANTHROPIC_EXTRACTION_MODEL?.trim() || DEFAULT_MODEL, { model: DEFAULT_MODEL, effort: "medium" });
+      // Haiku high by default (owner, 2026-10-30, from the calibration data): Haiku low and Sonnet low rejected plainly
+      // supported claims; Haiku high caught a detail Haiku medium let through. A model given without an effort runs high.
+      const raw = env.ANTHROPIC_MODEL_CHECK?.trim() || env.ANTHROPIC_EXTRACTION_MODEL?.trim() || DEFAULT_MODEL;
+      const check = parseSetting(raw.includes(":") ? raw : `${raw}:high`, { model: DEFAULT_MODEL, effort: "high" });
       return { checkModel: check.model, checkEffort: check.effort };
     })(),
     checkCompare: (env.AI_CHECK_COMPARE ?? "claude-haiku-5-5:high,claude-sonnet-5-5:low")
