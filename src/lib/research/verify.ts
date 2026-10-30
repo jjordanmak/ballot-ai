@@ -68,7 +68,7 @@ export interface FetchedDoc {
 
 export interface Rejection {
   field: string;
-  reason: "unknown source" | "quote not found" | "neutrality" | "unsupported";
+  reason: "unknown source" | "quote not found" | "neutrality" | "unsupported" | "repeat";
   detail?: string;
   /** Synthesis: the dropped sentence, for review on the comparison page. */
   text?: string;

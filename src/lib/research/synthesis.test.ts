@@ -3,6 +3,9 @@ import type { PersonWriting } from "@/lib/ai/schemas";
 import {
   apSlips,
   applyParity,
+  balanceRace,
+  raceImbalance,
+  repeats,
   factText,
   hardFactProblem,
   mightFitProblem,
@@ -154,6 +157,11 @@ describe("shapeSections", () => {
     expect(out.limited).toContain("background");
   });
 
+  it("never highlights a person's name or a party (round 2: highlights landed on names)", () => {
+    const out = shapeSections("race", kept("context", ["<mark>Steve Hilton</mark> and <mark>Democrats</mark> on <mark>$300 billion</mark>."]), { names: ["Steve Hilton", "Hilton"] });
+    expect(out.sections.context![0].text).toBe("Steve Hilton and Democrats on <mark>$300 billion</mark>.");
+  });
+
   it("judges get background and timeline only", () => {
     expect(shapeSections("person", [], { judge: true }).limited).toEqual(["background", "timeline"]);
   });
@@ -200,6 +208,42 @@ describe("units and parity", () => {
     expect(applyParity(p, "c1", { ...parity, rewrites: [], unresolved: [{ target: "c1", unit: "background.1", reason: "x" }] }).sections.background!.map((s) => s.text)).toEqual([
       "Gov. Brown appointed him.",
     ]);
+  });
+});
+
+describe("race intro balance and repetition (round 3, owner 2026-10-30)", () => {
+  const u = (id: string, text: string, kind = "prose") => ({ unit: { id, section: id.split(".")[0], kind }, text });
+  const field = ["Xavier Becerra", "Steve Hilton"];
+
+  it("a section names every candidate the same number of times, or none", () => {
+    const list = [
+      u("bigPicture.0", "Hilton has campaigned on gas prices."),
+      u("bigPicture.1", "Hilton won the most votes in June."),
+      u("bigPicture.2", "Becerra and Hilton debated on Oct. 8."),
+      u("context.0", "Becerra spoke in Fresno."),
+      u("context.1", "Hilton spoke in Sacramento."),
+      u("whyItMatters.0", "The governor signs the budget."),
+    ];
+    expect(raceImbalance(list, field)).toEqual([{ section: "bigPicture", over: ["Steve Hilton"], under: ["Xavier Becerra"], units: ["bigPicture.0", "bigPicture.1"] }]);
+    // A one-candidate race has nothing to balance.
+    expect(raceImbalance(list, ["Steve Hilton"])).toEqual([]);
+  });
+
+  it("the last resort drops the latest extra mention until the section balances", () => {
+    const list = [u("bigPicture.0", "Hilton has campaigned on gas prices."), u("bigPicture.1", "Hilton won the most votes in June."), u("bigPicture.2", "Becerra has campaigned on Medi-Cal.")];
+    const out = balanceRace(list, field);
+    expect(out.kept.map((x) => x.unit.id)).toEqual(["bigPicture.0", "bigPicture.2"]);
+    expect(out.dropped[0].reason).toBe("unbalanced: bigPicture names Steve Hilton more than Xavier Becerra");
+  });
+
+  it("finds a sentence that says what an earlier one says, in any section", () => {
+    const list = [
+      u("inBrief.0", "Becerra represented Los Angeles in the U.S. House from 1993 to 2017."),
+      u("background.0", "From 1993 to 2017, Becerra represented Los Angeles in the U.S. House."),
+      u("background.1", "Gov. Jerry Brown appointed him attorney general in 2017."),
+      u("timeline.0", "Represented Los Angeles in the U.S. House from 1993 to 2017", "timeline"),
+    ];
+    expect([...repeats(list)]).toEqual([["background.0", "inBrief.0"]]);
   });
 });
 
