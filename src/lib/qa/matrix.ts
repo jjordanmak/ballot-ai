@@ -68,6 +68,15 @@ export function summarize(ballot: ResolvedBallot): Pick<QaInsert, "status" | "st
   };
 }
 
+/**
+ * Every row with every column. A batch insert sends the union of all rows'
+ * keys, so an error row missing `contest_count` would be sent as null and
+ * fail the whole batch (the county sweep stalled on this, 2026-10-30).
+ */
+export function completeRow(row: QaInsert): QaInsert {
+  return { state: null, contest_count: 0, categories: {}, warnings: [], inventory: {}, error: null, ...row };
+}
+
 /** Look one location up through the normal resolver path; the address is used here and nowhere else. */
 export async function lookupLocation(runtime: BallotRuntime, election: ElectionRef, runId: string, label: string, raw: string, today = electionToday()): Promise<QaInsert> {
   const address = AddressInput.parse(raw);
@@ -107,7 +116,7 @@ export async function runMatrix(opts: {
     }),
   );
   if (rows.length) {
-    const { error } = await opts.db.from("qa_runs").insert(rows);
+    const { error } = await opts.db.from("qa_runs").insert(rows.map(completeRow));
     if (error) throw new Error(`qa_runs insert: ${error.message}`);
   }
   logEvent("qa.matrix", { runId, stored: rows.length, skipped: queue.length });
