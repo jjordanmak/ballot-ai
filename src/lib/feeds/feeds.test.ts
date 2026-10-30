@@ -129,11 +129,13 @@ describe("feed matcher on article text", () => {
   const long = (s: string) => `${"Unrelated reporting on the region. ".repeat(30)} ${s} ${"More background. ".repeat(30)}`;
 
   it("matches a candidate named only in the story, whatever the topic", () => {
-    const m = match("Wildfire insurance rates jump again", "Homeowners face higher premiums.", national, long("Xavier Becerra, who is running for governor, said rates should be frozen."));
+    const m = match("Wildfire insurance rates jump again", "Homeowners face higher premiums.", national, long("Xavier Becerra, who is running for governor, said rates should be frozen. Becerra spoke in Fresno."));
     expect(m).toMatchObject({ candidateIds: ["becerra"], via: "article" });
+    // A passing mention isn't a story about them.
+    expect(match("House race guide", "Two Democrats face off.", national, long("The seat was once held by Xavier Becerra, now running for governor."))).toBeNull();
     // Personal news counts: identity, not topic, decides.
     expect(
-      match("Family business sold", "A longtime shop changes hands.", national, long("The shop belongs to the family of Xavier Becerra, the former California attorney general."))?.candidateIds,
+      match("Family business sold", "A longtime shop changes hands.", national, long("The shop belongs to the family of Xavier Becerra, the former California attorney general. Becerra declined to comment."))?.candidateIds,
     ).toEqual(["becerra"]);
   });
 
@@ -141,7 +143,7 @@ describe("feed matcher on article text", () => {
     expect(match("Town news", "Around town.", national, long("Xavier Becerra said residents should vote."))).toBeNull();
     // A short name needs 2 identifying terms in the story, not just the state and an election word.
     expect(match("Restaurant week", "New openings.", national, long("Chef Jane Kim of California opened a stall; voters in the poll liked it."))).toBeNull();
-    expect(match("Rate fight", "Premiums rise.", national, long("Jane Kim, running for insurance commissioner in California, criticized the plan."))?.candidateIds).toEqual(["kim"]);
+    expect(match("Rate fight", "Premiums rise.", national, long("Jane Kim, running for insurance commissioner in California, criticized the plan. Kim said rates are too high."))?.candidateIds).toEqual(["kim"]);
   });
 
   it("needs a measure named twice when only the story names it", () => {
@@ -166,7 +168,7 @@ describe("feed matcher on article text", () => {
         ],
       },
     ]);
-    const story = long("Rosalind Alvarado, the attorney general candidate, met with farmers.");
+    const story = long("Rosalind Alvarado, the attorney general candidate, met with farmers. Alvarado promised water aid.");
     expect(tx("Drought hits farms", "Crops suffer.", { scope: "state", state: "TX" }, story)?.candidateIds).toEqual(["alvarado"]);
     expect(tx("Drought hits farms", "Crops suffer.", { scope: "state", state: "OK" }, story)).toBeNull();
   });

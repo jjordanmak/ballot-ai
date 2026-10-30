@@ -38,6 +38,9 @@ const READ_BUDGET_MS = 85_000;
 const MAX_READS = 40;
 const MAX_READS_PER_HOST = 3;
 const READ_CONCURRENCY = 8;
+/** A site that refused this many reads within REFUSED_FOR_MS isn't read again until that window passes. */
+const REFUSALS_TO_SKIP = 3;
+const REFUSED_FOR_MS = 24 * 3600_000;
 /** Longest a read waits for its site's slot before trying again next run. */
 const READ_MAX_WAIT_MS = 8_000;
 const MINUTE = 60_000;
@@ -250,10 +253,23 @@ export async function collectNews(opts: {
       const { data } = await db.from("feed_article_reads").select("url").in("url", ranked.slice(i, i + 50).map(([u]) => u));
       for (const r of data ?? []) seen.add(r.url);
     }
+    // Sites that refused our last reads (robots.txt or 403/429) are skipped for a day, not retried per article.
+    const refused = new Map<string, number>();
+    const { data: recent } = await db
+      .from("feed_article_reads")
+      .select("url")
+      .in("outcome", ["robots", "blocked"])
+      .gte("read_at", new Date(now.getTime() - REFUSED_FOR_MS).toISOString())
+      .limit(5000);
+    for (const r of recent ?? []) {
+      const host = new URL(r.url).hostname;
+      refused.set(host, (refused.get(host) ?? 0) + 1);
+    }
     const perHost = new Map<string, number>();
     const picked = ranked.filter(([u]) => {
       if (seen.has(u)) return false;
       const host = new URL(u).hostname;
+      if ((refused.get(host) ?? 0) >= REFUSALS_TO_SKIP) return false;
       const n = perHost.get(host) ?? 0;
       if (n >= MAX_READS_PER_HOST) return false;
       perHost.set(host, n + 1);

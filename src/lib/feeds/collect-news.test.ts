@@ -59,7 +59,7 @@ function fakeDb(existingUrls: string[] = [], readUrls: string[] = []) {
       return { data: [], error: null };
     };
     const q: Record<string, unknown> = {};
-    for (const m of ["eq", "in", "order", "range", "lte", "is", "select", "limit", "maybeSingle"]) q[m] = () => q;
+    for (const m of ["eq", "in", "order", "range", "lte", "gte", "is", "select", "limit", "maybeSingle"]) q[m] = () => q;
     q.then = (ok: (v: unknown) => unknown, bad?: (e: unknown) => unknown) => Promise.resolve(result()).then(ok, bad);
     return q;
   };
@@ -143,7 +143,7 @@ describe("collectNews article text", () => {
         item("Library hours change", "https://news.test/library"),
     );
     const pages: Record<string, string> = {
-      "https://news.test/insurance": page("Xavier Becerra, a candidate for governor, said he would freeze rates."),
+      "https://news.test/insurance": page("Xavier Becerra, a candidate for governor, said he would freeze rates. Becerra spoke in Fresno."),
       "https://news.test/weather": page("Sunny skies with a chance of fog along the coast."),
     };
     const fetchImpl = vi.fn(async (url: string | URL | Request) => {
@@ -169,16 +169,27 @@ describe("collectNews article text", () => {
   it("uses the feed's own full text without reading the page, and never reads an article twice", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const { db, inserted, reads } = fakeDb([], ["https://news.test/old"]);
-    const full = `Xavier Becerra, running for governor, toured a clinic. ${"Details of the visit. ".repeat(100)}`;
+    const full = `Xavier Becerra, running for governor, toured a clinic. ${"Details of the visit. ".repeat(100)} Becerra left at noon.`;
     const feed = rss(
       `<item><title>A day on the trail</title><link>https://news.test/trail</link><description>Short teaser.</description><content:encoded><![CDATA[<p>${full}</p>]]></content:encoded><pubDate>Thu, 29 Oct 2026 09:00:00 GMT</pubDate></item>` +
         item("Read before", "https://news.test/old"),
     );
     const fetchImpl = vi.fn(async (url: string | URL | Request) =>
-      String(url) === "https://a.test/feed" ? new Response(feed) : new Response(page("Xavier Becerra for governor"), { headers: { "content-type": "text/html" } }),
+      String(url) === "https://a.test/feed" ? new Response(feed) : new Response(page("Xavier Becerra for governor. Becerra said."), { headers: { "content-type": "text/html" } }),
     );
     await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
     expect(inserted).toMatchObject([{ url: "https://news.test/trail", match: { via: "article" } }]);
+    expect(fetchImpl.mock.calls.map(([u]) => String(u))).toEqual(["https://a.test/feed"]);
+    expect(reads).toEqual([]);
+  });
+
+  it("skips a site that refused 3 reads in the last day", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db, reads } = fakeDb([], ["https://news.test/a", "https://news.test/b", "https://news.test/c"]);
+    const fetchImpl = vi.fn(async (url: string | URL | Request) =>
+      String(url) === "https://a.test/feed" ? new Response(rss(item("Insurance rates jump", "https://news.test/new"))) : new Response(page("x"), { headers: { "content-type": "text/html" } }),
+    );
+    await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
     expect(fetchImpl.mock.calls.map(([u]) => String(u))).toEqual(["https://a.test/feed"]);
     expect(reads).toEqual([]);
   });
