@@ -15,6 +15,10 @@
  * The same channel carries "research" messages (migration 0012): when an AI
  * summary for something on this ballot is published, the page re-renders its
  * server data in place, so "being researched" sections fill in without a reload.
+ *
+ * Each card can name the candidates the matcher found in the story (from the
+ * row's `candidate_ids`, printed as on this ballot), so items that arrive live
+ * carry the same mentions as the first render.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -46,6 +50,8 @@ interface FeedState {
   loadOlder: (target: { contestId?: string; candidateId?: string }) => void;
   /** The server's clock when it rendered this page, so time-relative text hydrates identically. */
   renderedAt?: number;
+  /** Candidate id → ballot position and name as printed on this ballot. */
+  names: Map<string, { name: string; order: number }>;
 }
 
 const FeedContext = createContext<FeedState | null>(null);
@@ -57,6 +63,7 @@ export function LiveFeedProvider({
   researchIds,
   initial,
   renderedAt,
+  candidateNames,
   children,
 }: {
   electionId: string;
@@ -68,6 +75,8 @@ export function LiveFeedProvider({
   initial: FeedRow[];
   /** Server time (ms) of this render; see `useRenderedAt`. */
   renderedAt?: number;
+  /** Candidate feed id → name as printed on this ballot, in ballot order (the order mentions print in). */
+  candidateNames?: Record<string, string>;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -75,6 +84,7 @@ export function LiveFeedProvider({
   const research = useMemo(() => new Set(researchIds ?? []), [researchIds]);
   const [rows, setRows] = useState(() => new Map(initial.map((r) => [r.id, r])));
   const ids = useMemo(() => new Set(contestIds), [contestIds]);
+  const names = useMemo(() => new Map(Object.entries(candidateNames ?? {}).map(([id, name], order) => [id, { name, order }])), [candidateNames]);
   const [pages, setPages] = useState(() => initialPages(initial, contestIds) as FeedState["pages"]);
   // The ref is the source of truth for loadOlder (no double requests); the state re-renders carousels.
   const pagesRef = useRef(pages);
@@ -167,11 +177,15 @@ export function LiveFeedProvider({
     };
   }, [electionId, state, ids, refetch, research, router]);
 
-  const value = useMemo(() => ({ rows, contestIds: ids, pages, loadOlder, renderedAt }), [rows, ids, pages, loadOlder, renderedAt]);
+  const value = useMemo(() => ({ rows, contestIds: ids, pages, loadOlder, renderedAt, names }), [rows, ids, pages, loadOlder, renderedAt, names]);
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;
 }
 
-function toNewsItem(r: FeedRow): NewsItem {
+function toNewsItem(r: FeedRow, names: FeedState["names"]): NewsItem {
+  const mentions = r.candidate_ids
+    .flatMap((id) => names.get(id) ?? [])
+    .sort((a, b) => a.order - b.order)
+    .map((n) => n.name);
   return {
     id: r.id,
     type: r.type === "poll" ? "poll" : "news",
@@ -180,6 +194,7 @@ function toNewsItem(r: FeedRow): NewsItem {
     excerpt: r.excerpt ?? undefined,
     url: r.url,
     date: r.published_at,
+    mentions: [...new Set(mentions)],
   };
 }
 
@@ -191,7 +206,7 @@ export function useFeedItems(target?: { contestId?: string; candidateId?: string
     const out: NewsItem[] = [];
     for (const r of ctx.rows.values()) {
       const hit = target.candidateId ? r.candidate_ids.includes(target.candidateId) : r.contest_ids.includes(target.contestId!);
-      if (hit) out.push(toNewsItem(r));
+      if (hit) out.push(toNewsItem(r, ctx.names));
     }
     return out.sort((a, b) => b.date.localeCompare(a.date));
   }, [ctx, target]);

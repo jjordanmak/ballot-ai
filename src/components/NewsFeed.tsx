@@ -20,6 +20,8 @@ import {
 import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
 import { useFeedItems, useFeedPaging, useRenderedAt } from "./ballot/LiveFeed";
 import { FEED_PAGE } from "@/lib/feeds/paging";
+import { newsTopics } from "@/lib/feeds/topics";
+import { NewsTags } from "./NewsTags";
 
 const TYPE_META: Record<
   NewsItemType,
@@ -171,6 +173,8 @@ export function NewsFeed({
   const [archiveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
   const liveItems = fromFeed ?? archiveItems;
   const clock = useNewsClock(liveItems);
+  // A candidate's own carousel is already about them: mentions show on race and measure carousels only.
+  const showMentions = !feed?.candidateId;
   const [canLeft, setCanLeft] = useState(false);
   // Off until we've measured: nothing to scroll means both buttons stay disabled.
   const [canRight, setCanRight] = useState(false);
@@ -313,6 +317,7 @@ export function NewsFeed({
                   item={item}
                   fallbackAvatar={fallbackAvatar}
                   clock={clock}
+                  showMentions={showMentions}
                 />
               ))}
               {paging?.loading && <NewsCardSkeleton />}
@@ -366,10 +371,12 @@ function NewsCard({
   item,
   fallbackAvatar,
   clock,
+  showMentions,
 }: {
   item: NewsItem;
   fallbackAvatar?: string;
   clock: { now: number | null; timeZone?: string };
+  showMentions?: boolean;
 }) {
   const meta = TYPE_META[item.type] ?? TYPE_META.news;
   const isSocial = item.type === "social" && item.social;
@@ -445,6 +452,7 @@ function NewsCard({
           )}
         </>
       )}
+      <NewsTags mentions={showMentions ? item.mentions : undefined} topics={newsTopics(item.title, item.excerpt)} />
     </Element>
   );
 }
