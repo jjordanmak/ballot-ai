@@ -86,13 +86,15 @@
       "officialPdfHosts": [
         "sos.ca.gov",
         "smcacre.gov",
-        "smcacre.org"
+        "smcacre.org",
+        "ocvote.gov",
+        "ocvote.org"
       ],
       "counties": [
         {
           "name": "San Mateo County",
           "publisher": "San Mateo County Elections",
-          "divisions": "san mateo|daly city|jefferson union|smc community college|supervisorial|trustee area|15th congressional|19th assembly|13th senate",
+          "divisions": "san mateo|daly city|jefferson union|smc community college|^5th supervisorial district - 2022$|15th congressional|19th assembly|13th senate",
           "page": "https://smcacre.gov/november-3-2026",
           "follow": [
             "measure",
@@ -102,6 +104,15 @@
             "sample ballot",
             "local measures",
             "candidates"
+          ]
+        },
+        {
+          "name": "Orange County",
+          "publisher": "Orange County Registrar of Voters",
+          "divisions": "orange county|placentia|yorba linda|^4th supervisorial district$|45th congressional|59th assembly|34th senate",
+          "page": "https://ocvote.gov/elections/assigned-measure-letters-november-3-2026",
+          "follow": [
+            "measure"
           ]
         }
       ]

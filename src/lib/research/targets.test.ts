@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTargets, measureNumber, officeKeyFor, taskFor, type ContestRow } from "./targets";
+import { buildTargets, countyFor, measureNumber, officeKeyFor, taskFor, type ContestRow } from "./targets";
 
 const row = (over: Partial<ContestRow>): ContestRow => ({
   id: "c1",
@@ -86,6 +86,25 @@ describe("buildTargets", () => {
     expect(task.startsWith("Candidate: Ann Bee, running for Governor (California).\n")).toBe(true);
     expect(task).toMatch(/use only passages about Ann Bee/);
     expect(task).toMatch(/Says they will/);
+  });
+});
+
+describe("countyFor", () => {
+  it("places each registry division with its own county, never a neighbor's", () => {
+    const county = (name: string) => countyFor("CA", name)?.name;
+    // Orange County (Placentia sample ballot).
+    expect(county("Placentia")).toBe("Orange County");
+    expect(county("North Orange County Community College District Trustee Area 6")).toBe("Orange County");
+    expect(county("Placentia-Yorba Linda Unified School District Trustee Area 5")).toBe("Orange County");
+    expect(county("4th Supervisorial District")).toBe("Orange County");
+    // San Mateo County (Daly City sample ballot).
+    expect(county("City of Daly City")).toBe("San Mateo County");
+    expect(county("5th Supervisorial District - 2022")).toBe("San Mateo County");
+    expect(county("SMC Community College District Trustee Area 2 - 2022")).toBe("San Mateo County");
+    // A bare district from a county we have no entry for stays unplaced.
+    expect(county("2nd Supervisorial District")).toBeUndefined();
+    expect(county("Trustee Area 3")).toBeUndefined();
+    expect(countyFor("TX", "Placentia")).toBeUndefined();
   });
 });
 
