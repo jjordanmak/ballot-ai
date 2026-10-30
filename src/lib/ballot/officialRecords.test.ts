@@ -73,6 +73,18 @@ describe("supplementWithOfficialRecords with the provider's own retention questi
     expect(n.contests.some((c) => c.kind === "measure")).toBe(false);
   });
 
+  it("finds the question in whichever field the feed fills, and ignores Yes/No listed as candidates", () => {
+    const t = "For Associate Justice, Court of Appeal, Fourth District, Division Three, THOMAS A. DELANEY";
+    const shapes = [
+      { type: "ballot-measure", referendumTitle: "Judicial", referendumSubtitle: t, district: { name: "Orange County" } },
+      { type: "ballot-measure", ballotTitle: t, candidates: [{ name: "Yes" }, { name: "No" }], district: { name: "Orange County" } },
+    ];
+    for (const c of shapes) {
+      const n = normalizeVoterInfo({ contests: [c] } as unknown as CivicVoterInfoResponse, election, "2026-10-30T00:00:00.000Z");
+      expect(n.contests.map((x) => [x.kind, x.contestType, x.choices.map((ch) => ch.ballotName)])).toEqual([["candidate", "retention", ["THOMAS A. DELANEY"]]]);
+    }
+  });
+
   it("replaces them with the certified contests, places the rest of the court's judges, and adds no duplicates", () => {
     const n = normalizeVoterInfo(civic, election, "2026-10-30T00:00:00.000Z");
     const b = supplementWithOfficialRecords(ballot({ state: "CA", city: "Placentia", zip: "92870" }, n.contests));

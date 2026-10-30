@@ -120,12 +120,19 @@ function normalizeContest(
   warnings: BallotWarning[],
   stateCode: string | undefined,
 ): Contest {
-  // Some counties send each judge's retention question as a referendum
-  // ("For Associate Justice, …, NAME"); it is a retention contest for that judge.
-  const retention = !c.candidates?.length ? retentionQuestion(c.referendumTitle || c.ballotTitle || c.office || "") : null;
   // VIP feeds send measures as "ballot-measure"; Civic docs say "Referendum".
-  const isMeasure = !retention && (/^(referendum|ballot[- ]?measure|measure|proposition|initiative)$/i.test(c.type ?? "") ||
-    (!c.candidates?.length && !!c.referendumTitle));
+  const measureType = /^(referendum|ballot[- ]?measure|measure|proposition|initiative)$/i.test(c.type ?? "");
+  // Some counties send each judge's retention question as a measure
+  // ("For Associate Justice, …, NAME"), in whichever text field they fill;
+  // it is a retention contest for that judge.
+  const retention = measureType || !c.candidates?.length
+    ? [c.referendumTitle, c.referendumSubtitle, c.ballotTitle, c.office].map((t) => retentionQuestion(t ?? "")).find(Boolean) ?? null
+    : null;
+  const isMeasure = !retention && (measureType || (!c.candidates?.length && !!c.referendumTitle));
+  if (isMeasure && /\b(justice|judge)\b/i.test(`${c.referendumTitle ?? ""} ${c.referendumSubtitle ?? ""} ${c.ballotTitle ?? ""} ${c.office ?? ""}`)) {
+    const fields = { type: c.type, referendumTitle: c.referendumTitle, referendumSubtitle: c.referendumSubtitle, ballotTitle: c.ballotTitle, office: c.office, candidates: c.candidates?.length ?? 0 };
+    warnings.push({ code: "UNREAD_RETENTION", severity: "info", detail: JSON.stringify(fields).slice(0, 500) });
+  }
   let contestType = retention ? "retention" : mapContestType(c.type, isMeasure);
   const parsed = isMeasure ? parseMeasureTitle(c.referendumTitle || c.ballotTitle || c.office || "") : undefined;
   const title = (isMeasure
