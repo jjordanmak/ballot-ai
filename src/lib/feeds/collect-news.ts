@@ -4,17 +4,22 @@
  * apply the automated checks, and store the result. Matched items publish
  * immediately or are held with a reason; unmatched articles are not stored.
  *
+ * Matching tries the headline and feed summary first, then the article's own
+ * text: the feed's full text when it carries it, else the page, read once
+ * and politely (`article.ts`) within a per-run cap, most promising first.
+ *
  * Runs from the Vercel cron route; never touches an address.
  */
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logEvent } from "@/lib/observability/log";
 import type { Database } from "@/lib/supabase/types";
+import { readArticle, type ReadOutcome } from "./article";
 import { canonicalUrl } from "./canonical";
 import { checkEntry } from "./checks";
-import { buildMatcher, isStateLevelDivision, type TrackedContest } from "./match";
+import { buildHint, buildMatcher, isStateLevelDivision, type MatchResult, type TrackedContest } from "./match";
 import { discoverFeed } from "./discover";
-import { looksLikeFeed, parseFeed } from "./parse";
+import { looksLikeFeed, parseFeed, type FeedEntry } from "./parse";
 import { safeFetch, type Resolver } from "./safeFetch";
 import type { NewsSource } from "./sources";
 
@@ -25,8 +30,16 @@ type SourceStateInsert = Database["public"]["Tables"]["feed_source_state"]["Inse
 
 const FETCH_TIMEOUT_MS = 15_000;
 const CONCURRENCY = 16;
-/** Stop starting new fetches after this long, so cron runs (every 2 minutes) never overlap. */
-const DEFAULT_BUDGET_MS = 80_000;
+/** Stop starting new feed fetches after this long; article reads get the time after it. */
+const DEFAULT_BUDGET_MS = 60_000;
+/** Stop starting article reads after this long from the start, so cron runs (every 2 minutes) never overlap. */
+const READ_BUDGET_MS = 85_000;
+/** Article pages read per run, and per site per run (each site allows one request every ~10 s). */
+const MAX_READS = 40;
+const MAX_READS_PER_HOST = 3;
+const READ_CONCURRENCY = 8;
+/** Longest a read waits for its site's slot before trying again next run. */
+const READ_MAX_WAIT_MS = 8_000;
 const MINUTE = 60_000;
 /** How often each tier is fetched. */
 const INTERVAL_MS: Record<NewsSource["scope"], number> = { national: 2 * MINUTE, state: 6 * MINUTE, local: 10 * MINUTE };
@@ -67,6 +80,11 @@ export interface CollectSummary {
   discovered: string[];
   entries: number;
   matched: number;
+  /** Of those, matched on the article's text (from the feed, or read from the page). */
+  matchedOnText: number;
+  /** Article pages read this run, and how many reads were skipped or failed (robots, busy, blocked, empty, error). */
+  articlesRead: number;
+  readsFailed: number;
   published: number;
   held: number;
   /** Held items published this run because their reason no longer applies. */
@@ -151,18 +169,28 @@ export async function collectNews(opts: {
   resolve?: Resolver;
   publish?: boolean;
   budgetMs?: number;
+  readBudgetMs?: number;
 }): Promise<CollectSummary> {
   const { db, electionId } = opts;
   const now = opts.now ?? new Date();
   const publish = opts.publish ?? true;
   const sources = opts.sources.filter((s) => s.enabled);
-  const until = Date.now() + (opts.budgetMs ?? DEFAULT_BUDGET_MS);
-  const summary: CollectSummary = { sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], discovered: [], entries: 0, matched: 0, published: 0, held: 0, released: 0 };
+  const started = Date.now();
+  const until = started + (opts.budgetMs ?? DEFAULT_BUDGET_MS);
+  const readUntil = started + (opts.readBudgetMs ?? READ_BUDGET_MS);
+  const summary: CollectSummary = {
+    sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], discovered: [],
+    entries: 0, matched: 0, matchedOnText: 0, articlesRead: 0, readsFailed: 0, published: 0, held: 0, released: 0,
+  };
 
   summary.released = await releaseHeld(db, electionId, now, publish);
   const tracked = await loadTracked(db, electionId);
   if (!tracked.length) return summary;
   const match = buildMatcher(tracked);
+  const hint = buildHint(tracked);
+  const trackedStates = new Set(tracked.map((c) => c.state).filter(Boolean));
+  // A state or local outlet can only match its own state's contests.
+  const canMatch = (src: NewsSource) => src.scope === "national" || (!!src.state && trackedStates.has(src.state));
 
   const { data: states } = await db.from("feed_source_state").select("*").in("source_key", sources.map((s) => s.key));
   const stateByKey = new Map((states ?? []).map((s) => [s.source_key, s]));
@@ -174,9 +202,74 @@ export async function collectNews(opts: {
     .map((d) => d.src);
   summary.due = due.length;
   const rows = new Map<string, FeedInsert>();
+  /** Unmatched entries worth reading the page of, by canonical URL. */
+  const toRead = new Map<string, { e: FeedEntry; src: NewsSource; verdict: ReturnType<typeof checkEntry>; score: number }>();
+
+  const addRow = (e: FeedEntry, src: NewsSource, link: string, verdict: ReturnType<typeof checkEntry>, m: MatchResult) => {
+    const existing = rows.get(link);
+    if (existing) {
+      // Same article from another source: keep every contest either one matched.
+      existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), ...m.contestIds])];
+      existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...m.candidateIds])];
+      return;
+    }
+    summary.matched++;
+    if (m.via === "article") summary.matchedOnText++;
+    const held = verdict.status === "held" ? verdict.reason : !publish ? "publishing paused" : null;
+    rows.set(link, {
+      election_id: electionId,
+      type: "news",
+      source_key: src.key,
+      publisher: src.name,
+      title: e.title.slice(0, 300),
+      excerpt: e.summary ? e.summary.slice(0, 280) : null,
+      url: link,
+      image_url: e.image && /^https:\/\//.test(e.image) ? e.image : null,
+      published_at: (e.published ?? now).toISOString(),
+      status: held ? "held" : "published",
+      held_reason: held,
+      contest_ids: m.contestIds,
+      candidate_ids: m.candidateIds,
+      match: { terms: m.terms, via: m.via },
+    });
+  };
   // Source state is written only after the items are stored: a 304 next run
   // must never hide articles this run failed to save.
   const nextStates: SourceStateInsert[] = [];
+
+  const reads: { url: string; read_at: string; outcome: ReadOutcome; matched: boolean }[] = [];
+  /** Read the most promising unmatched articles' pages, newest first, and match on their text. */
+  async function readArticles() {
+    for (const link of rows.keys()) toRead.delete(link);
+    if (!toRead.size || Date.now() > readUntil) return;
+    const ranked = [...toRead.entries()]
+      .sort(([, a], [, b]) => b.score - a.score || (b.e.published?.getTime() ?? 0) - (a.e.published?.getTime() ?? 0))
+      .slice(0, MAX_READS * 5);
+    const seen = new Set<string>();
+    for (let i = 0; i < ranked.length; i += 50) {
+      const { data } = await db.from("feed_article_reads").select("url").in("url", ranked.slice(i, i + 50).map(([u]) => u));
+      for (const r of data ?? []) seen.add(r.url);
+    }
+    const perHost = new Map<string, number>();
+    const picked = ranked.filter(([u]) => {
+      if (seen.has(u)) return false;
+      const host = new URL(u).hostname;
+      const n = perHost.get(host) ?? 0;
+      if (n >= MAX_READS_PER_HOST) return false;
+      perHost.set(host, n + 1);
+      return true;
+    }).slice(0, MAX_READS);
+    await mapLimit(picked, READ_CONCURRENCY, async ([link, { e, src, verdict }]) => {
+      // A failed read never costs the run its feed results.
+      const r = await readArticle({ db, now, fetchImpl: opts.fetchImpl, resolve: opts.resolve }, link, USER_AGENT, READ_MAX_WAIT_MS).catch(() => ({ outcome: "error" as const, text: undefined }));
+      if (r.outcome === "read") summary.articlesRead++;
+      else summary.readsFailed++;
+      const m = r.text ? match(e.title, e.summary, src, r.text) : null;
+      if (m) addRow(e, src, link, verdict, m);
+      // A busy site is tried again next run; every other outcome is final.
+      if (r.outcome !== "busy") reads.push({ url: link, read_at: now.toISOString(), outcome: r.outcome, matched: !!m });
+    }, readUntil);
+  }
 
   summary.deferred = await mapLimit(due, CONCURRENCY, async (src) => {
     const prev = stateByKey.get(src.key);
@@ -218,33 +311,13 @@ export async function collectNews(opts: {
             if (!link) continue;
             const verdict = checkEntry(e, now);
             if (verdict.status === "skip") continue;
-            const m = match(e.title, e.summary, src);
-            if (!m) continue;
-            const existing = rows.get(link);
-            if (existing) {
-              // Same article from another source: keep every contest either one matched.
-              existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), ...m.contestIds])];
-              existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...m.candidateIds])];
-              continue;
+            const m = match(e.title, e.summary, src) ?? (e.content ? match(e.title, e.summary, src, e.content) : null);
+            if (m) {
+              addRow(e, src, link, verdict, m);
+              toRead.delete(link);
+            } else if (!e.content && canMatch(src) && !rows.has(link)) {
+              toRead.set(link, { e, src, verdict, score: hint(e.title, e.summary) });
             }
-            summary.matched++;
-            const held = verdict.status === "held" ? verdict.reason : !publish ? "publishing paused" : null;
-            rows.set(link, {
-              election_id: electionId,
-              type: "news",
-              source_key: src.key,
-              publisher: src.name,
-              title: e.title.slice(0, 300),
-              excerpt: e.summary ? e.summary.slice(0, 280) : null,
-              url: link,
-              image_url: e.image && /^https:\/\//.test(e.image) ? e.image : null,
-              published_at: (e.published ?? now).toISOString(),
-              status: held ? "held" : "published",
-              held_reason: held,
-              contest_ids: m.contestIds,
-              candidate_ids: m.candidateIds,
-              match: { terms: m.terms },
-            });
           }
           nextStates.push({
             source_key: src.key,
@@ -295,6 +368,8 @@ export async function collectNews(opts: {
     });
   }, until);
 
+  await readArticles();
+
   // Skip URLs already stored, then insert the rest.
   const urls = [...rows.keys()];
   for (let i = 0; i < urls.length; i += 50) {
@@ -308,6 +383,7 @@ export async function collectNews(opts: {
     if (error) throw new Error(`feed_items insert: ${error.message}`);
   }
   if (nextStates.length) await db.from("feed_source_state").upsert(nextStates);
+  if (reads.length) await db.from("feed_article_reads").upsert(reads, { onConflict: "url", ignoreDuplicates: true });
   summary.published = fresh.filter((r) => r.status === "published").length;
   summary.held = fresh.length - summary.published;
   logEvent("feeds.news", { ...summary, failed: summary.failed.join("; "), discovered: summary.discovered.join("; ") });

@@ -22,9 +22,10 @@ describe("checkEntry", () => {
 });
 
 /** Minimal stand-in for the Supabase query builder: just the calls collectNews makes. */
-function fakeDb(existingUrls: string[] = []) {
+function fakeDb(existingUrls: string[] = [], readUrls: string[] = []) {
   const inserted: Record<string, unknown>[] = [];
   const states: Record<string, unknown>[] = [];
+  const reads: Record<string, unknown>[] = [];
   const contests = [
     {
       id: "gov",
@@ -43,7 +44,8 @@ function fakeDb(existingUrls: string[] = []) {
   const query = (table: string, op: "select" | "update" | "upsert", payload?: unknown) => {
     const result = () => {
       if (op === "upsert") {
-        (table === "feed_items" ? inserted : states).push(...(Array.isArray(payload) ? payload : [payload]) as Record<string, unknown>[]);
+        const into = table === "feed_items" ? inserted : table === "feed_article_reads" ? reads : table === "feed_source_state" ? states : [];
+        into.push(...(Array.isArray(payload) ? payload : [payload]) as Record<string, unknown>[]);
         return { data: null, error: null };
       }
       if (op === "update") {
@@ -52,14 +54,18 @@ function fakeDb(existingUrls: string[] = []) {
       }
       if (table === "contests") return { data: contests, error: null };
       if (table === "feed_items") return { data: existingUrls.map((url) => ({ url })), error: null };
+      if (table === "feed_article_reads") return { data: readUrls.map((url) => ({ url })), error: null };
+      if (table === "fetch_hosts") return { data: null, error: null };
       return { data: [], error: null };
     };
     const q: Record<string, unknown> = {};
-    for (const m of ["eq", "in", "order", "range", "lte", "is", "select", "limit"]) q[m] = () => q;
+    for (const m of ["eq", "in", "order", "range", "lte", "is", "select", "limit", "maybeSingle"]) q[m] = () => q;
     q.then = (ok: (v: unknown) => unknown, bad?: (e: unknown) => unknown) => Promise.resolve(result()).then(ok, bad);
     return q;
   };
   const db = {
+    // The site's next request slot is free right away.
+    rpc: async () => ({ data: 0, error: null }),
     from(table: string) {
       return {
         select: () => query(table, "select"),
@@ -68,7 +74,7 @@ function fakeDb(existingUrls: string[] = []) {
       };
     },
   };
-  return { db, inserted, states, updates };
+  return { db, inserted, states, reads, updates };
 }
 
 const rss = (items: string) => `<rss version="2.0"><channel><title>t</title>${items}</channel></rss>`;
@@ -96,7 +102,8 @@ describe("collectNews", () => {
     const fetchImpl = vi.fn(async (url: string | URL | Request) => new Response(feeds[String(url)] ?? "", { status: feeds[String(url)] ? 200 : 404 }));
     const summary = await collectNews({ db: db as never, electionId: "us-2026-11-03-general", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2); // disabled source never fetched
+    const feedCalls = fetchImpl.mock.calls.map(([u]) => String(u)).filter((u) => u.endsWith("/feed"));
+    expect(feedCalls.sort()).toEqual(["https://a.test/feed", "https://b.test/feed"]); // disabled source never fetched
     expect(inserted.map((r) => [r.url, r.status, r.held_reason])).toEqual([
       ["https://news.test/debate", "published", null],
       ["https://news.test/op", "held", "opinion or sponsored"],
@@ -120,6 +127,78 @@ describe("collectNews", () => {
       publish: false,
     });
     expect(inserted).toMatchObject([{ status: "held", held_reason: "publishing paused" }]);
+  });
+});
+
+describe("collectNews article text", () => {
+  const page = (body: string) => `<html><body><nav>Sections</nav><article><h1>Story</h1><p>${body}</p><p>${"More reporting. ".repeat(40)}</p></article></body></html>`;
+  const sources: NewsSource[] = [{ key: "a", name: "Outlet A", url: "https://a.test/feed", scope: "national", enabled: true }];
+
+  it("reads the page when the headline doesn't name anyone, matches on the story, and remembers every read", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db, inserted, reads } = fakeDb();
+    const feed = rss(
+      item("Insurance rates jump again", "https://news.test/insurance", undefined, "Homeowners face higher premiums.") +
+        item("Weather today", "https://news.test/weather") +
+        item("Library hours change", "https://news.test/library"),
+    );
+    const pages: Record<string, string> = {
+      "https://news.test/insurance": page("Xavier Becerra, a candidate for governor, said he would freeze rates."),
+      "https://news.test/weather": page("Sunny skies with a chance of fog along the coast."),
+    };
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      const u = String(url);
+      if (u === "https://a.test/feed") return new Response(feed, { headers: { "content-type": "application/rss+xml" } });
+      if (pages[u]) return new Response(pages[u], { headers: { "content-type": "text/html" } });
+      return new Response("", { status: 404 });
+    });
+    const summary = await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
+    expect(inserted).toMatchObject([{ url: "https://news.test/insurance", contest_ids: ["gov"], candidate_ids: ["becerra"], match: { via: "article" } }]);
+    expect(summary).toMatchObject({ matched: 1, matchedOnText: 1, articlesRead: 2, readsFailed: 1 });
+    expect(reads.map((r) => [r.url, r.outcome, r.matched])).toEqual(
+      expect.arrayContaining([
+        ["https://news.test/insurance", "read", true],
+        ["https://news.test/weather", "read", false],
+        ["https://news.test/library", "error", false],
+      ]),
+    );
+    // The headline and summary are kept; the story's text is not.
+    expect(JSON.stringify(inserted)).not.toContain("freeze rates");
+  });
+
+  it("uses the feed's own full text without reading the page, and never reads an article twice", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db, inserted, reads } = fakeDb([], ["https://news.test/old"]);
+    const full = `Xavier Becerra, running for governor, toured a clinic. ${"Details of the visit. ".repeat(100)}`;
+    const feed = rss(
+      `<item><title>A day on the trail</title><link>https://news.test/trail</link><description>Short teaser.</description><content:encoded><![CDATA[<p>${full}</p>]]></content:encoded><pubDate>Thu, 29 Oct 2026 09:00:00 GMT</pubDate></item>` +
+        item("Read before", "https://news.test/old"),
+    );
+    const fetchImpl = vi.fn(async (url: string | URL | Request) =>
+      String(url) === "https://a.test/feed" ? new Response(feed) : new Response(page("Xavier Becerra for governor"), { headers: { "content-type": "text/html" } }),
+    );
+    await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
+    expect(inserted).toMatchObject([{ url: "https://news.test/trail", match: { via: "article" } }]);
+    expect(fetchImpl.mock.calls.map(([u]) => String(u))).toEqual(["https://a.test/feed"]);
+    expect(reads).toEqual([]);
+  });
+
+  it("doesn't read pages for a state outlet whose state has no tracked races", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { db } = fakeDb();
+    const fetchImpl = vi.fn(async (url: string | URL | Request) =>
+      String(url).endsWith("/feed") ? new Response(rss(item("City budget vote", "https://tx.test/budget"))) : new Response(page("x"), { headers: { "content-type": "text/html" } }),
+    );
+    const summary = await collectNews({
+      db: db as never,
+      electionId: "e",
+      sources: [{ key: "tx", name: "TX", url: "https://tx.test/feed", scope: "state", state: "TX", enabled: true }],
+      now: NOW,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolve: publicDns,
+    });
+    expect(summary.articlesRead + summary.readsFailed).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
 
