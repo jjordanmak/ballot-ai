@@ -24,8 +24,7 @@ import {
   RACE_SECTIONS,
   type MeasureSynthesis,
   type PersonSection,
-  type PersonSynthesis,
-  type PositionFact,
+  type PersonWriting,
   type RaceSection,
   type RaceSynthesis,
   type SynthRef,
@@ -141,10 +140,10 @@ function sectionUnits(sections: { section: string; sentences: { text: string; re
 }
 
 /** Every unit the model wrote, with an id the repair pass and the reviewer refer to. */
-export function unitsOf(kind: SynthKind, data: RaceSynthesis | MeasureSynthesis | PersonSynthesis): Unit[] {
+export function unitsOf(kind: SynthKind, data: RaceSynthesis | MeasureSynthesis | PersonWriting): Unit[] {
   const out = sectionUnits(data.sections);
   if (kind !== "person") return out;
-  const p = data as PersonSynthesis;
+  const p = data as PersonWriting;
   p.mightFit.forEach((m, i) => out.push({ id: `mightFit.${i}`, section: "mightFit", kind: "mightFit", text: m.text, refs: m.refs, issue: m.issue }));
   p.timeline.forEach((t, i) => out.push({ id: `timeline.${i}`, section: "timeline", kind: "timeline", text: t.event, refs: t.refs, when: t.when }));
   p.endorsements.forEach((e, i) => out.push({ id: `endorsements.${i}`, section: "endorsements", kind: "endorsement", text: e.name, refs: e.refs, category: e.category }));
@@ -343,19 +342,15 @@ export function screenUnit(u: Unit, ctx: ScreenContext): Screened {
   return { unit: u, text, refs, problems: [...new Set(problems)], style };
 }
 
-/** Years each verified position was held, by the model's ids, from code-checked start and end years. */
-export function positionYears(raw: PositionFact[], verified: StoredPositionV2[], now: Date): Map<string, number | null> {
-  const key = (title: string, org?: string | null) => `${normalizeForQuote(title.replace(/<\/?mark>/g, ""))}|${normalizeForQuote((org ?? "").replace(/<\/?mark>/g, ""))}`;
-  const byKey = new Map(verified.map((p) => [key(p.title, p.organization), p]));
-  const out = new Map<string, number | null>();
-  raw.forEach((p, i) => {
-    const v = byKey.get(key(cleanText(p.title, 160), p.organization ? cleanText(p.organization, 160) : null));
-    if (!v?.startYear || v.endYear === undefined) return void out.set(`P${i}`, null);
-    const end = v.endYear === "present" ? now.getUTCFullYear() : v.endYear;
-    const n = end - v.startYear;
-    out.set(`P${i}`, n > 0 ? n : null);
-  });
-  return out;
+/** Years each checked position was held, by the ids the writer sees ("P0" = the first checked position), from code-checked start and end years. */
+export function yearsHeld(verified: Pick<StoredPositionV2, "startYear" | "endYear">[], now: Date): Map<string, number | null> {
+  return new Map(
+    verified.map((v, i) => {
+      if (!v.startYear || v.endYear === undefined) return [`P${i}`, null];
+      const n = (v.endYear === "present" ? now.getUTCFullYear() : v.endYear) - v.startYear;
+      return [`P${i}`, n > 0 ? n : null];
+    }),
+  );
 }
 
 /* ---------- Highlights ---------- */

@@ -10,7 +10,7 @@
  */
 import type { Target } from "@/lib/research/targets";
 
-export const PROMPT_VERSION = "synthesis-2026-10-30.r1";
+export const PROMPT_VERSION = "synthesis-2026-10-30.r1b";
 
 /** Research instructions: the same for every item and every model, so they are cached. */
 export const RESEARCH_SYSTEM = `You extract facts for ballot.ai, an independent, nonpartisan voter guide.
@@ -179,11 +179,12 @@ const MEASURE_SECTION_SPECS = `Official sources only: use only the official docu
 - currentLaw: what the law is today.
 - kind: what type of change it is (constitutional amendment, statute, bond, tax) and who placed it on the ballot.`;
 
-const PERSON_SECTION_SPECS = `${PERSON_RULES.replace(/\n\nPlatform:[\s\S]*?(?=\n\nLeave out)/, "").replace("A campaign site may be used only for the platform.", "A campaign site may be used only for the platform (priorities, stances, mightFit).")}
+/** The lists (people's first call): education, positions, residence. Code checks each field against its quote. */
+const PERSON_LIST_RULES = PERSON_RULES.replace(/\n\nPlatform:[\s\S]*?(?=\n\nLeave out)/, "");
 
-Education and positions are lists that code checks field by field: follow those rules exactly.
+const PERSON_SECTION_SPECS = `Sources, in order of trust when they disagree: official pages and statements (government sites, the official voter guide, court biographies), then Ballotpedia, then news articles, then the campaign's own site. A campaign site may be used only for the platform (priorities, stances, mightFit).
 
-Positions are numbered P0, P1… in the order you list them.
+Leave out, for everyone: family background ("son of…", "first in their family…"), awards and honors, personal anecdotes, campaign slogans, and anything that judges or predicts.
 
 Sections:
 - inBrief: 2 or 3 sentences, each cited, in this order: (1) experience: the offices they held, with durations written as {{years:Pn}} (code fills in the number from that position's years; never write the number yourself); (2) track record: the most-cited fact from their record in office; (3) positioning and platform, attributed to the campaign. You may name their party only as the ballot prints it. Never compare them with other candidates, never use labels ("establishment", "outsider"), rankings ("deepest résumé"), electability, momentum, strengths, criticisms or character judgments.
@@ -201,22 +202,37 @@ timeline: offices, past elections and results, key decisions and track-record ev
 
 endorsements: only confirmed, named endorsements a document states, each in one category: Elected Officials, Unions, Advocacy & Industry, or Local Leaders. No "soft" endorsements, no unnamed "leadership".`;
 
-const JUDGE_SPECS = `This is a judge on the ballot for a retention vote. Fill only the lists (education, positions), background (2 to 4 sentences: their path to the bench and their court) and timeline. Leave inBrief, priorities, stances, mightFit and endorsements empty.
+const JUDGE_SPECS = `This is a judge on the ballot for a retention vote. Write only background (2 to 4 sentences: their path to the bench and their court) and timeline. Leave inBrief, priorities, stances, mightFit and endorsements empty.
 
-${PERSON_RULES.replace(/\n\nPlatform:[\s\S]*?(?=\n\nLeave out)/, "")}`;
+Leave out: family background, awards and honors, personal anecdotes, and anything that judges or predicts.`;
 
-/** The writing task for one target. Built from stored entities only (never request data). */
-export function synthesisTask(t: Target): string {
+const who = (t: Target) =>
+  t.kind === "retention"
+    ? `Judge: ${t.personName}, ${t.office} (${t.division}), on the ballot for a retention vote.`
+    : `Candidate: ${t.personName}, running for ${t.office} (${t.division}).`;
+const onlyThem = (t: Target) => `The documents may mention other people: use only passages about ${t.personName}.`;
+
+/** People, first call: the lists only. Built from stored entities only (never request data). */
+export function personListsTask(t: Target): string {
+  const residence = isLocal(t) ? `Residence: the city or area where they live, only if a document states it (never a street address).` : `Residence: leave null.`;
+  return `${who(t)}\n${onlyThem(t)}\n\nReturn their lists only: education, positions, residence and leftOut. Every entry gives "quote" and "sourceId" (not refs).\n\n${PERSON_LIST_RULES}\n\n${residence}`;
+}
+
+/**
+ * The writing task for one target. People get their checked positions
+ * (from the first call) as P0, P1…, which In Brief uses for durations.
+ * Built from stored entities only (never request data).
+ */
+export function synthesisTask(t: Target, positions: string[] = []): string {
   if (t.kind === "measure") return `Measure: ${t.label}.\nWrite each section about this measure only.\n\n${MEASURE_SECTION_SPECS}`;
   if (t.kind === "race") {
     const field = t.candidateNames?.length ? `\nCandidates on the ballot: ${t.candidateNames.join(", ")}.` : "";
     return `Race: ${t.label}.${field}\nWrite the race introduction for this contest only.\n\n${RACE_SECTION_SPECS}`;
   }
-  const residence = isLocal(t) ? `Residence: the city or area where they live, only if a document states it (never a street address).` : `Residence: leave null.`;
-  if (t.kind === "retention") {
-    return `Judge: ${t.personName}, ${t.office} (${t.division}).\nThe documents may mention other people: use only passages about ${t.personName}.\n\n${JUDGE_SPECS}\n\n${residence}`;
-  }
-  return `Candidate: ${t.personName}, running for ${t.office} (${t.division}).\nThe documents may mention other people: use only passages about ${t.personName}.\n\n${PERSON_SECTION_SPECS}\n\n${residence}`;
+  const checked = positions.length
+    ? `Checked positions (write a duration only as {{years:Pn}}; code fills in the number):\n${positions.map((p, i) => `P${i}: ${p}`).join("\n")}`
+    : "Checked positions: none. Don't state durations.";
+  return `${who(t)}\n${onlyThem(t)}\n\n${checked}\n\n${t.kind === "retention" ? JUDGE_SPECS : PERSON_SECTION_SPECS}`;
 }
 
 /** The single repair pass: only the listed units, with why each failed. */

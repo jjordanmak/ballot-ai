@@ -376,7 +376,7 @@ async function raceCandidates(db: Db, t: Target & { compare: boolean }, setting:
     .sort((a, b) => ids.indexOf(a.target) - ids.indexOf(b.target));
 }
 
-const transient = (problem?: string) => !!problem && /^api_(429|500|502|503|529|error)$|^error$/.test(problem);
+const transient = (problem?: string) => !!problem && /^api_(429|500|502|503|529|error)(:|$)|^error$/.test(problem);
 
 async function finishState(db: Db, key: string, now: Date, patch: { outcome: string; hash?: string; afterMs: number; failures?: number }) {
   const jitter = Math.floor(Math.random() * 30 * 60_000);

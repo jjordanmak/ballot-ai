@@ -2,7 +2,7 @@
 
 exports[`prompts > are pinned 1`] = `
 {
-  "PROMPT_VERSION": "synthesis-2026-10-30.r1",
+  "PROMPT_VERSION": "synthesis-2026-10-30.r1b",
   "RESEARCH_SYSTEM": "You extract facts for ballot.ai, an independent, nonpartisan voter guide.
 
 Rules:
@@ -68,7 +68,7 @@ Residence: leave null.",
 
 exports[`prompts > synthesis prompts are pinned 1`] = `
 {
-  "PROMPT_VERSION": "synthesis-2026-10-30.r1",
+  "PROMPT_VERSION": "synthesis-2026-10-30.r1b",
   "REVIEW_SYSTEM": "You review text for ballot.ai, an independent, nonpartisan voter guide, against its neutrality rules. You flag; you don't rewrite. Judge only the wording, not whether facts are true.",
   "REWRITE_SYSTEM": "You edit sentences for ballot.ai, an independent, nonpartisan voter guide, so they follow its neutrality rules while saying the same facts. Use only the excerpts given for each sentence: every number, date and name must appear in them. Follow the house style: numerals always, "%", the Oxford comma, AP otherwise. Keep any <mark> highlights only on load-bearing facts.",
   "SYNTH_SYSTEM": "You write for ballot.ai, an independent, nonpartisan voter guide. You turn the documents provided into short, readable, neutral explanations.
@@ -144,22 +144,12 @@ Profile, Timeline:
   "candidate": "Candidate: Ann Bee, running for Governor (California).
 The documents may mention other people: use only passages about Ann Bee.
 
+Checked positions (write a duration only as {{years:Pn}}; code fills in the number):
+P0: Member, Springfield City Council (2019–present)
+
 Sources, in order of trust when they disagree: official pages and statements (government sites, the official voter guide, court biographies), then Ballotpedia, then news articles, then the campaign's own site. A campaign site may be used only for the platform (priorities, stances, mightFit).
 
-Education: every degree and certificate program, with the institution. Leave out high school unless it is the highest level stated.
-
-Positions: everything they have done in adult life, as separate entries: every elected or appointed office, paid job, board seat, military service, nonprofit or advisory role.
-- Each title is its own entry with its own years, including promotions within one organization and military ranks.
-- A committee chair or vice-chair is its own entry. Plain committee memberships go in "committees" on the office they belong to.
-- Years only when a document states them. endYear is "present" only if a document says they hold it now.
-
 Leave out, for everyone: family background ("son of…", "first in their family…"), awards and honors, personal anecdotes, campaign slogans, and anything that judges or predicts.
-
-In "leftOut", list facts you found but did not include, with the rule that excluded each.
-
-Education and positions are lists that code checks field by field: follow those rules exactly.
-
-Positions are numbered P0, P1… in the order you list them.
 
 Sections:
 - inBrief: 2 or 3 sentences, each cited, in this order: (1) experience: the offices they held, with durations written as {{years:Pn}} (code fills in the number from that position's years; never write the number yourself); (2) track record: the most-cited fact from their record in office; (3) positioning and platform, attributed to the campaign. You may name their party only as the ballot prints it. Never compare them with other candidates, never use labels ("establishment", "outsider"), rankings ("deepest résumé"), electability, momentum, strengths, criticisms or character judgments.
@@ -175,9 +165,26 @@ mightFit ("Might fit if you…"): exactly 4 lines when the documents allow, each
 
 timeline: offices, past elections and results, key decisions and track-record events, and this election (debates, primary result, Nov. 3), oldest first. "when" is a year or a date; "event" is a short past-tense phrase.
 
-endorsements: only confirmed, named endorsements a document states, each in one category: Elected Officials, Unions, Advocacy & Industry, or Local Leaders. No "soft" endorsements, no unnamed "leadership".
+endorsements: only confirmed, named endorsements a document states, each in one category: Elected Officials, Unions, Advocacy & Industry, or Local Leaders. No "soft" endorsements, no unnamed "leadership".",
+  "candidateLists": "Candidate: Ann Bee, running for Governor (California).
+The documents may mention other people: use only passages about Ann Bee.
 
-Residence: leave null.",
+Return their lists only: education, positions, residence and leftOut. Every entry gives "quote" and "sourceId" (not refs).
+
+Sources, in order of trust when they disagree: official pages and statements (government sites, the official voter guide, court biographies), then Ballotpedia, then news articles, then the campaign's own site. A campaign site may be used only for the platform.
+
+Education: every degree and certificate program, with the institution. Leave out high school unless it is the highest level stated.
+
+Positions: everything they have done in adult life, as separate entries: every elected or appointed office, paid job, board seat, military service, nonprofit or advisory role.
+- Each title is its own entry with its own years, including promotions within one organization and military ranks.
+- A committee chair or vice-chair is its own entry. Plain committee memberships go in "committees" on the office they belong to.
+- Years only when a document states them. endYear is "present" only if a document says they hold it now.
+
+Leave out, for everyone: family background ("son of…", "first in their family…"), awards and honors, personal anecdotes, campaign slogans, and anything that judges or predicts.
+
+In "leftOut", list facts you found but did not include, with the rule that excluded each.
+
+Residence: the city or area where they live, only if a document states it (never a street address).",
   "measure": "Measure: Proposition 7 (California).
 Write each section about this measure only.
 
@@ -208,25 +215,14 @@ Sections (each has its own job; never repeat a fact across them):
 
 context.0: a
   Reasons: excerpt not found in its document",
-  "retention": "Judge: Ann Bee, Associate Justice (California).
+  "retention": "Judge: Ann Bee, Associate Justice (California), on the ballot for a retention vote.
 The documents may mention other people: use only passages about Ann Bee.
 
-This is a judge on the ballot for a retention vote. Fill only the lists (education, positions), background (2 to 4 sentences: their path to the bench and their court) and timeline. Leave inBrief, priorities, stances, mightFit and endorsements empty.
+Checked positions: none. Don't state durations.
 
-Sources, in order of trust when they disagree: official pages and statements (government sites, the official voter guide, court biographies), then Ballotpedia, then news articles, then the campaign's own site. A campaign site may be used only for the platform.
+This is a judge on the ballot for a retention vote. Write only background (2 to 4 sentences: their path to the bench and their court) and timeline. Leave inBrief, priorities, stances, mightFit and endorsements empty.
 
-Education: every degree and certificate program, with the institution. Leave out high school unless it is the highest level stated.
-
-Positions: everything they have done in adult life, as separate entries: every elected or appointed office, paid job, board seat, military service, nonprofit or advisory role.
-- Each title is its own entry with its own years, including promotions within one organization and military ranks.
-- A committee chair or vice-chair is its own entry. Plain committee memberships go in "committees" on the office they belong to.
-- Years only when a document states them. endYear is "present" only if a document says they hold it now.
-
-Leave out, for everyone: family background ("son of…", "first in their family…"), awards and honors, personal anecdotes, campaign slogans, and anything that judges or predicts.
-
-In "leftOut", list facts you found but did not include, with the rule that excluded each.
-
-Residence: leave null.",
+Leave out: family background, awards and honors, personal anecdotes, and anything that judges or predicts.",
   "review": "Item: Governor.
 
 Flag a unit (with its id and the rule) if it has:

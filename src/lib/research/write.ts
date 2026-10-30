@@ -18,20 +18,22 @@ import {
   REWRITE_SYSTEM,
   SYNTH_SYSTEM,
   parityTask,
+  personListsTask,
   repairTask,
   reviewTask,
   rewriteTask,
   synthesisTask,
 } from "@/lib/ai/prompts";
-import { MeasureSynthesis, NeutralityReview, PersonSynthesis, RaceSynthesis, Rewrite } from "@/lib/ai/schemas";
+import { MeasureSynthesis, NeutralityReview, PersonLists, PersonWriting, RaceSynthesis, Rewrite } from "@/lib/ai/schemas";
 import { STATE_NAMES } from "@/domain/categorize";
 import { neutralityProblem } from "@/lib/ai/checks";
 import { screenFacts, usedSources } from "./person";
+import { positionLine } from "@/domain/profileFormat";
 import {
   hardFactProblem,
   mightFitProblem,
   personUnits,
-  positionYears,
+  yearsHeld,
   screenUnit,
   shapeSections,
   stripMarks,
@@ -128,24 +130,33 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   if (!docs.length) return empty("no official documents");
 
   const modelDocs: Doc[] = docs.map((d) => ({ id: d.id, title: d.meta.title, url: d.meta.url, text: d.text }));
-  const call = { model: setting.model, effort: setting.effort, system: SYNTH_SYSTEM, task: synthesisTask(t), docs: modelDocs, cacheDocs: true, maxTokens: 24000, timeoutMs: 150_000, client };
-  const schema = kind === "measure" ? MeasureSynthesis : kind === "race" ? RaceSynthesis : PersonSynthesis;
+  // Every call for this item shares the system prompt and the documents block, so later calls read both from the cache.
+  const base = { model: setting.model, effort: setting.effort, system: SYNTH_SYSTEM, docs: modelDocs, cacheDocs: true, maxTokens: 24000, timeoutMs: 150_000, client };
+
+  // People, first call: the lists, checked field by field and written by code (person.ts).
+  let lists: ReturnType<typeof screenFacts> | null = null;
+  let listsRaw: PersonLists | null = null;
+  let years: Map<string, number | null> | undefined;
+  if (kind === "person") {
+    const l = await extract({ ...base, task: personListsTask(t), schema: PersonLists });
+    spent += l.costMicroUsd;
+    usage.push(l.usage ?? null);
+    if (!l.data) return empty(l.problem);
+    listsRaw = l.data;
+    lists = screenFacts({ ...l.data, platform: [] }, docs, { local: !!t.local, judge: judgeOnly, now });
+    rejected.push(...lists.rejected);
+    years = yearsHeld(lists.positions, now);
+  }
+
+  // The writing call. People get their checked positions as P0, P1… for {{years:Pn}}.
+  const call = { ...base, task: synthesisTask(t, lists?.positions.map(positionLine) ?? []) };
+  const schema = kind === "measure" ? MeasureSynthesis : kind === "race" ? RaceSynthesis : PersonWriting;
   const first = await extract({ ...call, schema });
   spent += first.costMicroUsd;
   usage.push(first.usage ?? null);
   if (!first.data) return empty(first.problem);
-  const data = first.data as MeasureSynthesis | RaceSynthesis | PersonSynthesis;
-
-  // People: the lists are checked field by field and written by code (person.ts); durations come from verified years.
+  const data = first.data as MeasureSynthesis | RaceSynthesis | PersonWriting;
   const docMap = new Map(docs.map((d) => [d.id, d]));
-  let lists: ReturnType<typeof screenFacts> | null = null;
-  let years: Map<string, number | null> | undefined;
-  if (kind === "person") {
-    const p = data as PersonSynthesis;
-    lists = screenFacts({ ...p, platform: [] }, docs, { local: !!t.local, judge: judgeOnly, now });
-    rejected.push(...lists.rejected);
-    years = positionYears(p.positions, lists.positions, now);
-  }
   const ctx = { docs: docMap, ownNames: ownNamesFor(t), years };
   const context = `Item: ${t.label}.`;
   const screened = unitsOf(kind, data).map((u) => screenUnit(u, ctx));
@@ -224,8 +235,8 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   else payload = { kind: "measure", v: 2, sections: shaped.sections, limited: shaped.limited, sources: {} };
   const sourceIds = [...new Set([...listSources, ...refSources])];
   payload.sources = usedSources(docs, sourceIds);
-  const leftOut = kind === "person" ? (data as PersonSynthesis).leftOut.slice(0, 10) : undefined;
-  return { payload, sourceIds, rejected, spent, usage, raw: data, extra: { leftOut, conflicts: lists?.conflicts, repaired: repaired.size } };
+  const leftOut = listsRaw ? listsRaw.leftOut.slice(0, 10) : undefined;
+  return { payload, sourceIds, rejected, spent, usage, raw: listsRaw ? { lists: listsRaw, writing: data } : data, extra: { leftOut, conflicts: lists?.conflicts, repaired: repaired.size } };
 }
 
 /**
