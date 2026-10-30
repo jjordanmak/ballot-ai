@@ -18,7 +18,8 @@ import {
   Facebook,
 } from "lucide-react";
 import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
-import { useFeedItems } from "./ballot/LiveFeed";
+import { useFeedItems, useFeedPaging } from "./ballot/LiveFeed";
+import { FEED_PAGE } from "@/lib/feeds/paging";
 
 const TYPE_META: Record<
   NewsItemType,
@@ -142,7 +143,10 @@ export function NewsFeed({
   hideWhenEmpty?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
   const fromFeed = useFeedItems(feed);
+  const paging = useFeedPaging(feed);
   const [archiveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
   const liveItems = fromFeed ?? archiveItems;
   const [canLeft, setCanLeft] = useState(false);
@@ -187,13 +191,39 @@ export function NewsFeed({
     window.setTimeout(updateAffordance, 350);
   };
 
+  // Older stories load as the carousel nears its end, about 1 card early.
+  const loadOlder = paging?.loadOlder;
+  const canPage = !!paging && !paging.done;
+  useEffect(() => {
+    const root = scrollRef.current;
+    const end = endRef.current;
+    if (!canPage || !root || !end || !loadOlder) return;
+    const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && loadOlder(), { root, rootMargin: "0px 400px 0px 0px" });
+    io.observe(end);
+    return () => io.disconnect();
+  }, [canPage, loadOlder, liveItems.length]);
+
+  // A candidate's carousel is a slice of its race's stories, so it can start short:
+  // fetch its own first page once it scrolls into view.
+  const short = !!feed?.candidateId && !!paging && !paging.started && liveItems.length < FEED_PAGE;
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!short || !el || !loadOlder) return;
+    const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && loadOlder(), { rootMargin: "200px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [short, loadOlder]);
+
   const sorted = liveItems
     .slice()
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  if (hideWhenEmpty && !sorted.length) return null;
+  if (hideWhenEmpty && !sorted.length) {
+    // Nothing to show yet; keep an invisible anchor while a candidate's first page may still bring stories.
+    return short || paging?.loading ? <section ref={sectionRef} aria-hidden className="h-px" /> : null;
+  }
 
   return (
-    <section>
+    <section ref={sectionRef}>
       <div className="mb-6 flex items-center gap-3">
         <div className="font-mono-cap text-[11px] text-[var(--color-paper)] flex items-center gap-2.5 flex-1 tracking-[0.16em]">
           <RadioTower size={12} className="text-[var(--color-accent)]" />
@@ -228,7 +258,7 @@ export function NewsFeed({
         </div>
       </div>
 
-      {sorted.length === 0 ? (
+      {sorted.length === 0 && !paging?.loading ? (
         <div className="rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-6 py-7">
           <div className="font-mono text-[13px] font-bold text-[var(--color-paper-2)]">
             No recent news in our feed yet.
@@ -262,6 +292,8 @@ export function NewsFeed({
                   fallbackAvatar={fallbackAvatar}
                 />
               ))}
+              {paging?.loading && <NewsCardSkeleton />}
+              {canPage && <div ref={endRef} aria-hidden className="w-px shrink-0" />}
             </div>
           </div>
           {/* NYT API terms ask for this credit wherever its results appear (owner, 2026-10-30). */}
@@ -278,6 +310,22 @@ export function NewsFeed({
   );
 }
 
+
+/** Stands in for the next stories while they load: a NewsCard's size and surface, no content. */
+function NewsCardSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading older stories"
+      className="flex flex-col gap-3 shrink-0 w-[85vw] sm:w-[360px] rounded-xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 animate-pulse"
+    >
+      <div className="h-3 w-1/3 rounded bg-[var(--color-ink-3)]" />
+      <div className="h-4 w-11/12 rounded bg-[var(--color-ink-3)]" />
+      <div className="h-4 w-3/4 rounded bg-[var(--color-ink-3)]" />
+      <div className="h-3 w-1/4 rounded bg-[var(--color-ink-3)] mt-auto" />
+    </div>
+  );
+}
 
 function LivePill() {
   return (

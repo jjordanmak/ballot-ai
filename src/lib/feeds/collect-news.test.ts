@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { checkEntry } from "./checks";
+import { checkEntry, cycleWindow } from "./checks";
 import { collectNews, nextDue, retryAfter } from "./collect-news";
 import type { NewsSource } from "./sources";
 
@@ -7,17 +7,32 @@ const NOW = new Date("2026-10-29T12:00:00Z");
 const publicDns = (async () => [{ address: "93.184.216.34", family: 4 }]) as never;
 
 describe("checkEntry", () => {
+  const cycle = cycleWindow({ date: "2026-11-03", cycle_start: "2024-11-06" });
   const base = { title: "Becerra rally", link: "https://example.com/news/a", categories: [], published: new Date("2026-10-29T10:00:00Z") };
-  it("publishes recent news and skips old items", () => {
-    expect(checkEntry(base, NOW)).toEqual({ status: "published" });
-    expect(checkEntry({ ...base, published: new Date("2026-10-01T00:00:00Z") }, NOW)).toEqual({ status: "skip" });
+  it("keeps the whole election cycle, not just recent weeks", () => {
+    expect(checkEntry(base, NOW, cycle)).toEqual({ status: "published" });
+    expect(checkEntry({ ...base, published: new Date("2026-03-01T00:00:00Z") }, NOW, cycle)).toEqual({ status: "published" });
+    // Before the cycle started.
+    expect(checkEntry({ ...base, published: new Date("2024-10-01T00:00:00Z") }, NOW, cycle)).toEqual({ status: "skip" });
+  });
+  it("takes a story from before the election year only when it's about the campaign", () => {
+    const early = { ...base, published: new Date("2025-04-10T00:00:00Z") };
+    expect(checkEntry({ ...early, title: "Becerra launches campaign for governor" }, NOW, cycle)).toEqual({ status: "published" });
+    expect(checkEntry({ ...early, title: "Becerra eyes 2026" }, NOW, cycle)).toEqual({ status: "published" });
+    expect(checkEntry({ ...early, title: "Becerra speaks", summary: "He is running for governor." }, NOW, cycle)).toEqual({ status: "published" });
+    expect(checkEntry({ ...early, title: "Becerra testifies on hospital prices" }, NOW, cycle)).toEqual({ status: "skip" });
+  });
+  it("defaults to the day after the last general election when an election sets no cycle start (non-CA)", () => {
+    const nj = cycleWindow({ date: "2027-11-02" });
+    expect(nj.start.toISOString()).toBe("2025-11-03T00:00:00.000Z");
+    expect(nj.electionYearStart.toISOString()).toBe("2027-01-01T00:00:00.000Z");
   });
   it("holds opinion, sponsored, undated and future-dated items", () => {
-    expect(checkEntry({ ...base, title: "Opinion: vote no" }, NOW)).toMatchObject({ status: "held" });
-    expect(checkEntry({ ...base, link: "https://example.com/opinion/x" }, NOW)).toMatchObject({ status: "held" });
-    expect(checkEntry({ ...base, categories: ["Sponsored"] }, NOW)).toMatchObject({ status: "held" });
-    expect(checkEntry({ ...base, published: undefined }, NOW)).toMatchObject({ status: "held", reason: "no publish date" });
-    expect(checkEntry({ ...base, published: new Date("2026-10-30T12:00:00Z") }, NOW)).toMatchObject({ status: "held" });
+    expect(checkEntry({ ...base, title: "Opinion: vote no" }, NOW, cycle)).toMatchObject({ status: "held" });
+    expect(checkEntry({ ...base, link: "https://example.com/opinion/x" }, NOW, cycle)).toMatchObject({ status: "held" });
+    expect(checkEntry({ ...base, categories: ["Sponsored"] }, NOW, cycle)).toMatchObject({ status: "held" });
+    expect(checkEntry({ ...base, published: undefined }, NOW, cycle)).toMatchObject({ status: "held", reason: "no publish date" });
+    expect(checkEntry({ ...base, published: new Date("2026-10-30T12:00:00Z") }, NOW, cycle)).toMatchObject({ status: "held" });
   });
 });
 
@@ -53,6 +68,7 @@ function fakeDb(existingUrls: string[] = [], readUrls: string[] = [], existingRo
         return { data: [], error: null };
       }
       if (table === "contests") return { data: contests, error: null };
+      if (table === "elections") return { data: { date: "2026-11-03", cycle_start: "2024-11-06" }, error: null };
       if (table === "feed_items") return { data: [...existingUrls.map((url) => ({ url })), ...existingRows], error: null };
       if (table === "feed_article_reads") return { data: readUrls.map((url) => ({ url })), error: null };
       if (table === "fetch_hosts") return { data: null, error: null };

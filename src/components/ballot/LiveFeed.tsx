@@ -9,6 +9,9 @@
  * After a dropped connection (a phone waking up, a network change) or when
  * the tab becomes visible again, the page refetches so nothing is missed.
  *
+ * Each carousel loads older stories as it nears its end (`useFeedPaging`,
+ * `feed_page()`), FEED_PAGE at a time, with its own cursor.
+ *
  * The same channel carries "research" messages (migration 0012): when an AI
  * summary for something on this ballot is published, the page re-renders its
  * server data in place, so "being researched" sections fill in without a reload.
@@ -18,6 +21,7 @@ import { useRouter } from "next/navigation";
 import type { NewsItem } from "@/data/types";
 import type { Json } from "@/lib/supabase/types";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
+import { FEED_PAGE, initialPages, nextPage, pageFor, targetKey, type PageState } from "@/lib/feeds/paging";
 
 export interface FeedRow {
   id: string;
@@ -38,6 +42,8 @@ export interface FeedRow {
 interface FeedState {
   rows: Map<string, FeedRow>;
   contestIds: Set<string>;
+  pages: Map<string, PageState & { loading?: boolean; retryAt?: number }>;
+  loadOlder: (target: { contestId?: string; candidateId?: string }) => void;
 }
 
 const FeedContext = createContext<FeedState | null>(null);
@@ -64,16 +70,58 @@ export function LiveFeedProvider({
   const research = useMemo(() => new Set(researchIds ?? []), [researchIds]);
   const [rows, setRows] = useState(() => new Map(initial.map((r) => [r.id, r])));
   const ids = useMemo(() => new Set(contestIds), [contestIds]);
+  const [pages, setPages] = useState(() => initialPages(initial, contestIds) as FeedState["pages"]);
+  // The ref is the source of truth for loadOlder (no double requests); the state re-renders carousels.
+  const pagesRef = useRef(pages);
+  const setPage = useCallback((key: string, p: FeedState["pages"] extends Map<string, infer V> ? V : never) => {
+    pagesRef.current = new Map(pagesRef.current).set(key, p);
+    setPages(pagesRef.current);
+  }, []);
 
+  const merge = useCallback((list: FeedRow[]) => {
+    setRows((prev) => {
+      const next = new Map(prev);
+      for (const r of list) next.set(r.id, r);
+      return next;
+    });
+  }, []);
+
+  // Catch up after a dropped connection: merge, so older stories already paged in stay
+  // (retractions arrive on the channel).
   const refetch = useCallback(async () => {
     const { data, error } = await getSupabaseBrowser().rpc("ballot_feed", {
       p_election_id: electionId,
       p_contest_ids: [...ids],
-      p_per_contest: 12,
+      p_per_contest: FEED_PAGE,
     });
     if (error || !data) return;
-    setRows(new Map((data as FeedRow[]).map((r) => [r.id, r])));
-  }, [electionId, ids]);
+    merge(data as FeedRow[]);
+  }, [electionId, ids, merge]);
+
+  const loadOlder = useCallback(
+    async (target: { contestId?: string; candidateId?: string }) => {
+      const key = targetKey(target);
+      const cur: FeedState["pages"] extends Map<string, infer V> ? V : never = pageFor(pagesRef.current, target) ?? { cursor: null, done: false };
+      if (cur.done || cur.loading || (cur.retryAt ?? 0) > Date.now()) return;
+      setPage(key, { ...cur, loading: true });
+      const { data, error } = await getSupabaseBrowser().rpc("feed_page", {
+        p_election_id: electionId,
+        p_contest_id: target.candidateId ? null : (target.contestId ?? null),
+        p_candidate_id: target.candidateId ?? null,
+        p_before_at: cur.cursor?.at ?? null,
+        p_before_id: cur.cursor?.id ?? null,
+        p_limit: FEED_PAGE,
+      });
+      if (error || !data) {
+        // Try again the next time the carousel nears its end, at most every 10 s.
+        setPage(key, { ...cur, loading: false, retryAt: Date.now() + 10_000 });
+        return;
+      }
+      merge(data as FeedRow[]);
+      setPage(key, nextPage(data as FeedRow[]));
+    },
+    [electionId, merge, setPage],
+  );
 
   useEffect(() => {
     if (!ids.size || !state) return;
@@ -114,7 +162,7 @@ export function LiveFeedProvider({
     };
   }, [electionId, state, ids, refetch, research, router]);
 
-  const value = useMemo(() => ({ rows, contestIds: ids }), [rows, ids]);
+  const value = useMemo(() => ({ rows, contestIds: ids, pages, loadOlder }), [rows, ids, pages, loadOlder]);
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;
 }
 
@@ -142,6 +190,30 @@ export function useFeedItems(target?: { contestId?: string; candidateId?: string
     }
     return out.sort((a, b) => b.date.localeCompare(a.date));
   }, [ctx, target]);
+}
+
+/** Paging for one carousel: whether more may exist, whether a page is loading, and how to ask for it. */
+export function useFeedPaging(target?: { contestId?: string; candidateId?: string }) {
+  const ctx = useContext(FeedContext);
+  const key = target && (target.contestId || target.candidateId) ? targetKey(target) : undefined;
+  const page = key && ctx && target ? (pageFor(ctx.pages, target) as (PageState & { loading?: boolean }) | undefined) : undefined;
+  const load = ctx?.loadOlder;
+  const contestId = target?.contestId;
+  const candidateId = target?.candidateId;
+  const loadOlder = useCallback(() => load?.({ contestId, candidateId }), [load, contestId, candidateId]);
+  return useMemo(
+    () =>
+      ctx && key
+        ? {
+            /** Never asked yet (a candidate's carousel starts here). */
+            started: !!page,
+            loading: !!page?.loading,
+            done: !!page?.done,
+            loadOlder,
+          }
+        : undefined,
+    [ctx, key, page, loadOlder],
+  );
 }
 
 /** Feed rows of one type for a contest, newest first (e.g. polls for the polling card). */
