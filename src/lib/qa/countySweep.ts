@@ -17,7 +17,7 @@ import { electionToday } from "@/domain/electionDay";
 import type { BallotRuntime } from "@/lib/ballot/runtime";
 import { logEvent } from "@/lib/observability/log";
 import type { Database } from "@/lib/supabase/types";
-import { lookupLocation, type QaInsert } from "./matrix";
+import { completeRow, lookupLocation, type QaInsert } from "./matrix";
 import { ADDRFEAT_FIELDS, addrfeatUrl, countyAddresses, countyListUrl, isResidentialRoad, parseCountyList, readDbf, readZipEntry, type County } from "./tiger";
 
 type Db = SupabaseClient<Database>;
@@ -89,7 +89,7 @@ export async function runCountySweep(opts: {
     }),
   );
   if (rows.length) {
-    const { error } = await opts.db.from("qa_runs").insert(rows);
+    const { error } = await opts.db.from("qa_runs").insert(rows.map(completeRow));
     if (error) throw new Error(`qa_runs insert: ${error.message}`);
   }
   const total = counties.length;

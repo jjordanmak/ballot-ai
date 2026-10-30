@@ -51,6 +51,8 @@ describe("runCountySweep", () => {
       ]),
     );
     expect(inserted.find((r) => r.label === "WY · Empty County (56999)")).toMatchObject({ error: "no residential address ranges" });
+    // Every row carries every column, so a batch mixing results and errors never sends a null.
+    for (const r of inserted) expect(r).toMatchObject({ contest_count: expect.any(Number), warnings: expect.any(Array), inventory: expect.any(Object) });
     // No street, house number or ZIP from the address ranges is stored.
     expect(JSON.stringify(inserted)).not.toMatch(/Sample Way|Example Rd|Invalid Ct|9990[123]/);
   });
