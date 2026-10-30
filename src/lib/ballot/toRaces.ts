@@ -98,7 +98,8 @@ function contestToRace(c: Contest, bundle: EnrichmentBundle, state?: string): Ra
       issues: Object.fromEntries(
         Object.entries(ce?.issues ?? {}).map(([k, v]) => [k, { stance: v.text, source: sourceLabel(bundle.sources, v.sources[0]), sourceUrl: bundle.sources[v.sources[0]]?.url }]),
       ),
-      feed: ch.durableId ? { candidateId: ch.durableId } : undefined,
+      // The race goes along so a profile's carousel knows when its race's stories are all loaded.
+      feed: ch.durableId ? { candidateId: ch.durableId, contestId: c.durableId } : undefined,
       general: {
         ...(ce ?? {}),
         campaignUrl: ch.urls.campaign ?? ce?.campaignUrl,

@@ -2,9 +2,10 @@ import "server-only";
 import type { FeedRow } from "@/components/ballot/LiveFeed";
 import { logEvent } from "@/lib/observability/log";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { FEED_PAGE } from "./paging";
 
-/** Published feed items for a ballot's contests: the newest per contest (public read; RLS hides held items). */
-export async function initialFeed(electionId: string, contestIds: string[], perContest = 12): Promise<FeedRow[]> {
+/** Published feed items for a ballot's contests: the newest FEED_PAGE per contest and type (public read; RLS hides held items). */
+export async function initialFeed(electionId: string, contestIds: string[], perContest = FEED_PAGE): Promise<FeedRow[]> {
   if (!contestIds.length) return [];
   try {
     const { data, error } = await getSupabaseServer().rpc("ballot_feed", {
