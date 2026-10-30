@@ -18,7 +18,7 @@ import {
   Facebook,
 } from "lucide-react";
 import type { FeedTarget, NewsItem, NewsItemType, SocialPlatform } from "@/data/types";
-import { useFeedItems, useFeedPaging } from "./ballot/LiveFeed";
+import { useFeedItems, useFeedPaging, useRenderedAt } from "./ballot/LiveFeed";
 import { FEED_PAGE } from "@/lib/feeds/paging";
 
 const TYPE_META: Record<
@@ -73,12 +73,19 @@ function PlatformGlyph({ platform, size = 14 }: { platform: SocialPlatform; size
   }
 }
 
-function formatNewsDate(input: string): string {
+/**
+ * "11 hr ago" relative to `now`; older items (or no clock yet) print the
+ * date, in `timeZone` when given, else the viewer's own. Never reads the
+ * clock itself, so the server render and hydration can agree (React #418).
+ */
+export function formatNewsDate(input: string, now: number | null, timeZone?: string): string {
   if (!/T|Z/.test(input)) return input;
   const date = new Date(input);
   if (Number.isNaN(date.getTime())) return input;
+  const absolute = () => date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone });
+  if (now === null) return absolute();
 
-  const diffMs = Date.now() - date.getTime();
+  const diffMs = now - date.getTime();
   const diffMin = Math.round(diffMs / 60000);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin} min ago`;
@@ -86,7 +93,21 @@ function formatNewsDate(input: string): string {
   if (diffHr < 24) return `${diffHr} hr ago`;
   const diffDay = Math.round(diffHr / 24);
   if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return absolute();
+}
+
+/**
+ * The clock news dates are measured against. Until mount it's the server's
+ * render time in UTC (identical on both sides); after mount, the browser's
+ * clock and time zone, refreshed whenever the items change.
+ */
+function useNewsClock(items: unknown): { now: number | null; timeZone?: string } {
+  const renderedAt = useRenderedAt();
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+  }, [items]);
+  return now !== null ? { now } : { now: renderedAt ?? null, timeZone: "UTC" };
 }
 
 /** Build a CSS mask-image for the carousel based on which edges are
@@ -149,6 +170,7 @@ export function NewsFeed({
   const paging = useFeedPaging(feed);
   const [archiveItems, setLiveItems] = useState<NewsItem[]>(items ?? []);
   const liveItems = fromFeed ?? archiveItems;
+  const clock = useNewsClock(liveItems);
   const [canLeft, setCanLeft] = useState(false);
   // Off until we've measured: nothing to scroll means both buttons stay disabled.
   const [canRight, setCanRight] = useState(false);
@@ -290,6 +312,7 @@ export function NewsFeed({
                   key={item.id}
                   item={item}
                   fallbackAvatar={fallbackAvatar}
+                  clock={clock}
                 />
               ))}
               {paging?.loading && <NewsCardSkeleton />}
@@ -342,9 +365,11 @@ function LivePill() {
 function NewsCard({
   item,
   fallbackAvatar,
+  clock,
 }: {
   item: NewsItem;
   fallbackAvatar?: string;
+  clock: { now: number | null; timeZone?: string };
 }) {
   const meta = TYPE_META[item.type] ?? TYPE_META.news;
   const isSocial = item.type === "social" && item.social;
@@ -357,7 +382,7 @@ function NewsCard({
       ? fallbackSocialUrl(item.social.platform, item.social.handle)
       : undefined);
   const Element = resolvedUrl ? "a" : "div";
-  const dateStr = formatNewsDate(item.date);
+  const dateStr = formatNewsDate(item.date, clock.now, clock.timeZone);
 
   // Source label:
   //   social: "@handle · Platform"
