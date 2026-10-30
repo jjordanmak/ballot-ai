@@ -1,6 +1,6 @@
 # November 3, 2026 General Election: Implementation Plan
 
-> Architecture: [TARGET](../../architecture/TARGET_ARCHITECTURE.md) · Sequence: [MIGRATION_PLAN](../../architecture/MIGRATION_PLAN.md) · Sources: [SOURCE_STRATEGY](./SOURCE_STRATEGY.md) · QA: [QA_PLAN](./QA_PLAN.md)
+> Architecture: [TARGET](../../architecture/TARGET_ARCHITECTURE.md) · Sequence: [MIGRATION_PLAN](../../architecture/MIGRATION_PLAN.md) · Sources: [SOURCE_STRATEGY](./SOURCE_STRATEGY.md) · QA: [QA_PLAN](./QA_PLAN.md) · Writing pipeline: [WRITING_PIPELINE_PLAN](./WRITING_PIPELINE_PLAN.md)
 
 **Context:** work starts 2026-10-28, which is 6 days before Election Day. California mailed ballots in early October, so many voters already hold them. The plan therefore puts Tier 0 correctness and reliability first, and enrichment is explicitly deferred.
 
