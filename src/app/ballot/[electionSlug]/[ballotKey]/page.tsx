@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import type { ReactNode } from "react";
 import { Columns3, ExternalLink, Info, ListChecks, Mail, MapPin, Scale } from "lucide-react";
-import { AddressForm } from "@/components/AddressForm";
+import { ErrorShell } from "@/components/ErrorShell";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { RaceHeader } from "@/components/RaceHeader";
@@ -18,7 +18,6 @@ import type { Race } from "@/data/types";
 import { CATEGORY_LABEL, type ResolvedBallot } from "@/domain/ballot";
 import { formatElectionDate, locationLabel, locationLine, STATE_LOOKUP_FALLBACK, STATUS_COPY } from "@/lib/ballot/copy";
 import { getEnrichment } from "@/lib/ballot/enrichment";
-import { electionChoices, type ElectionChoice } from "@/lib/ballot/electionChoices";
 import { loadBallot as loadStoredBallot } from "@/lib/ballot/loadBallot";
 import { researchTargetIds, withResearch } from "@/lib/ballot/research";
 import { publishedResearch } from "@/lib/ballot/researchRead";
@@ -54,7 +53,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function BallotPage({ params }: { params: Params }) {
   const { electionSlug, ballotKey } = await params;
   const result = await loadBallot(electionSlug, ballotKey);
-  if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} elections={await electionChoices()} />;
+  if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} />;
 
   const ballot = result.ballot;
   // Research answers (published, quote-checked) fill in under the curated enrichment.
@@ -402,20 +401,16 @@ function Notices({ ballot, officialUrl }: { ballot: ResolvedBallot; officialUrl?
   );
 }
 
-function ExpiredBallot({ unavailable = false, elections }: { unavailable?: boolean; elections: ElectionChoice[] }) {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
-      <h1 className="font-display text-[44px] leading-none tracking-[-0.02em]">
-        ballot<span className="text-[var(--color-paper-3)]">.ai</span>
-      </h1>
-      <p className="mt-8 max-w-md text-center text-[15px] leading-[1.6] text-[var(--color-paper-2)]">
-        {unavailable
-          ? "We couldn't load this ballot right now. This is a problem on our end. Enter your address to look it up again, or check with your local election office."
-          : "This ballot link has expired. To keep ballot information fresh and your address private, we only keep a looked-up ballot for a short time. Enter your address to see your current ballot."}
-      </p>
-      <div className="mt-10 w-full flex justify-center">
-        <AddressForm autoFocus elections={elections} />
-      </div>
-    </div>
+/** Expired or unreadable ballot link: like the 404 page, a button back to the landing page (owner, 2026-10-30). */
+function ExpiredBallot({ unavailable = false }: { unavailable?: boolean }) {
+  return unavailable ? (
+    <ErrorShell title="We couldn’t load this ballot" home>
+      This is a problem on our end, not with your address. Please look up your ballot again in a moment.
+    </ErrorShell>
+  ) : (
+    <ErrorShell title="This ballot link has expired" home>
+      To keep ballot information fresh and your address private, we only keep a looked-up ballot for a short time. Look it up again to
+      see your current ballot.
+    </ErrorShell>
   );
 }
