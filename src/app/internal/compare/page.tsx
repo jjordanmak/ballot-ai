@@ -8,11 +8,13 @@ import { deprecatedPagesEnabled } from "@/components/deprecated/JunePrimary";
 import { settingId } from "@/lib/ai/config";
 import { loadComparison } from "@/lib/research/compareLoad";
 import { settingLabel, type Cell, type CompareTarget, type Item, type SettingSummary } from "@/lib/research/compareReview";
+import { RUN_SET_NAMES } from "@/lib/research/runSet";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * INTERNAL ONLY: the model comparison (owner, 2026-10-29). Every setting's
- * held result for each item in the comparison set, side by side. Previews
+ * INTERNAL ONLY: the model comparison (owner, 2026-10-29) and the writing
+ * rounds (WRITING_PIPELINE_PLAN.md). Every setting's held result for each
+ * item in a run set (?set=, default: the current round's), side by side. Previews
  * and local only (production 404s, same gate as the deprecated June page);
  * held rows are read with the service role and never served on a ballot.
  */
@@ -25,12 +27,13 @@ const KINDS: { key: CompareTarget["kind"] | "all"; label: string }[] = [
   { key: "measure", label: "Measures" },
   { key: "retention", label: "Judges" },
   { key: "candidate", label: "Candidates" },
+  { key: "race", label: "Race intros" },
   { key: "office", label: "Offices" },
 ];
 
 const usd = (micro: number) => (micro === 0 ? "$0" : micro >= 10_000 ? `$${(micro / 1e6).toFixed(2)}` : `$${(micro / 1e6).toFixed(4)}`);
 
-type Search = { kind?: string; differ?: string; hide?: string };
+type Search = { kind?: string; differ?: string; hide?: string; set?: string };
 
 function href(cur: Search, patch: Partial<Search>): string {
   const q = new URLSearchParams();
@@ -43,7 +46,7 @@ function href(cur: Search, patch: Partial<Search>): string {
 export default async function ComparePage({ searchParams }: { searchParams: Promise<Search> }) {
   if (!deprecatedPagesEnabled()) notFound();
   const sp = await searchParams;
-  const data = await loadComparison(getSupabaseAdmin());
+  const data = await loadComparison(getSupabaseAdmin(), undefined, sp.set && RUN_SET_NAMES.includes(sp.set) ? sp.set : undefined);
   const hidden = new Set((sp.hide ?? "").split(",").filter(Boolean));
   const shown = data.settings.map(settingId).filter((s) => !hidden.has(s));
   const kind = KINDS.some((k) => k.key === sp.kind) ? sp.kind! : "all";
@@ -85,6 +88,11 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
         >
           Only where settings differ
         </Link>
+        {RUN_SET_NAMES.map((n) => (
+          <Link key={n} href={href(sp, { set: n })} className="rounded-full border border-[var(--color-ink-3)] px-3 py-1 text-paper-2 hover:border-[var(--color-ink-4)]">
+            {n}
+          </Link>
+        ))}
         <span className="ml-auto text-paper-3">
           {items.length} items · {shown.length} columns
         </span>
@@ -204,7 +212,7 @@ function CellView({ cell, item }: { cell: Cell; item: Item }) {
             return (
               <div key={f.key} className={item.differing.includes(f.key) ? "border-l-2 border-[var(--color-accent)] pl-2" : "pl-2.5"}>
                 <dt className="text-xs text-paper-3">{f.label}</dt>
-                {lines.length === 0 && <dd className="text-paper-4">blank</dd>}
+                {lines.length === 0 && <dd className="text-paper-4">{cell.limited.includes(f.key) ? "Limited documented information in reviewed sources" : "blank"}</dd>}
                 {lines.map((l, n) => (
                   <dd key={n} className="mt-1">
                     <RichText text={l.text} auto="neutral" />
@@ -214,7 +222,7 @@ function CellView({ cell, item }: { cell: Cell; item: Item }) {
                 ))}
                 {rejected.map((r, n) => (
                   <dd key={`r${n}`} className="mt-1 text-xs text-paper-4">
-                    {`Rejected (${r.reason})${r.detail ? `: ${r.detail}` : ""}`}
+                    {`Rejected (${r.reason})${r.detail ? `: ${r.detail}` : ""}${r.text ? ` — “${r.text}”` : ""}`}
                   </dd>
                 ))}
               </div>
@@ -223,6 +231,31 @@ function CellView({ cell, item }: { cell: Cell; item: Item }) {
         </dl>
       )}
       {Object.keys(docs).length > 0 && <SourceList docs={docs} />}
+      {cell.parity && (
+        <details className="mt-3 text-xs text-paper-3" open={cell.parity.rewrites.length + cell.parity.unresolved.length > 0}>
+          <summary className="cursor-pointer text-paper-2">
+            Fairness pass: {cell.parity.rewrites.length} rewritten, {cell.parity.unresolved.length} unresolved
+          </summary>
+          <ul className="mt-1 space-y-1">
+            {cell.parity.rewrites.map((x, i) => (
+              <li key={`w${i}`}>
+                {x.target} · {x.unit}: “{x.text}”
+              </li>
+            ))}
+            {cell.parity.unresolved.map((x, i) => (
+              <li key={`u${i}`} className="text-paper-4">
+                {x.target} · {x.unit}: dropped ({x.reason})
+              </li>
+            ))}
+            {cell.parity.missing.length > 0 && <li className="text-paper-4">No result yet for: {cell.parity.missing.join(", ")}</li>}
+            {cell.parity.thin.map((x, i) => (
+              <li key={`t${i}`} className="text-paper-4">
+                Thin coverage, {x.target}: no {x.sections.join(", ")}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {cell.leftOut.length > 0 && (
         <details className="mt-3 text-xs text-paper-3">
           <summary className="cursor-pointer text-paper-2">Left out ({cell.leftOut.length})</summary>

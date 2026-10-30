@@ -219,8 +219,10 @@ function candidateSourceIds(ce: CandidateEnrichment | undefined): string[] {
     if (!x) return;
     for (const i of Array.isArray(x) ? x : [x]) ids.push(...i.sources);
   };
+  // Page order, so [n] numbers run down the profile (FR-K4 order, owner 2026-10-30).
   add(ce.currentRole);
   add(ce.ballotDesignation);
+  add(ce.inBrief);
   add(ce.bio);
   add(ce.platform);
   add(ce.background);
@@ -231,9 +233,10 @@ function candidateSourceIds(ce: CandidateEnrichment | undefined): string[] {
   add(ce.priorities);
   add(ce.stances);
   add(Object.values(ce.issues ?? {}));
+  add(ce.endorsements);
+  add(ce.mightFit);
   add(ce.timeline);
   add(ce.notableFacts);
-  add(ce.endorsements);
   add(ce.funding);
   add(ce.headshot);
   add(ce.links);

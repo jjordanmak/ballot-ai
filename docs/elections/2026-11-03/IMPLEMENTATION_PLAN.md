@@ -106,4 +106,4 @@ National correctness, failure handling and live-feed safety, all built and on th
 
 ## Explicitly out of scope for Nov 3
 
-AI synthesis, endorsements for the general, and photo resolution. (News ingestion and live polls shipped as P1-9 and P1-11.)
+Photo resolution. (News ingestion and live polls shipped as P1-9 and P1-11.) AI synthesis and cited endorsements moved into scope on 2026-10-29/30: the writing pipeline (`WRITING_PIPELINE_PLAN.md`) is built and in revision rounds; it publishes only after the owner picks models (`docs/architecture/MODEL_DECISIONS.md`).

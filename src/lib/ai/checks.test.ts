@@ -37,6 +37,16 @@ describe("neutralityProblem", () => {
     expect(neutralityProblem("A controversial plan.")).toBe("judgment");
     expect(neutralityProblem("Critics say it costs too much.")).toBe("unnamed critics");
   });
+
+  it("flags the June prototype's framing, but not ordinary uses of the same words", () => {
+    expect(neutralityProblem("Her campaign surged after the debate.")).toBe("judgment");
+    expect(neutralityProblem("The most fractured field in years.")).toBe("judgment");
+    expect(neutralityProblem("He aggressively filled the seat.")).toBe("judgment");
+    expect(neutralityProblem("The establishment candidate.")).toBe("judgment");
+    expect(neutralityProblem("A message aimed at coastal elites.")).toBe("judgment");
+    expect(neutralityProblem("Requires the establishment of a trust fund.")).toBeNull();
+    expect(neutralityProblem("A surge in wildfire claims.")).toBeNull();
+  });
 });
 
 describe("cleanText", () => {

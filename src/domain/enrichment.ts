@@ -27,7 +27,17 @@ export interface Cited {
   sources: string[];
   /** The exact supporting sentence from each source (same order as `sources`), shown in the footnote popover. */
   quotes?: (string | undefined)[];
+  /**
+   * Synthesized prose (WRITING_PIPELINE_PLAN.md): the same text sentence by
+   * sentence, each with its own sources and excerpts, so every sentence gets
+   * its own [n]. `text`, `sources` and `quotes` stay the joined text and the
+   * union, for readers that don't render sentences.
+   */
+  sentences?: Cited[];
 }
+
+/** "Limited documented information in reviewed sources" (PRD FR-K4): researched, and the sources don't support it. */
+export const LIMITED_COPY = "Limited documented information in reviewed sources";
 
 export interface PollResult {
   pollster: string;
@@ -56,6 +66,8 @@ export interface ContestEnrichment {
   office?: { duties?: Cited; term?: Cited; seats?: Cited; salary?: Cited };
   /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
   aiFields?: string[];
+  /** Researched fields the reviewed sources don't support. */
+  limited?: string[];
 }
 
 export interface FundingSummary {
@@ -83,7 +95,9 @@ export interface CandidateEnrichment {
   /** Official campaign site / X account, each from an official filing (e.g. the SoS voter guide contact block). */
   links?: { kind: "campaign" | "x"; url: string; sources: string[] }[];
   currentRole?: Cited;
-  /** A short neutral bio written from the cited facts below (research job, stage 2). */
+  /** "In Brief" (the Bottom Line callout): experience, track record, platform; 2–3 sentences, each cited. */
+  inBrief?: Cited[];
+  /** Background: a short neutral narrative, one `Cited` per sentence. */
   bio?: Cited[];
   /** One line per degree, written by code ("J.D., Stanford Law School · 1984"). */
   education?: Cited[];
@@ -96,12 +110,16 @@ export interface CandidateEnrichment {
   stances?: Cited[];
   /** issue id → documented position, for the side-by-side table. */
   issues?: Record<string, Cited>;
-  timeline?: { year: string; event: string; sources: string[] }[];
+  timeline?: { year: string; event: string; sources: string[]; quotes?: (string | undefined)[] }[];
   notableFacts?: Cited[];
-  endorsements?: { name: string; category: string; sources: string[] }[];
+  endorsements?: { name: string; category: string; sources: string[]; quotes?: (string | undefined)[] }[];
+  /** "Might fit if you…": up to 4 voter priorities that match the candidate's own cited positions. Never highlighted. */
+  mightFit?: Cited[];
   funding?: FundingSummary;
   /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
   aiFields?: string[];
+  /** Researched fields the reviewed sources don't support ("Limited documented information…"). */
+  limited?: string[];
 }
 
 export interface MeasureEnrichment {
@@ -133,6 +151,8 @@ export interface MeasureEnrichment {
   officialUrl?: string;
   /** Fields filled by the in-app research pipeline (AI summary of the cited sources), for labeling. */
   aiFields?: string[];
+  /** Researched fields the official analyses don't address. */
+  limited?: string[];
 }
 
 export interface EnrichmentBundle {

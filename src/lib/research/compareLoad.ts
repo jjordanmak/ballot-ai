@@ -1,17 +1,17 @@
 import "server-only";
-import compareSet from "@/data/research/compare-set.json";
-import { aiConfig, settingId, type Setting } from "@/lib/ai/config";
+import { aiConfig, ROUND_CONFIG, settingId, type Setting } from "@/lib/ai/config";
 import type { Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildComparison, coordinates, type CellInput, type CompareTarget, type RunInfo } from "./compareReview";
+import { buildComparison, coordinates, type CellInput, type RunInfo } from "./compareReview";
+import { runSet } from "./runSet";
 import type { Payload } from "./verify";
 
 /**
  * Reads the comparison results (held rows, never served on ballot pages)
  * for /internal/compare. Service role only: held rows aren't public.
  */
-export async function loadComparison(db: SupabaseClient<Database>, settings: Setting[] = aiConfig().compare) {
-  const set = compareSet as { ballot: string; targets: CompareTarget[] };
+export async function loadComparison(db: SupabaseClient<Database>, settings: Setting[] = aiConfig().compare, setName: string = ROUND_CONFIG.runSet) {
+  const set = runSet(setName);
   const targets = set.targets;
   const ids = settings.map(settingId);
   const coords = targets.map((t) => ({ t, ...coordinates(t.key) }));

@@ -4,7 +4,9 @@
 
 **Status:**
 - Every decision below is approved by the owner, and the Round 0 style examples (end of this doc) are approved.
-- No code for this pipeline exists yet.
+- **Build done (2026-10-30):** schemas, prompts, checks (`src/lib/research/synthesis.ts`), the write/verify/review/repair flow and the race fairness pass (`src/lib/research/write.ts`), the read path and `?preview=`, the profile UI, and the docs. Round 1 (Haiku medium on the Placentia run set, `src/data/research/round.json`) is next.
+- **Owner decision (2026-10-30):** the race-level fairness pass **rewrites** sentences that treat candidates unequally (keeping their facts and excerpts, re-checked) instead of dropping them; only a rewrite that can't pass the checks is dropped, and it is listed on `/internal/compare`.
+- **Round settings** live in a checked-in round file, `src/data/research/round.json` (run set + `model:effort:round` settings); `AI_COMPARE` still overrides it.
 - CLAUDE.md / AGENTS.md hard rules still apply; where this doc changes one, it says so.
 
 **Recommended setup** (CLAUDE.md asks for it):

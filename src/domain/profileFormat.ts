@@ -3,6 +3,7 @@
  * lines look the same whichever model found the facts (owner, 2026-10-29).
  * Pure; used by the research job and the page.
  */
+import { STATE_NAMES } from "./categorize";
 
 export interface EducationEntry {
   degree: string;
@@ -64,12 +65,26 @@ export function positionYears(p: Pick<PositionEntry, "startYear" | "endYear">): 
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-/** "Deputy Attorney General, California Department of Justice (59th District) · 1987–1990". */
-export function positionLine(p: PositionEntry): string {
+const ORDINAL = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+
+/** A district written out in full: "CA-30" → "California's 30th congressional district"; anything else as the source wrote it. */
+export function districtInFull(d: string): string {
+  const m = /^([A-Z]{2})-(\d{1,2})$/.exec(d.trim());
+  if (!m || !STATE_NAMES[m[1]]) return d;
+  return `${STATE_NAMES[m[1]]}'s ${ORDINAL(Number(m[2]))} congressional district`;
+}
+
+/** "Chair, House Democratic Caucus", "State Representative, Ohio House of Representatives, 41st House District". */
+export function positionTitle(p: PositionEntry): string {
   const org = p.organization && !norm(p.title).includes(norm(p.organization)) ? p.organization : undefined;
-  const district = p.district && !norm(`${p.title} ${org ?? ""}`).includes(norm(p.district)) ? p.district : undefined;
+  const district = p.district && !norm(`${p.title} ${org ?? ""}`).includes(norm(p.district)) ? districtInFull(p.district) : undefined;
+  return [p.title, org, district].filter(Boolean).join(", ");
+}
+
+/** Title (years) (owner, 2026-10-30): "U.S. Secretary of Health and Human Services (2021–2025)". */
+export function positionLine(p: PositionEntry): string {
   const years = positionYears(p);
-  return `${[p.title, org].filter(Boolean).join(", ")}${district ? ` (${district})` : ""}${years ? ` · ${years}` : ""}`;
+  return `${positionTitle(p)}${years ? ` (${years})` : ""}`;
 }
 
 export function committeesLine(p: PositionEntry): string | null {

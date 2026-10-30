@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import compareSet from "@/data/research/compare-set.json";
-import { DEFAULT_COMPARE, type Setting } from "@/lib/ai/config";
+import { DEFAULT_COMPARE, ROUND_CONFIG, type Setting } from "@/lib/ai/config";
+import { RUN_SET_NAMES, runSet, runSetFor } from "./runSet";
 import { buildComparison, coordinates, settingLabel, type CellInput, type CompareTarget } from "./compareReview";
 
 const src = { url: "https://voterguide.sos.ca.gov/propositions/1/", title: "Prop 1", publisher: "California Secretary of State", official: true, fetchedAt: "2026-10-29T08:00:00Z" };
@@ -38,7 +39,7 @@ describe("buildComparison", () => {
     expect(buildComparison([target], settings, cells).items[0].differing).toEqual(["summary"]);
   });
 
-  it("shows a person as the ballot would: bio, current role, education, positions with committees, and what was left out", () => {
+  it("shows an earlier (v2) person: bio as Background, education, positions with committees, and what was left out", () => {
     const person: CompareTarget = { key: "candidate:k1:profile", kind: "candidate", label: "Ann Bee", group: "Candidates" };
     const payload = {
       kind: "person" as const,
@@ -51,11 +52,34 @@ describe("buildComparison", () => {
     };
     const cells = new Map<string, CellInput>([["candidate:k1:profile@claude-haiku-5-5:low", { stateKey: "", payload, run: { leftOut: [{ fact: "Son of teachers", reason: "family background" }] } }]]);
     const cell = buildComparison([person], settings, cells).items[0].cells[0];
-    expect(cell.fields.bio).toEqual([{ text: "Ann Bee is a State Senator.", refs: [{ quote: "qp", source: src }] }]);
-    expect(cell.fields.currentRole[0].text).toBe("State Senator, California State Senate");
+    expect(cell.fields.background).toEqual([{ text: "Ann Bee is a State Senator.", refs: [{ quote: "qp", source: src }] }]);
     expect(cell.fields.education[0].text).toBe("J.D., Stanford Law School");
-    expect(cell.fields.pastPositions[0]).toMatchObject({ text: "State Senator, California State Senate · 2020–present", sub: "Committees: Budget" });
+    expect(cell.fields.pastPositions[0]).toMatchObject({ text: "State Senator, California State Senate (2020–present)", sub: "Committees: Budget" });
     expect(cell.leftOut).toEqual([{ fact: "Son of teachers", reason: "family background" }]);
+  });
+
+  it("shows written sections sentence by sentence with their excerpts, and what the sources don't support", () => {
+    const person: CompareTarget = { key: "candidate:k1:profile", kind: "candidate", label: "Ann Bee", group: "Candidates" };
+    const s1 = (text: string) => ({ text, refs: [{ source: "s1", excerpt: `e: ${text}` }] });
+    const payload = {
+      kind: "person" as const,
+      v: 3 as const,
+      education: [],
+      positions: [],
+      sections: { inBrief: [s1("Ann Bee served 8 years.")], priorities: [s1("Transit")] },
+      mightFit: [{ ...s1("…want more buses"), issue: "Transit" }],
+      timeline: [{ ...s1("Elected to the Senate"), when: "2020" }],
+      endorsements: [{ name: "Teachers Union", category: "Unions" as const, refs: [{ source: "s1", excerpt: "e" }] }],
+      limited: ["stances"],
+      sources: { s1: src },
+    };
+    const cells = new Map<string, CellInput>([["candidate:k1:profile@claude-haiku-5-5:low", { stateKey: "", payload }]]);
+    const cell = buildComparison([person], settings, cells).items[0].cells[0];
+    expect(cell.fields.inBrief).toEqual([{ text: "Ann Bee served 8 years.", refs: [{ quote: "e: Ann Bee served 8 years.", source: src }] }]);
+    expect(cell.fields.timeline[0].text).toBe("2020: Elected to the Senate");
+    expect(cell.fields.endorsements[0]).toMatchObject({ text: "Teachers Union", sub: "Unions" });
+    expect(cell.fields.mightFit[0].text).toBe("…want more buses");
+    expect(cell.limited).toEqual(["stances"]);
   });
 
   it("a cell with nothing yet is pending", () => {
@@ -77,6 +101,31 @@ describe("the comparison set", () => {
       expect(c.targetId.length).toBeGreaterThan(0);
     }
     expect(coordinates("contest:ca|governor|california:office")).toEqual({ targetType: "contest", targetId: "ca|governor|california", field: "office" });
+  });
+
+  it("the Placentia run set: every kind including race intros, durable ids only, no address", () => {
+    const set = runSet("placentia-92870");
+    expect(set.ballot).toBe("Placentia (92870) sample ballot");
+    expect(new Set(set.targets.map((t) => t.kind))).toEqual(new Set(["measure", "race", "candidate", "retention"]));
+    expect(new Set(set.targets.map((t) => t.key)).size).toBe(set.targets.length);
+    expect(JSON.stringify(set)).not.toMatch(/\b\d+\s+[A-Z][a-z]+\s+(Drive|Dr|Street|St|Avenue|Ave|Road|Rd|Way|Lane|Ln|Court|Ct|Place|Pl|Circle|Blvd)\b/);
+    for (const t of set.targets) expect(coordinates(t.key).targetId).toMatch(/^[0-9a-f-]{36}$/);
+    // The round file names a run set that exists.
+    expect(RUN_SET_NAMES).toContain(ROUND_CONFIG.runSet);
+  });
+
+  it("builds a run set from a ballot's contests: race intros for candidate contests, judges apart", () => {
+    const set = runSetFor("Test ballot", [
+      { durableId: "m1", kind: "measure", title: "Proposition 1" },
+      { durableId: "c1", kind: "candidate", contestType: "general", title: "Governor", choices: [{ durableId: "k2", name: "Zed" }, { durableId: "k1", name: "Ann" }] },
+      { durableId: "j1", kind: "candidate", contestType: "retention", title: "Justice", choices: [{ durableId: "k3", name: "Jo" }] },
+    ]);
+    expect(set.targets.map((t) => t.key)).toEqual(["measure:m1:measure", "race:c1:race", "candidate:k1:profile", "candidate:k2:profile", "candidate:k3:profile"]);
+    expect(set.targets.find((t) => t.key === "candidate:k3:profile")?.kind).toBe("retention");
+  });
+
+  it("labels a writing round's column with its tag", () => {
+    expect(settingLabel("claude-haiku-5-5:medium:r1")).toBe("Haiku · medium · r1");
   });
 
   it("labels the 9 columns", () => {

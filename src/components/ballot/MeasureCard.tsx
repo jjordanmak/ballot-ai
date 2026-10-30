@@ -6,7 +6,7 @@ import { RichText } from "@/components/Highlight";
 import { COUNTS_VOTES_CAST, measureVoteNeeded, type VoteNeeded } from "@/domain/voteNeeded";
 import { IMPACT_QUESTIONS, impactAnswers } from "@/lib/ballot/measureImpact";
 import { divisionLabel } from "@/domain/districtMaps";
-import { AiLabel, Cite, SourceList } from "./Citations";
+import { AiLabel, Cite, CitedText, SourceList } from "./Citations";
 import { MapYearInfo } from "./MapYearInfo";
 
 /**
@@ -68,8 +68,7 @@ export function MeasureCard({
 
       {e?.summary ? (
         <p className="mt-5 text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty max-w-3xl">
-          <RichText text={e.summary.text} auto="neutral" />
-          <Cite ids={e.summary.sources} docs={docs} quotes={e.summary.quotes} />
+          <CitedText item={e.summary} docs={docs} />
         </p>
       ) : m?.brief ? (
         <p className="mt-5 text-[15px] leading-[1.6] text-[var(--color-paper-2)] text-pretty">{m.brief}</p>
@@ -99,10 +98,7 @@ export function MeasureCard({
                 <dt className="text-[13px] text-[var(--color-paper)] font-medium">{question}</dt>
                 <dd className={`mt-1 text-[14px] leading-[1.6] ${a.kind === "missing" ? "italic text-[var(--color-paper-4)] text-[13px]" : "text-[var(--color-paper-2)]"}`}>
                   {a.kind === "cited" ? (
-                    <>
-                      <RichText text={a.item.text} auto="neutral" />
-                      <Cite ids={a.item.sources} docs={docs} quotes={a.item.quotes} />
-                    </>
+                    <CitedText item={a.item} docs={docs} />
                   ) : a.kind === "title" ? (
                     <>
                       {a.text} <span className="text-[var(--color-paper-4)] text-[12px]">(from the official title)</span>
@@ -211,7 +207,7 @@ export function Meaning({
   muted,
 }: {
   label: string;
-  item: { text: string; sources: string[]; quotes?: (string | undefined)[] };
+  item: { text: string; sources: string[]; quotes?: (string | undefined)[]; sentences?: { text: string; sources: string[]; quotes?: (string | undefined)[] }[] };
   docs: Record<string, SourceDoc>;
   muted?: boolean;
 }) {
@@ -219,8 +215,7 @@ export function Meaning({
     <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-0)] p-4">
       <div className="font-mono-cap text-[9px] text-[var(--color-paper-3)] tracking-[0.16em] mb-1.5">{label}</div>
       <p className={`leading-[1.6] ${muted ? "text-[13px] text-[var(--color-paper-2)]" : "text-[14px] text-[var(--color-paper)]"}`}>
-        <RichText text={item.text} auto="neutral" />
-        <Cite ids={item.sources} docs={docs} quotes={item.quotes} />
+        <CitedText item={item} docs={docs} />
       </p>
     </div>
   );
