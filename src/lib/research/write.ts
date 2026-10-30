@@ -39,6 +39,9 @@ import {
   stripMarks,
   textHash,
   unitsOf,
+  expected,
+  LIST_SECTIONS,
+  type Unit,
   type MeasureSynthPayload,
   type Parity,
   type PersonPayloadV3,
@@ -70,7 +73,20 @@ const reasonOf = (p: string): Rejection["reason"] =>
 /** The item's own names: always allowed in its prose without an excerpt. */
 function ownNamesFor(t: Target): string[] {
   const state = t.state ? STATE_NAMES[t.state] ?? t.state : "";
-  return [t.personName ?? "", ...(t.personName ?? "").split(/\s+/), t.office ?? "", t.division ?? "", state, t.party ?? "", ...(t.candidateNames ?? [])].filter(Boolean);
+  return [t.personName ?? "", ...(t.personName ?? "").split(/\s+/), t.office ?? "", t.division ?? "", state, t.party ?? "", t.designation ?? "", ...(t.candidateNames ?? []), ...(t.candidateParties ?? []).filter((x): x is string => !!x)].filter(Boolean);
+}
+
+/** Prose sections with fewer than 2 sentences that pass the code checks (race intros, profile background) or none (measures). */
+function thinSections(kind: SynthKind, screened: Screened[], judgeOnly: boolean): string[] {
+  const ok = (section: string) => screened.filter((s) => s.unit.section === section && !s.problems.length).length;
+  const prose = expected(kind, judgeOnly).filter((n) => !["mightFit", "timeline", "endorsements", ...LIST_SECTIONS].includes(n));
+  const min = kind === "measure" ? 1 : 2;
+  return prose.filter((n) => (kind === "person" ? n === "background" : true) && ok(n) < min);
+}
+
+/** A race's candidates by full and last name: an uncited sentence may not be about one of them. */
+function personNamesOf(t: Target): string[] {
+  return (t.candidateNames ?? []).flatMap((n) => [n, n.split(/\s+/).filter((w) => !/^(jr|sr|ii|iii|iv)\.?$/i.test(w)).pop() ?? n]);
 }
 
 /** A measure's own name and number: never highlighted. */
@@ -81,44 +97,81 @@ function measureNamesFor(t: Target): string[] {
 
 const excerptsOf = (s: { refs: { excerpt: string }[] }) => s.refs.map((r, i) => `[${i + 1}] "${r.excerpt}"`).join(" ");
 
-/** The verifier and the reviewer over units that passed the code checks. Adds problems in place. */
+/**
+ * The verifier and the reviewer over units that passed the code checks. Adds
+ * problems in place. Cited sentences are verified against their excerpts plus
+ * the ballot data; a profile sentence stating only ballot data, against the
+ * ballot data; explanatory context (uncited, race intros and measures) goes
+ * to the reviewer only, which checks it is general, stable and neutral.
+ */
 async function judge(
   list: Screened[],
-  ctx: { cfg: AiConfig; client?: Client; context: string },
+  ctx: { cfg: AiConfig; client?: Client; context: string; ballotFacts: string },
 ): Promise<{ spent: number; usage: unknown[]; problem?: string }> {
   if (!list.length) return { spent: 0, usage: [] };
-  const support = await checkSupport({
-    model: ctx.cfg.checkModel,
-    effort: ctx.cfg.checkEffort,
-    mode: "synthesis",
-    claims: list.map((s) => ({ text: stripMarks(s.text), quote: excerptsOf(s) })),
-    client: ctx.client,
-  });
-  if (support.problem) return { spent: support.costMicroUsd, usage: [], problem: `verifier: ${support.problem}` };
-  list.forEach((s, i) => {
-    if (!support.supported[i]) s.problems.push("verifier: doesn't follow from its excerpts");
-  });
+  const checkable = list.filter((s) => s.uncited !== "general");
+  let spent = 0;
+  if (checkable.length) {
+    const ballot = `[ballot data] "${ctx.ballotFacts}"`;
+    const support = await checkSupport({
+      model: ctx.cfg.checkModel,
+      effort: ctx.cfg.checkEffort,
+      mode: "synthesis",
+      claims: checkable.map((s) => ({ text: stripMarks(s.text), quote: s.refs.length ? `${excerptsOf(s)} ${ballot}` : ballot })),
+      client: ctx.client,
+    });
+    spent += support.costMicroUsd;
+    if (support.problem) return { spent, usage: [], problem: `verifier: ${support.problem}` };
+    checkable.forEach((s, i) => {
+      if (!support.supported[i]) s.problems.push("verifier: doesn't follow from its excerpts");
+    });
+  }
   const live = list.filter((s) => !s.problems.length);
-  if (!live.length) return { spent: support.costMicroUsd, usage: [] };
+  if (!live.length) return { spent, usage: [] };
   const review = await extract({
     model: ctx.cfg.review.model,
     effort: ctx.cfg.review.effort,
     schema: NeutralityReview,
     system: REVIEW_SYSTEM,
-    task: reviewTask(ctx.context, live.map((s) => ({ id: s.unit.id, text: s.text }))),
+    task: reviewTask(ctx.context, live.map((s) => ({ id: s.unit.id, text: s.text, uncited: s.uncited === "general" }))),
     docs: [],
     client: ctx.client,
   });
-  const spent = support.costMicroUsd + review.costMicroUsd;
+  spent += review.costMicroUsd;
   if (!review.data) return { spent, usage: [review.usage ?? null], problem: `reviewer: ${review.problem}` };
   const byId = new Map(live.map((s) => [s.unit.id, s]));
-  for (const f of review.data.flags) byId.get(f.id)?.problems.push(`reviewer: ${f.reason}`);
+  for (const f of review.data.flags) {
+    const s = byId.get(f.id);
+    if (!s) continue;
+    // A highlight in the wrong place costs the highlight, not the sentence.
+    if (f.highlightOnly) s.text = stripMarks(s.text);
+    else s.problems.push(`reviewer: ${f.reason}`);
+  }
   return { spent, usage: [review.usage ?? null] };
 }
 
+/**
+ * The official ballot data for an item, as one sentence of text: always true,
+ * so it supports a sentence without a citation, like the ballot block itself.
+ */
+export function ballotFactsFor(t: Target, electionDate: string): string {
+  if (t.kind === "measure") return `${t.label} is on the ${electionDate} general election ballot.`;
+  if (t.kind === "race") {
+    const field = (t.candidateNames ?? []).map((n, i) => (t.candidateParties?.[i] ? `${n} (${t.candidateParties[i]})` : n)).join(", ");
+    return `${t.label} is on the ${electionDate} general election ballot.${field ? ` Candidates on the ballot: ${field}.` : ""}`;
+  }
+  const facts = [
+    t.kind === "retention" ? `${t.personName} is on the ${electionDate} general election ballot for a retention vote as ${t.office} (${t.division}).` : `${t.personName} is a candidate for ${t.office} (${t.division}) on the ${electionDate} general election ballot.`,
+    t.party ? `Party on the ballot: ${t.party}.` : "",
+    t.designation ? `Ballot designation: ${t.designation}.` : "",
+  ];
+  return facts.filter(Boolean).join(" ");
+}
+
 /** Write one item's sections and keep only what passes every check. */
-export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Target; docs: FetchedDoc[]; now: Date; client?: Client }): Promise<WriteResult> {
+export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Target; docs: FetchedDoc[]; now: Date; client?: Client; electionDate?: string }): Promise<WriteResult> {
   const { cfg, setting, t, now, client } = opts;
+  const ballotFacts = ballotFactsFor(t, opts.electionDate ?? "Nov. 3, 2026");
   const kind: SynthKind = t.kind === "measure" ? "measure" : t.kind === "race" ? "race" : "person";
   const judgeOnly = t.kind === "retention";
   // Measures: official analyses only (CLAUDE.md).
@@ -149,7 +202,7 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   }
 
   // The writing call. People get their checked positions as P0, P1… for {{years:Pn}}.
-  const call = { ...base, task: synthesisTask(t, lists?.positions.map(positionLine) ?? []) };
+  const call = { ...base, task: synthesisTask(t, lists?.positions.map(positionLine) ?? [], ballotFacts) };
   const schema = kind === "measure" ? MeasureSynthesis : kind === "race" ? RaceSynthesis : PersonWriting;
   const first = await extract({ ...call, schema });
   spent += first.costMicroUsd;
@@ -157,38 +210,51 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   if (!first.data) return empty(first.problem);
   const data = first.data as MeasureSynthesis | RaceSynthesis | PersonWriting;
   const docMap = new Map(docs.map((d) => [d.id, d]));
-  const ctx = { docs: docMap, ownNames: ownNamesFor(t), years };
-  const context = `Item: ${t.label}.`;
+  const ctx = { docs: docMap, ownNames: ownNamesFor(t), years, ballotFacts, kind, ...(kind === "race" ? { personNames: personNamesOf(t) } : {}) };
+  const context = `Item: ${t.label}. Ballot data: ${ballotFacts}`;
   const screened = unitsOf(kind, data).map((u) => screenUnit(u, ctx));
 
   const j1 = await judge(
     screened.filter((s) => !s.problems.length),
-    { cfg, client, context },
+    { cfg, client, context, ballotFacts },
   );
   spent += j1.spent;
   usage.push(...j1.usage);
   if (j1.problem) return empty(j1.problem);
 
   // One repair attempt for everything that failed (or has a style slip), reusing the cached documents.
+  // The same call fills prose sections left empty or thin (owner, 2026-10-30: "some sections feel too thin").
   const needs = screened.filter((s) => s.problems.length || s.style.length);
+  const thin = thinSections(kind, screened, judgeOnly);
   const repaired = new Map<string, Screened>();
-  if (needs.length) {
+  const added: Screened[] = [];
+  if (needs.length || thin.length) {
     const rep = await extract({
       ...call,
       schema: Rewrite,
-      followUp: { answer: JSON.stringify(data), task: repairTask(needs.map((s) => ({ id: s.unit.id, text: s.text, reasons: [...s.problems, ...s.style] }))) },
+      followUp: { answer: JSON.stringify(data), task: repairTask(needs.map((s) => ({ id: s.unit.id, text: s.text, reasons: [...s.problems, ...s.style] })), thin) },
     });
     spent += rep.costMicroUsd;
     usage.push(rep.usage ?? null);
     const byId = new Map(needs.map((s) => [s.unit.id, s]));
+    const next = new Map<string, number>();
     for (const r of rep.data?.units ?? []) {
       const orig = byId.get(r.id);
-      if (!orig || repaired.has(r.id)) continue;
-      repaired.set(r.id, screenUnit({ ...orig.unit, text: r.text, refs: r.refs }, ctx));
+      if (orig && !repaired.has(r.id)) {
+        repaired.set(r.id, screenUnit({ ...orig.unit, text: r.text, refs: r.refs }, ctx));
+        continue;
+      }
+      // A new sentence for a thin section: "<section>.new<n>".
+      const section = /^(\w+)\.new\d+$/.exec(r.id)?.[1];
+      if (!section || !thin.includes(section)) continue;
+      const n = next.get(section) ?? screened.filter((x) => x.unit.section === section).length;
+      next.set(section, n + 1);
+      const unit: Unit = { id: `${section}.${n}`, section, kind: LIST_SECTIONS.has(section) ? "list" : "prose", text: r.text, refs: r.refs };
+      added.push(screenUnit(unit, ctx));
     }
     const j2 = await judge(
-      [...repaired.values()].filter((s) => !s.problems.length),
-      { cfg, client, context },
+      [...repaired.values(), ...added].filter((s) => !s.problems.length),
+      { cfg, client, context, ballotFacts },
     );
     spent += j2.spent;
     usage.push(...j2.usage);
@@ -204,6 +270,10 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
     const r = repaired.get(s.unit.id);
     if (r && !r.problems.length) kept.push(r);
     else if (!s.problems.length) kept.push(s); // style only: never dropped
+    else for (const p of s.problems) rejected.push({ field: s.unit.id, reason: reasonOf(p), detail: p, text: stripMarks(s.text) });
+  }
+  for (const s of added) {
+    if (!s.problems.length) kept.push(s);
     else for (const p of s.problems) rejected.push({ field: s.unit.id, reason: reasonOf(p), detail: p, text: stripMarks(s.text) });
   }
 

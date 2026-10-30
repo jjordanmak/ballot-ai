@@ -134,7 +134,7 @@ export function Researching({ what, live }: { what?: string; live?: boolean }) {
 export function AiLabel({ className = "" }: { className?: string }) {
   return (
     <p className={`font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)] ${className}`}>
-      AI summary of the sources below · each item checked against the sentence it cites
+      AI summary of the sources below · every cited claim checked against its source
     </p>
   );
 }

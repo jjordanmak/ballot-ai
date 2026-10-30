@@ -202,3 +202,43 @@ describe("units and parity", () => {
     ]);
   });
 });
+
+describe("cited vs uncited (owner, 2026-10-30)", () => {
+  const race: ScreenContext = { docs, ownNames: ["Governor", "California"], kind: "race", personNames: ["Rob Bonta", "Bonta"], ballotFacts: "Governor (California) is on the Nov. 3, 2026 general election ballot." };
+  const prose = (text: string, refs: Unit["refs"] = [], over: Partial<Unit> = {}): Unit => ({ id: "whyItMatters.0", section: "whyItMatters", kind: "prose", text, refs, ...over });
+
+  it("parties, institutions and months aren't names that need a source", () => {
+    expect(hardFactProblem("Rob Bonta, the Democratic incumbent, faces Republican Michael E. Gates in November.", ["Rob Bonta and Michael E. Gates are on the ballot."], [])).toBeNull();
+    expect(hardFactProblem("The House and the State Senate passed it.", ["it passed"], [])).toBeNull();
+    // Real names still need one.
+    expect(hardFactProblem("Rob Bonta filed suit with CalMatters.", ["Rob Bonta filed suit."], [])).toMatch(/^"CalMatters/);
+  });
+
+  it("an explanatory sentence in a race intro may stand without a source", () => {
+    const s = screenUnit(prose("The governor signs or vetoes every bill the Legislature passes, which shapes the state budget."), race);
+    expect(s.problems).toEqual([]);
+    expect(s.uncited).toBe("general");
+    expect(s.refs).toEqual([]);
+  });
+
+  it("but not a new fact or a claim about a candidate", () => {
+    expect(screenUnit(prose("The governor proposes a $300 billion budget."), race).problems).toEqual(["needs a source: number 300 not in its sources"]);
+    expect(screenUnit(prose("Bonta wants to expand the program."), race).problems).toEqual(["needs a source: about Bonta"]);
+    expect(screenUnit(prose("The program was created by Newsom."), race).problems[0]).toMatch(/^needs a source: "Newsom/);
+  });
+
+  it("a profile sentence may state ballot data without a source; anything else about the person needs one", () => {
+    const person: ScreenContext = { docs, ownNames: ["Jesus Silva", "Jesus", "Silva"], kind: "person", years: new Map(), ballotFacts: "Jesus Silva is a candidate for Trustee Area 6. Ballot designation: Teacher/Business Owner." };
+    const ok = screenUnit(prose("Silva's ballot designation is Teacher/Business Owner.", [], { id: "background.0", section: "background" }), person);
+    expect(ok.problems).toEqual([]);
+    expect(ok.uncited).toBe("ballot");
+    const timeline = screenUnit({ id: "timeline.0", section: "timeline", kind: "timeline", text: "Elected to the board", refs: [], when: "2018" }, person);
+    expect(timeline.problems).toEqual(["needs a source: positions, claims and facts about a candidate are always cited"]);
+  });
+
+  it("measures may explain terms without a source", () => {
+    const s = screenUnit(prose("A bond is money the state borrows and repays with interest.", [], { id: "kind.0", section: "kind" }), { docs, ownNames: [], kind: "measure", ballotFacts: "" });
+    expect(s.uncited).toBe("general");
+    expect(s.problems).toEqual([]);
+  });
+});
