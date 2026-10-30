@@ -49,11 +49,19 @@ export class GoogleCivicClient {
   }
 
   voterInfo(address: AddressInput, electionId: string): Promise<CivicCall<CivicVoterInfoResponse>> {
-    return this.get<CivicVoterInfoResponse>(
-      "/voterinfo",
-      { address: address.reveal(), electionId, returnAllAvailableData: "true" },
-      "voterinfo",
-    );
+    return this.voterInfoWith(address, { electionId, allData: true });
+  }
+
+  /**
+   * The same call with its options spelled out, for diagnostics: with no
+   * `electionId` Google picks the voter's election and lists the others in
+   * `otherElections` (same-day elections then come back without contests).
+   */
+  voterInfoWith(address: AddressInput, opts: { electionId?: string; allData?: boolean }): Promise<CivicCall<CivicVoterInfoResponse>> {
+    const params: Record<string, string> = { address: address.reveal() };
+    if (opts.electionId) params.electionId = opts.electionId;
+    if (opts.allData) params.returnAllAvailableData = "true";
+    return this.get<CivicVoterInfoResponse>("/voterinfo", params, "voterinfo");
   }
 
   /** OCD division ids for the address (congressional, legislative, county, city…), with no election data. */

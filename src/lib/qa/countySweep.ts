@@ -38,18 +38,30 @@ async function download(fetchImpl: typeof fetch, url: string): Promise<Uint8Arra
   return new Uint8Array(await res.arrayBuffer());
 }
 
-/** Look one county up: first road, then a second if the first has no ballot. */
-async function sweepCounty(runtime: BallotRuntime, election: ElectionRef, county: County, fetchImpl: typeof fetch, today: string): Promise<QaInsert> {
-  const label = countyLabel(county);
+/** A county's test addresses (in memory only), or why there are none. */
+export async function countyTestAddresses(county: County, fetchImpl: typeof fetch): Promise<{ addresses: string[]; error?: string }> {
   let zip: Uint8Array | null = null;
   try {
     zip = await download(fetchImpl, addrfeatUrl(county.fips));
   } catch (e) {
-    return { run_id: SWEEP_RUN_ID, label, state: county.state, status: "ERROR", error: `download: ${e instanceof Error ? e.name : "failed"}` };
+    return { addresses: [], error: `download: ${e instanceof Error ? e.name : "failed"}` };
   }
   const dbf = zip ? readZipEntry(zip, ".dbf") : null;
   const addresses = dbf ? countyAddresses(readDbf(dbf, ADDRFEAT_FIELDS, isResidentialRoad), county.state) : [];
-  if (!addresses.length) return { run_id: SWEEP_RUN_ID, label, state: county.state, status: "ERROR", error: zip ? "no residential address ranges" : "download failed" };
+  return addresses.length ? { addresses } : { addresses, error: zip ? "no residential address ranges" : "download failed" };
+}
+
+export async function fetchCounties(fetchImpl: typeof fetch): Promise<County[]> {
+  const res = await fetchImpl(countyListUrl, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`county list: HTTP ${res.status}`);
+  return parseCountyList(await res.text());
+}
+
+/** Look one county up: first road, then a second if the first has no ballot. */
+async function sweepCounty(runtime: BallotRuntime, election: ElectionRef, county: County, fetchImpl: typeof fetch, today: string): Promise<QaInsert> {
+  const label = countyLabel(county);
+  const { addresses, error } = await countyTestAddresses(county, fetchImpl);
+  if (!addresses.length) return { run_id: SWEEP_RUN_ID, label, state: county.state, status: "ERROR", error };
   let row: QaInsert | undefined;
   for (const address of addresses) {
     row = await lookupLocation(runtime, election, SWEEP_RUN_ID, label, address, today);
@@ -69,9 +81,7 @@ export async function runCountySweep(opts: {
 }): Promise<{ done: number; total: number; stored: number; finished: boolean }> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const until = Date.now() + (opts.budgetMs ?? 240_000);
-  const listRes = await fetchImpl(countyListUrl, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
-  if (!listRes.ok) throw new Error(`county list: HTTP ${listRes.status}`);
-  const counties = parseCountyList(await listRes.text());
+  const counties = await fetchCounties(fetchImpl);
 
   const done = new Set<string>();
   for (let from = 0; ; from += 1000) {
