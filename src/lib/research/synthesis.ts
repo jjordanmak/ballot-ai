@@ -492,15 +492,17 @@ export function balanceRace<T extends { unit: { id: string; section: string }; t
 const contentWords = (t: string) => new Set(factText(t).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 || /^\d+$/.test(w)));
 
 /**
- * Sentences that say what an earlier one already says (round 2: In Brief and
- * Background repeating each other): most of their content words are in one
- * earlier prose or list sentence. Returns repeat id → the earlier id. Pure.
+ * Prose sentences that say what an earlier one already says (round 2: In
+ * Brief and Background repeating each other): most of their content words
+ * are in one earlier prose sentence. Lists are never compared: a priority
+ * or stance is meant to restate the platform In Brief summarizes (round 3
+ * dropped them). Returns repeat id → the earlier id. Pure.
  */
 export function repeats(units: { unit: { id: string; kind: string }; text: string }[]): Map<string, string> {
   const out = new Map<string, string>();
   const seen: { id: string; words: Set<string> }[] = [];
   for (const u of units) {
-    if (u.unit.kind !== "prose" && u.unit.kind !== "list") continue;
+    if (u.unit.kind !== "prose") continue;
     const words = contentWords(u.text);
     if (words.size >= 5) {
       const twin = seen.find((x) => {

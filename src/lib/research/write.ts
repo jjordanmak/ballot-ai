@@ -255,7 +255,9 @@ export async function writeItem(opts: {
   for (const b of imbalance) {
     for (const id of b.units) screened.find((s) => s.unit.id === id)?.style.push(`unbalanced: ${b.section} names ${b.over.join(", ")} more than ${b.under.join(", ")}`);
   }
-  for (const [id, twin] of repeats(live())) screened.find((s) => s.unit.id === id)?.style.push(`repeats ${twin}`);
+  // Measures answer fixed questions that mirror each other by design (yes/no, summary/money): never compared.
+  const repeatsOf = (list: Screened[]) => (kind === "measure" ? new Map<string, string>() : repeats(list));
+  for (const [id, twin] of repeatsOf(live())) screened.find((s) => s.unit.id === id)?.style.push(`repeats ${twin}`);
 
   // One repair attempt for everything that failed (or has a style slip), reusing the cached documents.
   // The same call fills prose sections left empty or thin (owner, 2026-10-30: "some sections feel too thin").
@@ -388,7 +390,7 @@ export async function writeItem(opts: {
     kept = b.kept;
     for (const d of b.dropped) rejected.push({ field: d.item.unit.id, reason: "neutrality", detail: d.reason, text: stripMarks(d.item.text) });
   }
-  const twins = repeats(kept);
+  const twins = repeatsOf(kept);
   for (const s of kept.filter((k) => twins.has(k.unit.id))) rejected.push({ field: s.unit.id, reason: "repeat", detail: `repeats ${twins.get(s.unit.id)}`, text: stripMarks(s.text) });
   kept = kept.filter((k) => !twins.has(k.unit.id));
 

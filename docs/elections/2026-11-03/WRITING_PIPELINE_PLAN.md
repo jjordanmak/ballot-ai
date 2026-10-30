@@ -144,7 +144,7 @@ The June prototype is viewable at `/archive/ca-2026-primary/<zip>` on previews o
 - **Split instead of drop.** In race intros and measures, the repair pass splits a sentence that joins a cited fact with an unstated explanation: the fact keeps its refs (`<id>`), the explanation goes uncited (`<id>+1`) and is kept only with its fact.
 - **Re-cite from every document.** The repair pass may cite any document in the item's set, not only the one first cited.
 - **The source finder.** Sentences still unsupported (not those dropped for wording) get one web search per item (`searchUrls` kind `claim`, 1 search; .gov, Ballotpedia and vetted news only; never for measures). Up to 3 found pages are read politely and narrowed; one call re-cites the sentences from them, and each goes through every check again. Runs record `metadata.finder` (pages tried, sentences rescued).
-- **No repetition.** A prose or list sentence whose content words are mostly in an earlier one (in any section) goes to the repair pass, then is dropped if it still repeats.
+- **No repetition.** A prose sentence whose content words are mostly in an earlier prose sentence (in any section) goes to the repair pass, then is dropped if it still repeats. List items (priorities, stances) and measures are never compared: a priority restates the platform In Brief summarizes, and a measure's questions mirror each other (YES/NO) by design; round 3's first run dropped both, and was re-run.
 
 **Allowed vs not:**
 - **Allowed:** insights that follow from cited facts ("The next governor will oversee a $X budget [1] and appoint judges [2]").

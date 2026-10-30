@@ -242,6 +242,9 @@ describe("race intro balance and repetition (round 3, owner 2026-10-30)", () => 
       u("background.0", "From 1993 to 2017, Becerra represented Los Angeles in the U.S. House."),
       u("background.1", "Gov. Jerry Brown appointed him attorney general in 2017."),
       u("timeline.0", "Represented Los Angeles in the U.S. House from 1993 to 2017", "timeline"),
+      // A priority restates the platform In Brief summarizes, by design (round 3 dropped these).
+      u("inBrief.1", "His campaign lists restoring high academic standards in reading, writing, and math."),
+      u("priorities.0", "Restoring high academic standards in reading, writing, and math", "list"),
     ];
     expect([...repeats(list)]).toEqual([["background.0", "inBrief.0"]]);
   });
