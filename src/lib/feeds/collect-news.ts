@@ -386,12 +386,31 @@ export async function collectNews(opts: {
 
   await readArticles();
 
-  // Skip URLs already stored, then insert the rest.
+  // Skip URLs already stored, then insert the rest. A story first found by name
+  // through an API (GDELT, the NYT) takes the outlet's own headline, summary and
+  // image when its feed brings it (collect-apis.ts).
   const urls = [...rows.keys()];
+  const upgrades: { url: string; row: FeedInsert; prior: { contest_ids: string[]; candidate_ids: string[] } }[] = [];
   for (let i = 0; i < urls.length; i += 50) {
-    const { data, error } = await db.from("feed_items").select("url").in("url", urls.slice(i, i + 50));
+    const { data, error } = await db.from("feed_items").select("url, match, contest_ids, candidate_ids").in("url", urls.slice(i, i + 50));
     if (error) throw new Error(`feed_items lookup: ${error.message}`);
-    for (const r of data ?? []) rows.delete(r.url);
+    for (const r of data ?? []) {
+      const via = (r.match as { via?: string } | null)?.via;
+      if (via === "gdelt" || via === "nyt-api") upgrades.push({ url: r.url, row: rows.get(r.url)!, prior: { contest_ids: r.contest_ids ?? [], candidate_ids: r.candidate_ids ?? [] } });
+      rows.delete(r.url);
+    }
+  }
+  for (const { url, row, prior } of upgrades) {
+    await db
+      .from("feed_items")
+      .update({
+        title: row.title,
+        excerpt: row.excerpt,
+        image_url: row.image_url,
+        contest_ids: [...new Set([...prior.contest_ids, ...(row.contest_ids ?? [])])],
+        candidate_ids: [...new Set([...prior.candidate_ids, ...(row.candidate_ids ?? [])])],
+      })
+      .eq("url", url);
   }
   const fresh = [...rows.values()];
   if (fresh.length) {

@@ -22,7 +22,7 @@ describe("checkEntry", () => {
 });
 
 /** Minimal stand-in for the Supabase query builder: just the calls collectNews makes. */
-function fakeDb(existingUrls: string[] = [], readUrls: string[] = []) {
+function fakeDb(existingUrls: string[] = [], readUrls: string[] = [], existingRows: Record<string, unknown>[] = []) {
   const inserted: Record<string, unknown>[] = [];
   const states: Record<string, unknown>[] = [];
   const reads: Record<string, unknown>[] = [];
@@ -53,7 +53,7 @@ function fakeDb(existingUrls: string[] = [], readUrls: string[] = []) {
         return { data: [], error: null };
       }
       if (table === "contests") return { data: contests, error: null };
-      if (table === "feed_items") return { data: existingUrls.map((url) => ({ url })), error: null };
+      if (table === "feed_items") return { data: [...existingUrls.map((url) => ({ url })), ...existingRows], error: null };
       if (table === "feed_article_reads") return { data: readUrls.map((url) => ({ url })), error: null };
       if (table === "fetch_hosts") return { data: null, error: null };
       return { data: [], error: null };
@@ -210,6 +210,30 @@ describe("collectNews article text", () => {
     });
     expect(summary.articlesRead + summary.readsFailed).toBe(0);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("collectNews and stories found by name first", () => {
+  it("gives a story GDELT found first the outlet's own headline and summary, keeping its races", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const prior = { url: "https://news.test/debate", match: { via: "gdelt" }, contest_ids: ["other"], candidate_ids: ["someone"] };
+    const { db, inserted, updates } = fakeDb([], [], [prior]);
+    const fetchImpl = vi.fn(async () => new Response(rss(item("Xavier Becerra and Steve Hilton debate", "https://news.test/debate", undefined, "The governor race heats up"))));
+    await collectNews({
+      db: db as never,
+      electionId: "e",
+      sources: [{ key: "a", name: "A", url: "https://a.test/feed", scope: "national", enabled: true }],
+      now: NOW,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolve: publicDns,
+    });
+    expect(inserted).toEqual([]);
+    expect(updates.find((u) => u.table === "feed_items" && "title" in u.values)?.values).toMatchObject({
+      title: "Xavier Becerra and Steve Hilton debate",
+      excerpt: "The governor race heats up",
+      contest_ids: expect.arrayContaining(["other", "gov"]),
+      candidate_ids: expect.arrayContaining(["someone", "becerra", "hilton"]),
+    });
   });
 });
 

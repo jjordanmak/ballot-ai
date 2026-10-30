@@ -280,3 +280,56 @@ export function buildHint(contests: TrackedContest[]): (title: string, summary: 
     return weakList.some((t) => has(text, t)) ? 1 : 0;
   };
 }
+
+/** One tracked candidate, with the words that identify their race, for news APIs queried by name. */
+export interface CandidateQuery {
+  candidateId: string;
+  contestId: string;
+  state?: string;
+  stateLevel: boolean;
+  /** Full name as people write it ("Xavier Becerra"), and its parts. */
+  name: string;
+  first: string;
+  surname: string;
+  /** Office words, the place or state, and opponents' last names: one must appear in a story about them. */
+  context: string[];
+}
+
+/** Readable "First Last" from a ballot name ("DONALD P. (DON) WAGNER" → "Don Wagner"). */
+function queryName(names: string[]): { name: string; first: string; surname: string } | null {
+  const raw = names.find((n) => /\p{Ll}/u.test(n)) ?? names[0] ?? "";
+  const nick = /\(([^)]+)\)/.exec(raw)?.[1];
+  const toks = raw.replace(/\([^)]*\)/g, " ").replace(/[,]/g, " ").split(/\s+/).filter(Boolean);
+  const words = toks.filter((t) => !/^[A-Za-z]\.?$/.test(t) && !SUFFIXES.has(t.toLowerCase().replace(/\./g, "")));
+  if (words.length < 2) return null;
+  const title = (w: string) => (/\p{Ll}/u.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase());
+  const first = title(nick ?? words[0]);
+  const surname = title(words[words.length - 1]);
+  return { name: `${first} ${surname}`, first, surname };
+}
+
+export function candidateQueries(contests: TrackedContest[]): CandidateQuery[] {
+  const out: CandidateQuery[] = [];
+  for (const c of contests) {
+    if (c.kind !== "candidate") continue;
+    const stateName = c.state ? STATE_NAMES[c.state] : undefined;
+    const place = placeTerm(c.divisionName);
+    for (const k of c.candidates) {
+      const n = queryName(k.names);
+      if (!n) continue;
+      const opponents = c.candidates
+        .filter((o) => o.id !== k.id)
+        .map((o) => queryName(o.names)?.surname)
+        .filter((s): s is string => !!s && s.length > 2);
+      out.push({
+        candidateId: k.id,
+        contestId: c.id,
+        state: c.state,
+        stateLevel: !!c.stateLevel,
+        ...n,
+        context: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...opponents.map((o) => o.toLowerCase())].filter((t) => t && t.length > 2))],
+      });
+    }
+  }
+  return out;
+}

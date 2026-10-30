@@ -1,8 +1,9 @@
 {
-  "_about": "Approved news sources for the live feed (approved 2026-10-29). Fetched by source, not per candidate. scope: national (matches any tracked contest) | state (matches only its own state's contests; the state name counts as context) | local (same, plus jurisdiction terms the article may omit). Inclusion rule: original reporting, a public corrections policy, and no ownership or control by a party, campaign, PAC or litigation group; national outlets are chosen across the political spectrum; every outlet that meets the rule is treated the same. Opinion and sponsored items are held by the automated checks. Excluded: CNN and Reuters (no maintained public RSS), RealClearPolitics (aggregator: links to other outlets' stories), Democracy Docket and similar (run by a litigation or advocacy group). Feed URLs follow each outlet's published feed pattern and are confirmed by the collector's first run (feed_source_state.last_status); failing sources back off automatically, and enabled=false drops a source instantly. Outlets that block automated readers (HTTP 403) are turned off with a disabledReason, never worked around (owner, 2026-10-29). Moved feeds are found automatically from the outlet's own advertised feed links (src/lib/feeds/discover.ts).",
+  "_about": "Approved news sources for the live feed (approved 2026-10-29). Fetched by source, not per candidate. scope: national (matches any tracked contest) | state (matches only its own state's contests; the state name counts as context) | local (same, plus jurisdiction terms the article may omit). Inclusion rule: original reporting, a public corrections policy, and no ownership or control by a party, campaign, PAC or litigation group; national outlets are chosen across the political spectrum; every outlet that meets the rule is treated the same. Opinion and sponsored items are held by the automated checks. Excluded: CNN and Reuters (no maintained public RSS), RealClearPolitics (aggregator: links to other outlets' stories), Democracy Docket and similar (run by a litigation or advocacy group). Feed URLs follow each outlet's published feed pattern and are confirmed by the collector's first run (feed_source_state.last_status); failing sources back off automatically, and enabled=false drops a source instantly. Outlets that block automated readers (HTTP 403) are turned off with a disabledReason, never worked around (owner, 2026-10-29). Moved feeds are found automatically from the outlet's own advertised feed links (src/lib/feeds/discover.ts). gdeltDomain (owner, 2026-10-30): outlets whose article pages we can't read are also searched by candidate name through GDELT, which reads the article for us; the New York Times through its own Article Search API (src/lib/feeds/apis.ts).",
   "sources": [
     {
       "key": "ap-politics",
+      "gdeltDomain": "apnews.com",
       "name": "Associated Press",
       "url": "https://apnews.com/hub/politics?output=rss",
       "scope": "national",
@@ -11,6 +12,7 @@
     },
     {
       "key": "npr-politics",
+      "gdeltDomain": "npr.org",
       "name": "NPR",
       "url": "https://feeds.npr.org/1014/rss.xml",
       "scope": "national",
@@ -39,6 +41,7 @@
     },
     {
       "key": "wsj-politics",
+      "gdeltDomain": "wsj.com",
       "name": "The Wall Street Journal",
       "url": "https://feeds.content.dowjones.io/public/rss/socialpoliticsfeed",
       "scope": "national",
@@ -53,6 +56,7 @@
     },
     {
       "key": "the-hill-campaign",
+      "gdeltDomain": "thehill.com",
       "name": "The Hill",
       "url": "https://thehill.com/homenews/campaign/feed/",
       "scope": "national",
@@ -60,6 +64,7 @@
     },
     {
       "key": "politico",
+      "gdeltDomain": "politico.com",
       "name": "Politico",
       "url": "https://rss.politico.com/politics-news.xml",
       "scope": "national",
@@ -122,6 +127,7 @@
     },
     {
       "key": "ocregister-politics",
+      "gdeltDomain": "ocregister.com",
       "name": "Orange County Register",
       "url": "https://www.ocregister.com/news/politics/feed/",
       "scope": "state",
@@ -160,6 +166,7 @@
     },
     {
       "key": "mercury-news-peninsula",
+      "gdeltDomain": "mercurynews.com",
       "name": "The Mercury News",
       "url": "https://www.mercurynews.com/location/california/san-mateo-county/feed/",
       "scope": "local",
@@ -227,6 +234,7 @@
     },
     {
       "key": "bloomberg-politics",
+      "gdeltDomain": "bloomberg.com",
       "name": "Bloomberg",
       "url": "https://feeds.bloomberg.com/politics/news.rss",
       "scope": "national",
@@ -868,6 +876,7 @@
     },
     {
       "key": "ny-daily-news-politics",
+      "gdeltDomain": "nydailynews.com",
       "name": "New York Daily News",
       "url": "https://www.nydailynews.com/news/politics/feed/",
       "scope": "local",
@@ -891,6 +900,7 @@
     },
     {
       "key": "la-daily-news-politics",
+      "gdeltDomain": "dailynews.com",
       "name": "Los Angeles Daily News",
       "url": "https://www.dailynews.com/news/politics/feed/",
       "scope": "local",
