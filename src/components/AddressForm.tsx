@@ -161,7 +161,7 @@ export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?:
           aria-controls="address-suggestions"
           aria-activedescendant={open && active >= 0 && active < suggestions.length ? `address-option-${active}` : undefined}
           aria-invalid={!!error}
-          aria-describedby={error ? "address-hint address-error" : "address-hint address-privacy"}
+          aria-describedby={error || missingLocality ? "address-hint address-error" : "address-hint address-privacy"}
           className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-lg pl-10 pr-4 py-3.5 text-[16px] text-[var(--color-paper)] placeholder:text-[var(--color-paper-4)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
         />
         {open && (
@@ -202,14 +202,8 @@ export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?:
         )}
       </div>
 
-      <p
-        id="address-hint"
-        aria-live="polite"
-        className={`-mt-1 text-[12px] leading-[1.5] ${missingLocality ? "text-[var(--color-paper)]" : "text-[var(--color-paper-3)]"}`}
-      >
-        {missingLocality
-          ? "Add the city and state, or the ZIP code (for example: 123 Main St, Springfield, IL 62701), or pick your address from the suggestions."
-          : "Your home street address. No apartment or unit number needed: everyone at the same address has the same ballot."}
+      <p id="address-hint" className="-mt-1 text-[12px] leading-[1.5] text-[var(--color-paper-3)]">
+        Your home street address. No apartment or unit number needed: everyone at the same address has the same ballot.
       </p>
 
       {complete && elections.length > 0 && (
@@ -236,7 +230,28 @@ export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?:
         </div>
       )}
 
+      <button
+        type="submit"
+        disabled={pending || filling || !complete || !electionReady}
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
+      >
+        {pending ? "Finding your ballot…" : "View my ballot"}
+        {!pending && <ArrowRight size={14} aria-hidden />}
+      </button>
+
+      <p id="address-privacy" className="mt-1 flex items-start gap-2 text-[12px] leading-[1.5] text-[var(--color-paper-3)]">
+        <ShieldCheck size={13} aria-hidden className="mt-[2px] shrink-0 text-[var(--color-accent)]" />
+        We send your address to Google to suggest matches and look up your ballot, then discard it. It isn{"’"}t saved,
+        logged, or shared with AI tools.
+      </p>
       <div aria-live="polite" id="address-error">
+        {/* Errors and the missing-city note sit below the button and the privacy note (owner, 2026-10-30). */}
+        {!error && missingLocality && (
+          <p className="flex items-start gap-2 text-[13px] leading-[1.55] text-[var(--color-paper)]">
+            <TriangleAlert size={14} aria-hidden className="mt-[3px] shrink-0 text-[var(--color-accent)]" />
+            Add the city and state, or the ZIP code (for example: 123 Main St, Springfield, IL 62701), or pick your address from the suggestions.
+          </p>
+        )}
         {error && (
           <div className="rounded-lg border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] px-4 py-3">
             <p className="flex items-center gap-2 text-[14px] text-[var(--color-paper)] font-medium">
@@ -257,21 +272,6 @@ export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?:
           </div>
         )}
       </div>
-
-      <button
-        type="submit"
-        disabled={pending || filling || !complete || !electionReady}
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--color-ink-0)] font-medium px-5 py-3 text-[14px] transition-all"
-      >
-        {pending ? "Finding your ballot…" : "View my ballot"}
-        {!pending && <ArrowRight size={14} aria-hidden />}
-      </button>
-
-      <p id="address-privacy" className="mt-1 flex items-start gap-2 text-[12px] leading-[1.5] text-[var(--color-paper-3)]">
-        <ShieldCheck size={13} aria-hidden className="mt-[2px] shrink-0 text-[var(--color-accent)]" />
-        We send your address to Google to suggest matches and look up your ballot, then discard it. It isn{"’"}t saved,
-        logged, or shared with AI tools.
-      </p>
     </form>
   );
 }
