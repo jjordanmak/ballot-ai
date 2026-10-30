@@ -123,13 +123,13 @@ export function placeTerm(divisionName: string): string {
   return normalizeForMatch(splitMapYear(divisionName).name).replace(GENERIC_PLACE_WORDS, " ").replace(/\s+/g, " ").trim();
 }
 
-function officeTerms(title: string): string[] {
+export function officeTerms(title: string): string[] {
   const t = normalizeForMatch(title);
   return OFFICE_SYNONYMS.flatMap(([re, terms]) => (re.test(t) ? terms : []));
 }
 
 /** Measure identifiers an article might use: "proposition 1" → also "prop 1". */
-function measureIds(title: string): string[] {
+export function measureIds(title: string): string[] {
   const t = normalizeForMatch(title);
   const prop = /^proposition (\d+)$/.exec(t);
   if (prop) return [`proposition ${prop[1]}`, `prop ${prop[1]}`];
@@ -293,6 +293,16 @@ export interface CandidateQuery {
   surname: string;
   /** Office words, the place or state, and opponents' last names: one must appear in a story about them. */
   context: string[];
+  /** 0 statewide, 1 other state-level (federal, legislative, appellate), 2 local: who is asked about first. */
+  tier: 0 | 1 | 2;
+  /** Judges' retention races, which national outlets rarely cover. */
+  judicial: boolean;
+}
+
+/** 0 statewide, 1 other state-level, 2 local. */
+export function contestTier(c: Pick<TrackedContest, "divisionName" | "state" | "stateLevel">): 0 | 1 | 2 {
+  if (c.state && normalizeForMatch(c.divisionName) === STATE_NAMES[c.state]) return 0;
+  return c.stateLevel ? 1 : 2;
 }
 
 /** Readable "First Last" from a ballot name ("DONALD P. (DON) WAGNER" → "Don Wagner"). */
@@ -328,6 +338,8 @@ export function candidateQueries(contests: TrackedContest[]): CandidateQuery[] {
         stateLevel: !!c.stateLevel,
         ...n,
         context: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...opponents.map((o) => o.toLowerCase())].filter((t) => t && t.length > 2))],
+        tier: contestTier(c),
+        judicial: /\b(justice|judge|court)\b/i.test(c.title),
       });
     }
   }

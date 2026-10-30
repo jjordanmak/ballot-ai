@@ -7,7 +7,7 @@ import { cronAuthorized } from "../_auth";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-/** Every 2 minutes (vercel.json): news by candidate name from the NYT and GDELT. */
+/** Every 2 minutes (vercel.json): news found by search: the NYT by candidate name, GDELT by race. */
 export async function GET(req: Request) {
   if (!cronAuthorized(req)) return new Response("Unauthorized", { status: 401 });
   const lookup = await getBallotRuntime().elections.current();
