@@ -110,16 +110,18 @@ describe("collectApiNews", () => {
     // The NYT is a national paper: never asked about school-board candidates or judges.
     const nytAsked = calls.filter((u) => u.includes("nytimes")).map((u) => new URL(u).searchParams.get("q"));
     expect(nytAsked.sort()).toEqual(['"Steve Hilton"', '"Xavier Becerra"']);
-    expect(inserted.map((r) => [r.url, r.source_key, r.publisher, r.status, (r.match as { via: string }).via])).toEqual([
-      ["https://www.politico.com/news/2026/10/29/becerra-insurance", "politico", "Politico", "published", "gdelt"],
-      ["https://www.ocregister.com/2026/10/29/opinion/becerra", "ocregister-politics", "Orange County Register", "held", "gdelt"],
+    // The two APIs run in parallel, so storage order isn't fixed.
+    const byUrl = [...inserted].sort((a, b) => String(a.url).localeCompare(String(b.url)));
+    expect(byUrl.map((r) => [r.url, r.source_key, r.publisher, r.status, (r.match as { via: string }).via])).toEqual([
       ["https://www.nytimes.com/2026/10/29/us/politics/hilton.html", "nyt-politics", "The New York Times", "published", "nyt-api"],
+      ["https://www.ocregister.com/2026/10/29/opinion/becerra", "ocregister-politics", "Orange County Register", "held", "gdelt"],
+      ["https://www.politico.com/news/2026/10/29/becerra-insurance", "politico", "Politico", "published", "gdelt"],
     ]);
     // The hotel story names no tracked person in a way that identifies them.
     expect(inserted.some((r) => String(r.url).includes("hilton-hotels"))).toBe(false);
     expect(summary).toMatchObject({ gdeltThrottled: false, stored: 3, published: 2 });
     // A story attaches to a candidate only when its headline names them.
-    expect(inserted.map((r) => [r.contest_ids, r.candidate_ids]).slice(0, 2)).toEqual([
+    expect(byUrl.filter((r) => (r.match as { via: string }).via === "gdelt").map((r) => [r.contest_ids, r.candidate_ids])).toEqual([
       [["gov", "appeal"], ["becerra"]],
       [["gov", "appeal"], ["becerra"]],
     ]);
