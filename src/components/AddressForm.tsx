@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, ExternalLink, MapPin, ShieldCheck, TriangleAlert } from "lucide-react";
 import { resolveAddressAction, type AddressFormState } from "@/app/actions";
-import { INCOMPLETE_ADDRESS_COPY, NO_STREET_NUMBER_COPY, STATUS_COPY } from "@/lib/ballot/copy";
+import { INCOMPLETE_ADDRESS_COPY, NO_STREET_NUMBER_COPY, NOT_PUBLISHED_COPY, STATUS_COPY } from "@/lib/ballot/copy";
 import { hasLocality } from "@/lib/providers/address";
 import { readyToSuggest } from "@/lib/providers/google-places/ready";
 import type { ElectionChoice } from "@/lib/ballot/electionChoices";
@@ -44,13 +44,15 @@ export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?:
       ? NO_STREET_NUMBER_COPY
       : state.incomplete
         ? INCOMPLETE_ADDRESS_COPY
-        : STATUS_COPY[state.status]
+        : state.notPublished
+          ? NOT_PUBLISHED_COPY
+          : STATUS_COPY[state.status]
     : null;
   // The button waits for a full address (ZIP, or city and state); the hint says what's missing.
   const complete = hasLocality(address);
   // Only once a street is under way ("123 Mai"), so the hint doesn't nag on the first keystrokes.
   const missingLocality = !complete && readyToSuggest(address);
-  const showLookup = !!state.lookup && (handoff || state.status === "NO_COVERAGE");
+  const showLinks = !!state.links?.length && (handoff || state.status === "NO_COVERAGE");
   // No list (couldn't be read): the server picks the next election itself.
   const electionReady = elections.length === 0 || !!electionSlug;
 
@@ -259,15 +261,21 @@ export function AddressForm({ autoFocus = false, elections = [] }: { autoFocus?:
               {error.title}
             </p>
             <p className="mt-1 text-[13px] leading-[1.55] text-[var(--color-paper-2)]">{error.body}</p>
-            {showLookup && (
-              <a
-                href={state.lookup!.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-[13px] text-[var(--color-paper)] underline hover:text-[var(--color-accent)]"
-              >
-                {state.lookup!.label} <ExternalLink size={12} aria-hidden />
-              </a>
+            {showLinks && (
+              <ul className="mt-2 flex flex-col gap-1">
+                {state.links!.map((l) => (
+                  <li key={l.url}>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[13px] text-[var(--color-paper)] underline hover:text-[var(--color-accent)]"
+                    >
+                      {l.label} <ExternalLink size={12} aria-hidden />
+                    </a>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}

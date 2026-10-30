@@ -3,7 +3,7 @@
  * as "nothing is on your ballot" — each state says what happened and what
  * to do next.
  */
-import type { CoarseLocation, ResolutionStatus } from "@/domain/ballot";
+import type { CoarseLocation, ElectionAdministration, ResolutionStatus } from "@/domain/ballot";
 
 export const STATUS_COPY: Record<Exclude<ResolutionStatus, "SUCCESS">, { title: string; body: string }> = {
   PARTIAL: {
@@ -53,8 +53,42 @@ export const INCOMPLETE_ADDRESS_COPY = {
   body: "Include the city, state, and ZIP code (for example, 123 Main St, Springfield, IL 62701), or pick your address from the suggestions as you type.",
 };
 
+/**
+ * The provider found the address and its state but has no races for it yet
+ * (2026-10-30: Google's Nov 3 data covered only some states). Not the
+ * voter's fault, so no address advice; the official links follow.
+ */
+export const NOT_PUBLISHED_COPY = {
+  title: "We don't have ballot details for your area yet",
+  body: "Our ballot data source hasn't published the races and measures for your address yet. This doesn't mean nothing is on your ballot. Your official sample ballot is available from your election office:",
+};
+
 /** National fallback when the provider didn't name a state election office (NASS "Can I Vote"). */
 export const STATE_LOOKUP_FALLBACK = { label: "Find your state's election office", url: "https://www.canivote.org/" };
+
+export interface OfficialLink {
+  label: string;
+  url: string;
+}
+
+/**
+ * The election office's own pages from the provider's response, most useful
+ * first (sample ballot, election information, registration check), without
+ * repeats; the national NASS finder when the provider named none. State or
+ * county offices only — never anything derived from the address itself.
+ */
+export function officialLinks(admin: ElectionAdministration | undefined): OfficialLink[] {
+  const office = admin?.name?.trim();
+  const of = (what: string) => (office ? `${office}: ${what}` : what);
+  const candidates: (OfficialLink | undefined)[] = [
+    admin?.ballotInfoUrl ? { label: of("ballot information"), url: admin.ballotInfoUrl } : undefined,
+    admin?.electionInfoUrl ? { label: of("election information"), url: admin.electionInfoUrl } : undefined,
+    admin?.voterLookupUrl ? { label: admin.regionName ? `${admin.regionName} voter lookup` : "Your state's voter lookup", url: admin.voterLookupUrl } : undefined,
+  ];
+  const seen = new Set<string>();
+  const out = candidates.filter((l): l is OfficialLink => !!l && !seen.has(l.url) && !!seen.add(l.url));
+  return out.length ? out : [STATE_LOOKUP_FALLBACK];
+}
 
 export function isResolutionStatus(s: string | undefined): s is ResolutionStatus {
   return !!s && (s === "SUCCESS" || s in STATUS_COPY);

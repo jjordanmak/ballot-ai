@@ -9,6 +9,7 @@ import {
   parityTask,
   personListsTask,
   repairTask,
+  rescueTask,
   researchTask,
   reviewTask,
   rewriteTask,
@@ -36,6 +37,7 @@ describe("prompts", () => {
       searchPerson: searchTask("person", "Ann Bee Governor"),
       searchMeasure: searchTask("measure", "Measure Z"),
       searchRace: searchTask("race", "Governor California 2026 election"),
+      searchClaim: searchTask("claim", "1. a"),
     }).toMatchSnapshot();
   });
 
@@ -50,6 +52,7 @@ describe("prompts", () => {
       candidateLists: personListsTask({ ...base, kind: "candidate", personName: "Ann Bee", office: "Governor", division: "California", local: true }),
       retention: synthesisTask({ ...base, kind: "retention", personName: "Ann Bee", office: "Associate Justice", division: "California" }),
       repair: repairTask([{ id: "context.0", text: "a", reasons: ["excerpt not found in its document"] }]),
+      rescue: rescueTask([{ id: "context.0", text: "a" }]),
       synthSupport: synthSupportTask('1. Text: a\n   Excerpts: [1] "b"'),
       REVIEW_SYSTEM,
       review: reviewTask("Item: Governor.", [{ id: "context.0", text: "a" }]),

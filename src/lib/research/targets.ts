@@ -95,7 +95,10 @@ interface StateGuide {
 const GUIDES = (guides as unknown as { states: Record<string, StateGuide> }).states;
 
 /** Campaign pages most likely to hold a bio or stated priorities. */
-export const CAMPAIGN_FOLLOW = ["about", "meet", "bio", "biography", "issues", "priorities", "platform", "vision", "agenda"];
+export const CAMPAIGN_FOLLOW = ["about", "meet", "bio", "biography", "issues", "priorities", "platform", "vision", "agenda", "endorsements"];
+
+/** A campaign site's own list of endorsements (round 3): the source for the Endorsements section when no one else lists them. */
+export const ENDORSEMENT_FOLLOW = ["endorsements", "endorsed", "supporters"];
 
 const isStatewideKey = (key: string, scope: string | null) =>
   scope === "statewide" || /^ocd-division\/country:us\/(state:[a-z]{2}|district:dc)$/.test(key);
