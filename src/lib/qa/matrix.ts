@@ -21,7 +21,7 @@ import { AddressInput } from "@/lib/providers/address";
 import type { Database, Json } from "@/lib/supabase/types";
 
 type Db = SupabaseClient<Database>;
-type QaInsert = Database["public"]["Tables"]["qa_runs"]["Insert"];
+export type QaInsert = Database["public"]["Tables"]["qa_runs"]["Insert"];
 
 export interface QaLocation {
   /** "WA · Seattle City Hall": state first, never the street. */
@@ -68,6 +68,22 @@ export function summarize(ballot: ResolvedBallot): Pick<QaInsert, "status" | "st
   };
 }
 
+/** Look one location up through the normal resolver path; the address is used here and nowhere else. */
+export async function lookupLocation(runtime: BallotRuntime, election: ElectionRef, runId: string, label: string, raw: string, today = electionToday()): Promise<QaInsert> {
+  const address = AddressInput.parse(raw);
+  if (!address) return { run_id: runId, label, status: "INVALID_ADDRESS", error: "unparseable address" };
+  try {
+    const ballot = await runtime.resolver.resolveBallot(address, election);
+    if (hasBallot(ballot)) {
+      supplementWithOfficialRecords(ballot);
+      ballot.warnings.push(...validateBallot(ballot, today));
+    }
+    return { run_id: runId, label, ...summarize(ballot) };
+  } catch (e) {
+    return { run_id: runId, label, status: "ERROR", error: e instanceof Error ? e.name : "unknown" };
+  }
+}
+
 /** Look every location up once and store the results; returns how many were stored. */
 export async function runMatrix(opts: {
   db: Db;
@@ -86,21 +102,7 @@ export async function runMatrix(opts: {
     Array.from({ length: Math.min(opts.concurrency ?? 4, queue.length) }, async () => {
       while (queue.length && Date.now() < until) {
         const loc = queue.shift()!;
-        const address = AddressInput.parse(loc.address);
-        if (!address) {
-          rows.push({ run_id: runId, label: loc.label, status: "INVALID_ADDRESS", error: "unparseable address" });
-          continue;
-        }
-        try {
-          const ballot = await opts.runtime.resolver.resolveBallot(address, opts.election);
-          if (hasBallot(ballot)) {
-            supplementWithOfficialRecords(ballot);
-            ballot.warnings.push(...validateBallot(ballot, today));
-          }
-          rows.push({ run_id: runId, label: loc.label, ...summarize(ballot) });
-        } catch (e) {
-          rows.push({ run_id: runId, label: loc.label, status: "ERROR", error: e instanceof Error ? e.name : "unknown" });
-        }
+        rows.push(await lookupLocation(opts.runtime, opts.election, runId, loc.label, loc.address, today));
       }
     }),
   );

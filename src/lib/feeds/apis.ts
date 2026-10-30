@@ -185,13 +185,21 @@ export function parseNyt(body: string): ApiArticle[] {
 
 const norm = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
 
-/** Whether the NYT tagged this person ("Becerra, Xavier" or "Becerra, Xavier (1958- )"). */
+/**
+ * Whether the NYT tagged this person. Tags come as "Becerra, Xavier",
+ * "Becerra, Xavier (1958- )" or, in newer responses, "Xavier Becerra".
+ */
 export function nytTagged(persons: string[] | undefined, c: Pick<CandidateQuery, "first" | "surname">): boolean {
   const first = norm(c.first);
   const last = norm(c.surname);
   return (persons ?? []).some((p) => {
-    const [l, f = ""] = p.split(",");
-    return norm(l) === last && norm(f).split(" ").includes(first);
+    const bare = p.replace(/\([^)]*\)/g, " ");
+    if (bare.includes(",")) {
+      const [l, f = ""] = bare.split(",");
+      return norm(l) === last && norm(f).split(" ").includes(first);
+    }
+    const words = norm(bare).split(" ");
+    return words.includes(first) && words[words.length - 1] === last;
   });
 }
 

@@ -152,6 +152,9 @@ describe("NYT Article Search", () => {
     expect(nytTagged(["Becerra, Xavier (1958- )"], by("becerra"))).toBe(true);
     expect(nytTagged(["Becerra, Maria"], by("becerra"))).toBe(false);
     expect(nytTagged(undefined, by("becerra"))).toBe(false);
+    // Newer responses write the name in reading order.
+    expect(nytTagged(["Xavier Becerra"], by("becerra"))).toBe(true);
+    expect(nytTagged(["Maria Becerra"], by("becerra"))).toBe(false);
   });
 
   it("builds a dated, newest-first query", () => {
