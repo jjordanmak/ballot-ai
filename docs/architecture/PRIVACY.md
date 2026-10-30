@@ -72,4 +72,11 @@ New items reach open pages over Realtime Broadcast on a topic named only by elec
 
 `BALLOT_QA_ADDRESS_94015` (and any other QA address) is read from the environment only by `scripts/qa-resolve.ts`. The output fixtures and reports contain only normalized, address-free data. CI never has access to QA addresses.
 
-The national test list (`/api/cron/qa-matrix`, `src/lib/qa/matrix.ts`) looks up public civic buildings (city halls), never homes. The list lives only in the private env var `QA_CIVIC_BUILDINGS`; the addresses go only to the ballot provider. Results in `qa_runs` carry each location's label ("WA · Seattle City Hall") and the provider's ballot wording, never the address. The run saves no ballot and registers no contests.
+The national test list (`src/lib/qa/matrix.ts`) looks up public locations: city halls, official governors' residences and public-university residence halls. It never uses a private home. The list lives only in the private env var `QA_CIVIC_BUILDINGS`, and the addresses go only to the ballot provider. Results in `qa_runs` carry each location's label ("WA · Seattle City Hall") and the provider's ballot wording, never the address. The run saves no ballot and registers no contests. Its daily cron was removed on 2026-10-30, because most states' data only answers residential address ranges.
+
+**One-time county sweep** (owner, 2026-10-30). `/api/cron/qa-counties` and `src/lib/qa/countySweep.ts` look up one address per county, about 3,143 counties, to catch naming and display quirks nationwide.
+- **How each address is built:** in memory, from the Census Bureau's public-domain TIGER/Line address ranges (`src/lib/qa/tiger.ts`). It takes the middle house number of a residential road segment's official range, in the county's most common ZIP.
+- **Privacy:** the number is synthetic, never picked from a list of homes, and no information about any person is involved.
+- **Where the address goes:** only to the ballot provider, and it is then discarded. It is never logged, stored or committed.
+- **What `qa_runs` keeps:** only "ST · County (FIPS)", the status, and the provider's wording.
+- **When it ends:** it stops by itself once every county is stored, and its cron entry is then removed.

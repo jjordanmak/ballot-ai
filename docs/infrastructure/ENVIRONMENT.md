@@ -32,7 +32,7 @@
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (Vercel sends it automatically on cron runs; compared timing-safe). Generate a long random value. Set by the owner in Vercel | server only | opt | ✓ (to call the route by hand) | ✓ | **new, required for crons** |
 | `FEEDS_PUBLISH` | `off` stores matched news items and polls as held instead of publishing them (kill switch). Unset = publish | server only | opt | opt | opt | new, optional |
 | `NYT_API_KEY` | New York Times Article Search API key (developer.nytimes.com, app "ballot.ai", Article Search enabled). `/api/cron/news-apis` looks candidates up by name; unset = the NYT part is skipped, GDELT (no key) still runs. Never logged; NYT terms require attribution and non-commercial use | server only | opt | opt | opt | new, optional |
-| `QA_CIVIC_BUILDINGS` | National test list: JSON `[{"label":"WA · Seattle City Hall","address":"…"}]` of public civic buildings (never homes), one or more per state. Read only by `/api/cron/qa-matrix`, which looks each up once a day and stores address-free results in `qa_runs`. Unset = the test list is skipped | server only, private | ✗ | ✗ | opt | new, optional |
+| `QA_CIVIC_BUILDINGS` | National test list: JSON `[{"label":"WA · Seattle City Hall","address":"…"}]` of public locations (city halls, governors' residences, public-university dorms; never a private home), one or more per state. Read only by `/api/cron/qa-matrix` (its cron is removed, so it runs only if called). It stores address-free results in `qa_runs`. Unset = the test list is skipped. The one-time county sweep needs no env var | server only, private | ✗ | ✗ | opt | new, optional |
 
 ## 2. Where to set them
 
