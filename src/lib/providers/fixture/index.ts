@@ -5,6 +5,7 @@
  * so the UI exercises the same code path as production. Never enabled in
  * production deployments. Address keywords simulate failure states:
  *   "invalid" | "ambiguous" | "ratelimit" | "error" | "nocoverage" | "noelection"
+ * and "unpublished" (the address is placed in its state, but no races are published there yet).
  */
 import type { ElectionRef, ResolutionStatus, ResolvedBallot } from "@/domain/ballot";
 import type { AddressInput } from "../address";
@@ -20,7 +21,7 @@ const SIMULATED: [RegExp, ResolutionStatus][] = [
   [/ambiguous/i, "AMBIGUOUS_ADDRESS"],
   [/ratelimit/i, "RATE_LIMITED"],
   [/error/i, "PROVIDER_ERROR"],
-  [/nocoverage/i, "NO_COVERAGE"],
+  [/nocoverage|unpublished/i, "NO_COVERAGE"],
   [/noelection/i, "ELECTION_NOT_FOUND"],
 ];
 
@@ -46,8 +47,10 @@ export class FixtureBallotResolver implements BallotResolver {
     for (const [re, status] of SIMULATED) {
       if (re.test(raw)) {
         // Like Civic, a no-ballot answer still names the state election office.
-        const administration = normalizeVoterInfo(sample as CivicVoterInfoResponse, election, retrievedAt).administration;
-        return { status, provider: this.id, election, contests: [], location: {}, administration, retrievedAt, expiresAt: retrievedAt, warnings: [] };
+        const n = normalizeVoterInfo(sample as CivicVoterInfoResponse, election, retrievedAt);
+        // "unpublished": Google placed the address (it knows the state) but has no races there yet.
+        const location = /unpublished/i.test(raw) ? { state: n.location.state } : {};
+        return { status, provider: this.id, election, contests: [], location, administration: n.administration, retrievedAt, expiresAt: retrievedAt, warnings: [] };
       }
     }
     const n = normalizeVoterInfo(sample as CivicVoterInfoResponse, election, retrievedAt);

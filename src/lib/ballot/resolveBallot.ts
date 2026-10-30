@@ -22,6 +22,8 @@ export type ResolveOutcome =
       ok: false;
       status: ResolutionStatus;
       administration?: ElectionAdministration;
+      /** The provider placed the address (it knows the state) but returned no races: not published there yet. */
+      located?: boolean;
       /** Typed without a ZIP or a city and state: the provider was not asked. */
       incomplete?: boolean;
     };
@@ -74,7 +76,7 @@ export async function resolveBallotForAddress(
 
   if (!hasBallot(ballot)) {
     if (ballot.statusDetail) logEvent("ballot.not_resolved", { status: ballot.status, detail: ballot.statusDetail });
-    return { ok: false, status: ballot.status, administration: ballot.administration };
+    return { ok: false, status: ballot.status, administration: ballot.administration, located: !!ballot.location.state };
   }
 
   const ballotKey = computeBallotKey(election.id, ballot.districtDescriptors ?? ballot.contests.map((c) => c.division.key));

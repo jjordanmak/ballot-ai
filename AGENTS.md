@@ -138,7 +138,7 @@ specs/                                 Historical specs + design system (PRD in 
 - Preview config (Claude Code only): `.claude/launch.json`
 - `npm run build` to typecheck + production build
 - `npm test` (Vitest), `npm run typecheck`, `npm run validate:ballots` — CI runs all of these plus lint and build
-- `BALLOT_PROVIDER=fixture npm run dev` runs the whole address → ballot flow on fictional data with no credentials (use a full address with city and state or ZIP, e.g. `1 Sample Way, Springfield, CA`; addresses containing `invalid`, `ratelimit`, `nocoverage`, `error`, `ambiguous` simulate failure states)
+- `BALLOT_PROVIDER=fixture npm run dev` runs the whole address → ballot flow on fictional data with no credentials (use a full address with city and state or ZIP, e.g. `1 Sample Way, Springfield, CA`; addresses containing `invalid`, `ratelimit`, `nocoverage`, `unpublished`, `error`, `ambiguous` simulate failure states; `unpublished` is an address Google places in its state with no races published yet)
 - Env var names/purposes: `docs/infrastructure/ENVIRONMENT.md`
 - Env vars in `.env.local` (gitignored). `.env.example` lists all required vars.
 

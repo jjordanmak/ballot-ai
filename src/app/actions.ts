@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import type { ResolutionStatus } from "@/domain/ballot";
-import { STATE_LOOKUP_FALLBACK } from "@/lib/ballot/copy";
+import { officialLinks, STATE_LOOKUP_FALLBACK, type OfficialLink } from "@/lib/ballot/copy";
 import { resolveBallotForAddress } from "@/lib/ballot/resolveBallot";
 import { startsLikeStreetAddress } from "@/lib/providers/address";
 import { logEvent } from "@/lib/observability/log";
@@ -13,8 +13,10 @@ export interface AddressFormState {
   incomplete?: boolean;
   /** The input had no house number (cross streets, a description, a city): show the voter-lookup handoff. */
   noStreetNumber?: boolean;
-  /** Official state voter lookup to hand off to. State-level link, never address-derived detail. */
-  lookup?: { label: string; url: string };
+  /** Google placed the address but has no races for it yet (not the voter's fault). */
+  notPublished?: boolean;
+  /** Official election-office pages to hand off to. State or county offices, never address-derived detail. */
+  links?: OfficialLink[];
 }
 
 /**
@@ -35,7 +37,7 @@ export async function resolveAddressAction(
   } catch (e) {
     // Never a bare error page: the form shows the provider-error copy and the official lookup.
     logEvent("ballot.resolve_crashed", { error: e instanceof Error ? e.name : "unknown" });
-    return { status: "PROVIDER_ERROR", lookup: STATE_LOOKUP_FALLBACK };
+    return { status: "PROVIDER_ERROR", links: [STATE_LOOKUP_FALLBACK] };
   }
   if (outcome.ok) redirect(`/ballot/${outcome.electionSlug}/${outcome.ballotKey}`);
   const admin = outcome.administration;
@@ -43,8 +45,7 @@ export async function resolveAddressAction(
     status: outcome.status as AddressFormState["status"],
     incomplete: outcome.incomplete,
     noStreetNumber: typeof raw === "string" && !startsLikeStreetAddress(raw),
-    lookup: admin?.voterLookupUrl
-      ? { label: admin.regionName ? `${admin.regionName} voter lookup` : "Your state's voter lookup", url: admin.voterLookupUrl }
-      : STATE_LOOKUP_FALLBACK,
+    notPublished: outcome.status === "NO_COVERAGE" && !!outcome.located,
+    links: officialLinks(admin),
   };
 }

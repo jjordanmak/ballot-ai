@@ -22,7 +22,7 @@
       "schedule": "* * * * *"
     },
     {
-      "path": "/api/cron/qa-civic-probe",
+      "path": "/api/cron/qa-counties",
       "schedule": "*/5 * * * *"
     }
   ]
