@@ -50,6 +50,9 @@ describe("resolveBallotForAddress", () => {
     const rt = runtime();
     expect(await resolveBallotForAddress("94015", rt)).toEqual({ ok: false, status: "INVALID_ADDRESS" });
     expect(await resolveBallotForAddress("1 nocoverage Ave, Sample City, CA", rt)).toMatchObject({ ok: false, status: "NO_COVERAGE" });
+    // Not found vs. found-but-not-published: only the second knows the state.
+    expect(await resolveBallotForAddress("1 nocoverage Ave, Sample City, CA", rt)).toMatchObject({ located: false });
+    expect(await resolveBallotForAddress("1 unpublished Ave, Sample City, CA", rt)).toMatchObject({ ok: false, status: "NO_COVERAGE", located: true });
     expect(await resolveBallotForAddress("1 error Ave, Sample City, CA", rt)).toMatchObject({ ok: false, status: "PROVIDER_ERROR" });
   });
 
