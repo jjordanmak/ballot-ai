@@ -20,7 +20,10 @@ import { formatElectionDate, locationLabel, locationLine, STATE_LOOKUP_FALLBACK,
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { loadBallot as loadStoredBallot } from "@/lib/ballot/loadBallot";
 import { researchTargetIds, withResearch } from "@/lib/ballot/research";
-import { publishedResearch } from "@/lib/ballot/researchRead";
+import { heldResearch, publishedResearch } from "@/lib/ballot/researchRead";
+import { previewSetting } from "@/lib/ballot/preview";
+import { aiConfig } from "@/lib/ai/config";
+import { settingLabel } from "@/lib/research/compareReview";
 import { statewideMeasuresHeading, toRaces, type MeasureView } from "@/lib/ballot/toRaces";
 import { discoveredLinks, initialFeed, type DiscoveredLink } from "@/lib/feeds/read";
 import { districtsFrom } from "@/domain/districts";
@@ -29,10 +32,16 @@ import { districtsFrom } from "@/domain/districts";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ electionSlug: string; ballotKey: string }>;
+type Search = Promise<{ preview?: string | string[] }>;
 
 /** Measures are listed in the nav as two pseudo races (statewide / local), one row per measure. */
 /** Metadata and the page read the same stored ballot once per request. */
 const loadBallot = cache(loadStoredBallot);
+
+/** This request's server time: news dates hydrate against it (React #418), then the browser's clock takes over. */
+function requestTime() {
+  return Date.now();
+}
 
 const MEASURE_GROUPS = [
   { id: "measures-state", statewide: true, title: "Statewide measures", eyebrow: "Statewide" },
@@ -50,16 +59,18 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-export default async function BallotPage({ params }: { params: Params }) {
+export default async function BallotPage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { electionSlug, ballotKey } = await params;
+  // A writing round's held results, on previews only (production ignores ?preview=).
+  const preview = previewSetting((await searchParams).preview);
   const result = await loadBallot(electionSlug, ballotKey);
   if (result.state !== "ok") return <ExpiredBallot unavailable={result.state === "unavailable"} />;
 
   const ballot = result.ballot;
   // Research answers (published, quote-checked) fill in under the curated enrichment.
   const researchIds = researchTargetIds(ballot);
-  const research = await publishedResearch(researchIds);
-  const { races, measures } = toRaces(ballot, withResearch(getEnrichment(electionSlug), ballot, research));
+  const research = preview ? await heldResearch(researchIds, preview) : await publishedResearch(researchIds);
+  const { races, measures } = toRaces(ballot, withResearch(getEnrichment(electionSlug), ballot, research, { highlights: aiConfig().highlights }));
   // Tab title stays "City, ST"; the sidebar and header add the ZIP.
   const location = locationLine(ballot.location);
   const onBallot = new Set(districtsFrom([], ballot.contests, ballot.location.state).map((d) => d.kind));
@@ -67,6 +78,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const electionId = ballot.election?.id ?? "";
   const candidateIds = races.flatMap((r) => r.candidates.flatMap((c) => (c.feed?.candidateId ? [c.feed.candidateId] : [])));
   const [feed, links] = await Promise.all([initialFeed(electionId, contestIds), discoveredLinks(candidateIds)]);
+  const renderedAt = requestTime();
   addDiscoveredLinks(races, links);
   const electionName = ballot.election?.name ?? "Your ballot";
   const electionDate = ballot.election ? formatElectionDate(ballot.election.date) : "";
@@ -90,7 +102,7 @@ export default async function BallotPage({ params }: { params: Params }) {
   const totalCandidates = races.reduce((n, r) => n + r.candidates.length, 0);
 
   return (
-    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed}>
+    <LiveFeedProvider electionId={electionId} state={ballot.location.state} contestIds={contestIds} researchIds={researchIds} initial={feed} renderedAt={renderedAt}>
       <div className="flex flex-col lg:flex-row">
         <MobileNav races={navRaces} electionName={electionName} location={location} electionDate={electionDate} />
         <Sidebar
@@ -103,6 +115,11 @@ export default async function BallotPage({ params }: { params: Params }) {
         />
 
         <main className="flex-1 min-w-0 px-6 sm:px-10 lg:px-14 xl:px-20 max-w-[1400px] pb-32">
+          {preview && (
+            <p className="mt-4 font-mono-cap text-[11px] tracking-[0.16em] text-paper-3">
+              {`Preview · held writing round ${settingLabel(preview)} · not public`}
+            </p>
+          )}
           <Cover
             location={location}
             electionName={electionName}

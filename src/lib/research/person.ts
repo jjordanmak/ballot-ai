@@ -1,13 +1,12 @@
 /**
- * People, in two stages (owner, 2026-10-29). Stage 1: the model returns
- * facts as fields; code checks every name and year against the quote, drops
- * what fails, resolves conflicts by source trust, and formats every line
- * (src/domain/profileFormat.ts). Stage 2: the model writes a short neutral
- * bio from those facts only; code checks every name and number in it traces
- * back to a fact it cites. Pure functions.
+ * A person's lists (owner, 2026-10-29): the model returns education and
+ * positions as fields; code checks every name and year against the quote,
+ * drops what fails, resolves conflicts by source trust, and formats every
+ * line (src/domain/profileFormat.ts). The written sections are checked in
+ * synthesis.ts (WRITING_PIPELINE_PLAN.md). Pure functions.
  */
 import { cleanText, neutralityProblem, normalizeForQuote, quoteFound } from "@/lib/ai/checks";
-import { CAPS, type EducationFact, type PersonBio, type PersonFacts, type PositionFact } from "@/lib/ai/schemas";
+import { CAPS, type EducationFact, type PersonFacts, type PositionFact } from "@/lib/ai/schemas";
 import { educationLine, positionLine, sortPositions, type PositionEntry } from "@/domain/profileFormat";
 import type { FetchedDoc, Pending, Rejection, SourceTier, StoredSource } from "./verify";
 
@@ -240,50 +239,12 @@ export function screenFacts(data: PersonFacts, docList: FetchedDoc[], opts: { lo
   return { education: [...eduMerged.values()], positions: sortPositions([...merged.values()]), platform, residence, rejected, conflicts };
 }
 
-/** The facts as the bio writer sees them: id + the line ballot.ai shows. */
-export function factList(f: { education: StoredEducation[]; positions: StoredPositionV2[]; platform: { text: string }[]; residence?: { place: string } }): { id: string; line: string }[] {
-  return [
-    ...f.positions.map((p, i) => ({ id: `P${i}`, line: [positionLine(p), p.committees?.length ? `committees: ${p.committees.join(", ")}` : ""].filter(Boolean).join("; ") })),
-    ...f.education.map((e, i) => ({ id: `E${i}`, line: educationLine(e) })),
-    ...(f.residence ? [{ id: "R", line: `Lives in ${f.residence.place}` }] : []),
-  ];
-}
-
-const BIO_EXTRA: { re: RegExp; reason: string }[] = [
+/** Family background, awards and momentum words: left out of every profile (PERSON_RULES), checked on written prose. */
+export const BIO_EXTRA: { re: RegExp; reason: string }[] = [
   { re: /\b(son|daughter|child|grandson|granddaughter) of\b|\bfirst in (his|her|their) family\b|\bimmigrant parents\b|\bworking-class\b/i, reason: "family background" },
   { re: /\b(award|awarded|honored|honoured|recognized as|named one of)\b/i, reason: "awards" },
   { re: /\b(surged|struggled|slumped|soared|plummeted|rising star|popular|beloved|embattled|scandal)\b/i, reason: "judgment" },
 ];
-
-const COMMON = new Set(["he", "she", "they", "his", "her", "their", "the", "in", "as", "after", "before", "since", "from", "then", "also", "and", "an", "a", "who", "earlier", "later", "previously", "currently", "today", "during", "while", "at", "on", "for", "with"]);
-
-/**
- * Stage 2 check: every number and capitalized name in a sentence must appear
- * in the facts it cites (or the person's name); wording passes the lint.
- */
-export function checkBio(bio: PersonBio, facts: { id: string; line: string }[], personName: string): { kept: StoredBioSentence[]; rejected: Rejection[] } {
-  const byId = new Map(facts.map((f) => [f.id, f.line]));
-  const kept: StoredBioSentence[] = [];
-  const rejected: Rejection[] = [];
-  bio.sentences.slice(0, CAPS.bioSentences).forEach((s, i) => {
-    const field = `bio.${i}`;
-    const text = cleanText(s.text, 400).replace(/<\/?mark>/g, "");
-    const ids = [...new Set(s.facts)].filter((id) => byId.has(id));
-    if (!ids.length) return void rejected.push({ field, reason: "unsupported", detail: "cites no known fact" });
-    const support = normalizeForQuote(`${ids.map((id) => byId.get(id)).join(" ")} ${personName}`);
-    for (const n of text.match(/\d{2,}/g) ?? []) {
-      if (!support.includes(n)) return void rejected.push({ field, reason: "unsupported", detail: `number ${n} not in cited facts` });
-    }
-    const names = (text.match(/\b[A-Z][A-Za-z.'-]{2,}\b/g) ?? []).filter((w) => !COMMON.has(w.toLowerCase()));
-    for (const w of names) {
-      if (!support.includes(normalizeForQuote(w).replace(/\.$/, ""))) return void rejected.push({ field, reason: "unsupported", detail: `"${w}" not in cited facts` });
-    }
-    const problem = neutralityProblem(text) ?? BIO_EXTRA.find((b) => b.re.test(text))?.reason ?? null;
-    if (problem) return void rejected.push({ field, reason: "neutrality", detail: problem });
-    kept.push({ text, facts: ids });
-  });
-  return { kept, rejected };
-}
 
 /** The sources a set of kept facts cite, for the payload. */
 export function usedSources(docs: FetchedDoc[], ids: Iterable<string>): Record<string, StoredSource> {

@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import type { SourceRef } from "@/domain/ballot";
-import type { SourceDoc } from "@/domain/enrichment";
+import type { Cited, SourceDoc } from "@/domain/enrichment";
+import { RichText } from "@/components/Highlight";
 import { CiteMarker } from "./CiteMarker";
 import { ProvenanceLine } from "./SourceLine";
 
@@ -25,6 +26,29 @@ export function Cite({ ids, docs, quotes }: { ids: string[] | undefined; docs: R
         <CiteMarker key={id} n={n} doc={docs[id]} quote={quote} />
       ))}
     </sup>
+  );
+}
+
+/** A cited item: synthesized prose gets one [n] per sentence (WRITING_PIPELINE_PLAN.md); anything else, one after the text. */
+export function CitedText({ item, docs }: { item: Pick<Cited, "text" | "sources" | "quotes" | "sentences">; docs: Record<string, SourceDoc> }) {
+  if (item.sentences?.length) {
+    return (
+      <>
+        {item.sentences.map((x, i) => (
+          <span key={i}>
+            {i > 0 && " "}
+            <RichText text={x.text} auto="neutral" />
+            <Cite ids={x.sources} docs={docs} quotes={x.quotes} />
+          </span>
+        ))}
+      </>
+    );
+  }
+  return (
+    <>
+      <RichText text={item.text} auto="neutral" />
+      <Cite ids={item.sources} docs={docs} quotes={item.quotes} />
+    </>
   );
 }
 

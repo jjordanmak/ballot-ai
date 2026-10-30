@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 vi.mock("server-only", () => ({}));
@@ -106,29 +107,55 @@ function pageFetch(robots = "") {
   });
 }
 
+type Msg = { role: string; content: string | { type: string; text: string }[] };
+type Req = { model: string; system: string | { text: string }[]; output_config: { effort: string }; messages: Msg[] };
+const textOf = (m: Msg) => (typeof m.content === "string" ? m.content : m.content.map((b) => b.text).join(""));
+const systemOf = (r: Req) => (typeof r.system === "string" ? r.system : r.system.map((b) => b.text).join(""));
+/** Which call this is: the writer, its repair, the verifier, the reviewer. */
+function kindOf(r: Req): "write" | "repair" | "verify" | "review" | "rewrite" {
+  const sys = systemOf(r);
+  if (sys.startsWith("You check summaries")) return "verify";
+  if (sys.startsWith("You review text")) return "review";
+  if (sys.startsWith("You edit sentences")) return "rewrite";
+  return r.messages.length > 1 ? "repair" : "write";
+}
+const allSupported = (r: Req) => ({ results: [...textOf(r.messages[0]).matchAll(/^(\d+)\. Text:/gm)].map((m) => ({ n: Number(m[1]), supported: true })) });
+
 function fakeClient() {
   const usage = { input_tokens: 10_000, output_tokens: 2_000, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
-  const parse = vi.fn(async (req: { model: string; output_config: { effort: string }; messages: { content: string }[] }) => {
-    const content = req.messages[0].content;
-    if (content.startsWith("For each numbered item")) {
-      return { stop_reason: "end_turn", usage, parsed_output: { results: [{ n: 1, supported: true }, { n: 2, supported: true }] } };
-    }
-    // The research call sees the documents and only stored entity data.
+  const parse = vi.fn(async (req: Req) => {
+    const kind = kindOf(req);
+    if (kind === "verify") return { stop_reason: "end_turn", usage, parsed_output: allSupported(req) };
+    if (kind === "review") return { stop_reason: "end_turn", usage, parsed_output: { flags: [] } };
+    const content = textOf(req.messages[0]);
+    // The writer sees the documents (cached, for the repair pass) and only stored entity data.
     expect(content).toContain('<document id="D1"');
     expect(content).toContain("Measure: Proposition 7 (California)");
+    expect(typeof req.messages[0].content).not.toBe("string");
+    if (kind === "repair") {
+      expect(textOf(req.messages[2])).toContain("money.0: Pays for road repair.");
+      return { stop_reason: "end_turn", usage, parsed_output: { units: [{ id: "money.0", text: "Sends the money to road repair.", refs: [{ sourceId: "D1", excerpt: "sends the money to road repair" }] }] } };
+    }
     return {
       stop_reason: "end_turn",
       usage,
       parsed_output: {
-        summary: null,
-        yesMeans: null,
-        noMeans: null,
-        taxes: { text: "Raises the sales tax to <mark>7.25%</mark>.", quote: "This measure raises the tax to 7.25%", sourceId: "D1" },
-        cost: { text: "Brings in about $2 billion a year.", quote: "about $2 billion a year in new state revenue", sourceId: "D1" },
-        money: { text: "Pays for road repair.", quote: "made-up sentence that is not in the page", sourceId: "D1" },
-        affected: null,
-        currentLaw: null,
-        kind: null,
+        sections: [
+          {
+            section: "taxes",
+            sentences: [
+              {
+                text: "Raises the state sales tax from 6% to <mark>7.25%</mark>.",
+                refs: [
+                  { sourceId: "D1", excerpt: "the state charges a 6% tax on sales" },
+                  { sourceId: "D1", excerpt: "This measure raises the tax to 7.25%" },
+                ],
+              },
+            ],
+          },
+          { section: "cost", sentences: [{ text: "Brings in about $2 billion a year.", refs: [{ sourceId: "D1", excerpt: "about $2 billion a year in new state revenue" }] }] },
+          { section: "money", sentences: [{ text: "Pays for road repair.", refs: [{ sourceId: "D1", excerpt: "made-up sentence that is not in the page" }] }] },
+        ],
       },
     };
   });
@@ -152,6 +179,7 @@ const KEY = "measure:m-7:measure";
 const base = aiConfig({ AI_SYNTHESIS_ENABLED: "on", ANTHROPIC_API_KEY: "test" });
 const publishCfg: AiConfig = { ...base, mode: "publish" };
 const compareCfg: AiConfig = { ...base, mode: "compare", compare: [{ model: "claude-haiku-5-5", effort: "low" }, { model: "claude-opus-5-5", effort: "high" }] };
+const writes = (p: { mock: { calls: unknown[][] } }) => p.mock.calls.map((c) => c[0] as Req).filter((r) => kindOf(r) === "write");
 const resolve = async () => [{ address: "93.184.216.34", family: 4 }];
 
 function setup(seed: Record<string, Row[]> = {}, robots = "", slotWait: () => number = () => 0) {
@@ -215,16 +243,26 @@ describe("dispatch", () => {
 });
 
 describe("runJob", () => {
-  it("publish mode: researches from the official page and publishes only checked answers", async () => {
+  it("publish mode: writes from the official page, repairs what fails once, and publishes only checked sentences", async () => {
     const s = setup();
     await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
     const r = await runJob(s.deps(publishCfg), KEY);
     expect(r.outcome).toBe("published");
-    expect(s.parse).toHaveBeenCalledTimes(2);
-    const [v] = s.tables.synthesized_field_versions as { field_name: string; payload: { answers: Record<string, unknown>; scope: unknown }; status: string; is_current: boolean; source_ids: string[] }[];
+    // Write, verify, review; one repair for the excerpt that isn't in the page; verify and review the repair.
+    expect(s.parse.mock.calls.map((c) => kindOf(c[0] as Req))).toEqual(["write", "verify", "review", "repair", "verify", "review"]);
+    const [v] = s.tables.synthesized_field_versions as {
+      field_name: string;
+      payload: { v: number; sections: Record<string, { text: string; refs: { excerpt: string }[] }[]>; limited: string[]; scope: unknown };
+      status: string;
+      is_current: boolean;
+    }[];
     expect(v).toMatchObject({ field_name: "measure", status: "published", is_current: true });
-    // The invented quote never made it; the two real ones did.
-    expect(Object.keys(v.payload.answers).sort()).toEqual(["cost", "taxes"]);
+    expect(v.payload.v).toBe(2);
+    expect(Object.keys(v.payload.sections).sort()).toEqual(["cost", "money", "taxes"]);
+    expect(v.payload.sections.money[0].text).toBe("Sends the money to road repair.");
+    // Each sentence carries its excerpts for the [n] popovers.
+    expect(v.payload.sections.taxes[0].refs.map((x) => x.excerpt)).toEqual(["the state charges a 6% tax on sales", "This measure raises the tax to 7.25%"]);
+    expect(v.payload.limited).toContain("summary");
     expect(v.payload.scope).toEqual({ election: "e1", state: "CA" });
     expect((s.tables.sources[0] as { source_type: string }).source_type).toBe("official");
     expect(s.rpcCalls.find((c) => c.name === "add_api_spend")?.args.p_amount).toBeGreaterThan(0);
@@ -241,8 +279,7 @@ describe("runJob", () => {
     const s = setup();
     await dispatch({ ...s.deps(compareCfg), runRemote: async () => {} });
     for (const k of [`${KEY}@claude-haiku-5-5:low`, `${KEY}@claude-opus-5-5:high`]) expect((await runJob(s.deps(compareCfg), k)).outcome).toBe("compared");
-    const research = s.parse.mock.calls.map((c) => c[0]).filter((req) => !req.messages[0].content.startsWith("For each"));
-    expect(research.map((req) => [req.model, req.output_config.effort])).toEqual([
+    expect(writes(s.parse).map((req) => [req.model, req.output_config.effort])).toEqual([
       ["claude-haiku-5-5", "low"],
       ["claude-opus-5-5", "high"],
     ]);
@@ -252,7 +289,7 @@ describe("runJob", () => {
     const runs = s.tables.synthesis_runs as { metadata: { setting: unknown; costMicroUsd: number; seconds: number; rejected: { reason: string }[] } }[];
     expect(runs[1].metadata).toMatchObject({ setting: { model: "claude-opus-5-5", effort: "high" } });
     expect(runs[1].metadata.costMicroUsd).toBeGreaterThan(runs[0].metadata.costMicroUsd);
-    expect(runs[0].metadata.rejected).toEqual([expect.objectContaining({ reason: "quote not found" })]);
+    expect(runs[0].metadata.rejected).toEqual([]);
     // The pages were read once and shared by both settings.
     expect(s.tables.sources.map((x) => x.url).sort()).toEqual(["https://voterguide.sos.ca.gov/propositions/7/", "https://voterguide.sos.ca.gov/propositions/7/analysis/"]);
   });
@@ -261,9 +298,8 @@ describe("runJob", () => {
     const s = setup();
     await dispatch({ ...s.deps(compareCfg), runRemote: async () => {} });
     for (const k of [`${KEY}@claude-haiku-5-5:low`, `${KEY}@claude-opus-5-5:high`]) await runJob(s.deps(compareCfg), k);
-    const docsSent = s.parse.mock.calls
-      .map((c) => c[0].messages[0].content)
-      .filter((content) => !content.startsWith("For each"))
+    const docsSent = writes(s.parse)
+      .map((r) => textOf(r.messages[0]))
       .map((content) => content.slice(0, content.lastIndexOf("</document>")));
     expect(docsSent).toHaveLength(2);
     expect(docsSent[0]).toContain("LAO-MARKER");
@@ -287,7 +323,7 @@ describe("runJob", () => {
     await runJob(s.deps(publishCfg), KEY);
     s.advance(7 * 3600_000);
     expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("unchanged");
-    expect(s.parse).toHaveBeenCalledTimes(2);
+    expect(writes(s.parse)).toHaveLength(1);
   });
 
   it("honors robots.txt: a disallowed site isn't read, and with nothing else there's nothing to run", async () => {
@@ -295,6 +331,19 @@ describe("runJob", () => {
     await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
     expect((await runJob(s.deps(publishCfg), KEY)).outcome).toBe("no documents");
     expect(s.parse).not.toHaveBeenCalled();
+  });
+
+  it("keeps the API's error message on a rejected request, so it can be diagnosed", async () => {
+    const s = setup();
+    const err = new Anthropic.BadRequestError(400, { type: "error", error: { type: "invalid_request_error", message: "Schema is too complex for compilation." } }, "Schema is too complex for compilation.", new Headers());
+    const parse = vi.fn(async () => {
+      throw err;
+    });
+    const deps = { ...s.deps(publishCfg), client: { messages: { parse } } as never };
+    await dispatch({ ...deps, runRemote: async () => {} });
+    expect((await runJob(deps, KEY)).outcome).toBe("failed");
+    const run = (s.tables.synthesis_runs as { error: string }[])[0];
+    expect(run.error).toMatch(/^api_400: .*Schema is too complex for compilation/);
   });
 
   it("stops at the monthly budget", async () => {
@@ -306,7 +355,7 @@ describe("runJob", () => {
   });
 });
 
-describe("runJob: people (facts, then a bio from the facts)", () => {
+describe("runJob: people and races (written sections, every sentence checked)", () => {
   const CAMPAIGN = `<html><body><main><h1>About Ann Bee</h1>
 <p>Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.</p>
 <p>She has served on the Springfield City Council since 2019.</p>
@@ -323,44 +372,55 @@ ${"<p>More about the campaign, for length.</p>".repeat(8)}</main></body></html>`
       title: "Mayor",
       division_key: "ocd-division/country:us/state:il/place:springfield",
       divisions: { name: "City of Springfield", state: "IL", scope: "citywide" },
-      contest_candidates: [{ id: "k-bee", ballot_name: "ANN BEE", display_name: "Ann Bee", campaign_url: "https://annbee.example.org/" }],
+      contest_candidates: [
+        { id: "k-bee", ballot_name: "ANN BEE", display_name: "Ann Bee", campaign_url: "https://annbee.example.org/", party: null },
+        { id: "k-cole", ballot_name: "CY COLE", display_name: "Cy Cole", campaign_url: null, party: null },
+      ],
     },
   ];
   const PKEY = "candidate:k-bee:profile";
+  const RKEY = "race:c-mayor:race";
+  const SETTING = "claude-haiku-5-5:low";
+  const usage = { input_tokens: 2000, output_tokens: 300, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
+  const ref = (excerpt: string) => [{ sourceId: "D1", excerpt }];
+  const fetchImpl = vi.fn(async (url: string) => {
+    if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
+    if (url.startsWith("https://annbee.example.org/")) return new Response(CAMPAIGN, { status: 200, headers: { "content-type": "text/html" } });
+    if (url.startsWith("https://www.springfield.il.gov/elections")) return new Response(CITY, { status: 200, headers: { "content-type": "text/html" } });
+    return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
+  });
+  const CITY = `<html><body><main><h1>City election</h1>
+<p>The mayor of Springfield is elected to a four-year term and prepares the city budget.</p>
+<p>The incumbent mayor is not running, so the seat is open.</p>
+${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></html>`;
 
-  it("checks each fact against its quote, writes the bio only from kept facts, and stores the quotes for the popovers", async () => {
-    let now = new Date("2026-10-29T07:00:00Z");
+  it("people: lists checked field by field, sections written and checked, a failed sentence repaired once then dropped", async () => {
+    const now = new Date("2026-10-29T07:00:00Z");
     const fake = fakeDb({ contests: candidateContests }, () => now);
-    const usage = { input_tokens: 2000, output_tokens: 300, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
-    const tasks: string[] = [];
-    const parse = vi.fn(async (req: { system: { text: string }[]; messages: { content: string }[] }) => {
-      const content = req.messages[0].content;
-      tasks.push(content.slice(0, 40));
-      if (content.startsWith("For each numbered item")) return { stop_reason: "end_turn", usage, parsed_output: { results: [{ n: 1, supported: true }] } };
-      if (content.startsWith("Write 3 to 5 sentences")) {
-        // The bio writer sees the checked facts only, never the documents.
-        expect(content).not.toContain("<document");
-        expect(content).toContain("P0: Member, Springfield City Council · 2019–present");
-        expect(content).not.toContain("Harvard");
+    let lists = 0;
+    const parse = vi.fn(async (req: Req) => {
+      const kind = kindOf(req);
+      if (kind === "verify") return { stop_reason: "end_turn", usage, parsed_output: allSupported(req) };
+      if (kind === "review") return { stop_reason: "end_turn", usage, parsed_output: { flags: [] } };
+      if (kind === "repair") {
+        // Only the failing sentence comes back for repair; the model can't support it, so it leaves it out.
+        expect(textOf(req.messages[2])).toContain("background.1: She is the daughter of two nurses.");
+        return { stop_reason: "end_turn", usage, parsed_output: { units: [] } };
+      }
+      const content = textOf(req.messages[0]);
+      // Both calls send the documents as their own cached block, ahead of the task.
+      const blocks = req.messages[0].content as { text: string; cache_control?: unknown }[];
+      expect(blocks[0].text).toContain('<document id="D1"');
+      expect(blocks[0].cache_control).toEqual({ type: "ephemeral" });
+      if (content.includes("Return their lists only")) {
+        lists++;
+        expect(content).toContain("Residence: the city or area where they live");
+        expect(content).toContain("Leave out, for everyone: family background");
         return {
           stop_reason: "end_turn",
           usage,
           parsed_output: {
-            sentences: [
-              { text: "Ann Bee has served on the Springfield City Council since 2019.", facts: ["P0"] },
-              { text: "She was a teacher from 2005 to 2018.", facts: ["P1"] },
-              { text: "She is the daughter of two nurses.", facts: ["P1"] },
-            ],
-          },
-        };
-      }
-      expect(content).toContain("Residence: the city or area where they live");
-      expect(content).toContain("Leave out, for everyone: family background");
-      return {
-        stop_reason: "end_turn",
-        usage,
-        parsed_output: {
-          education: [
+            education: [
             { degree: "Bachelor of Arts", field: "History", institution: "University of Michigan", year: null, quote: "Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.", sourceId: "D1" },
             { degree: "J.D.", field: null, institution: "Harvard Law School", year: null, quote: "Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.", sourceId: "D1" },
           ],
@@ -368,52 +428,134 @@ ${"<p>More about the campaign, for length.</p>".repeat(8)}</main></body></html>`
             { title: "Member", organization: "Springfield City Council", district: null, startYear: 2019, endYear: "present", type: "elected", committees: [], quote: "She has served on the Springfield City Council since 2019.", sourceId: "D1" },
             { title: "Teacher", organization: "public school", district: null, startYear: 2005, endYear: "2018", type: "job", committees: [], quote: "Before that, she was a public school teacher from 2005 to 2018.", sourceId: "D1" },
           ],
-          platform: [{ text: "Says she will expand bus service to every neighborhood.", quote: "As mayor, I will expand bus service to every neighborhood.", sourceId: "D1" }],
-          residence: null,
-          leftOut: [{ fact: "Daughter of two nurses", reason: "family background" }],
+            residence: null,
+            leftOut: [{ fact: "Daughter of two nurses", reason: "family background" }],
+          },
+        };
+      }
+      // The writer gets only the checked positions (the Harvard degree and anything unchecked are gone), as P0, P1….
+      expect(content).toContain("P0: Member, Springfield City Council (2019–present)");
+      expect(content).toContain("P1: Teacher, public school (2005–2018)");
+      return {
+        stop_reason: "end_turn",
+        usage,
+        parsed_output: {
+          sections: [
+            { section: "inBrief", sentences: [{ text: "Ann Bee has served on the <mark>Springfield City Council</mark> for {{years:P0}}.", refs: ref("She has served on the Springfield City Council since 2019.") }] },
+            {
+              section: "background",
+              sentences: [
+                { text: "She was a public school teacher from 2005 to 2018.", refs: ref("Before that, she was a public school teacher from 2005 to 2018.") },
+                { text: "She is the daughter of two nurses.", refs: ref("Ann is the daughter of two nurses.") },
+              ],
+            },
+            { section: "priorities", sentences: [{ text: "Bus service in every neighborhood", refs: ref("As mayor, I will expand bus service to every neighborhood.") }] },
+            { section: "stances", sentences: [] },
+          ],
+          mightFit: [{ issue: "Transit", text: "want bus service in every neighborhood", refs: ref("As mayor, I will expand bus service to every neighborhood.") }],
+          timeline: [{ when: "2019", event: "Joined the Springfield City Council", refs: ref("She has served on the Springfield City Council since 2019.") }],
+          endorsements: [],
         },
       };
     });
-    const fetchImpl = vi.fn(async (url: string) => {
-      if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
-      if (url.startsWith("https://annbee.example.org/")) return new Response(CAMPAIGN, { status: 200, headers: { "content-type": "text/html" } });
-      return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
-    });
-    const deps = {
-      db: fake.db,
-      electionId: "e1",
-      config: compareCfg,
-      client: { messages: { parse } } as never,
-      fetchImpl: fetchImpl as never,
-      resolve: resolve as never,
-      sleep: async () => {},
-      compareKeys: [PKEY],
-      now,
-    };
+    const deps = { db: fake.db, electionId: "e1", config: compareCfg, client: { messages: { parse } } as never, fetchImpl: fetchImpl as never, resolve: resolve as never, sleep: async () => {}, compareKeys: [PKEY], now };
     await dispatch({ ...deps, runRemote: async () => {} });
-    const out = await runJob(deps, `${PKEY}@claude-haiku-5-5:low`);
-    expect(out.outcome).toBe("compared");
+    expect((await runJob(deps, `${PKEY}@${SETTING}`)).outcome).toBe("compared");
+    expect(lists).toBe(1);
+    expect(parse.mock.calls.map((c) => kindOf(c[0] as Req))).toEqual(["write", "write", "verify", "review", "repair"]);
 
-    const [v] = fake.tables.synthesized_field_versions as { payload: Record<string, unknown>; status: string }[];
-    expect(v.status).toBe("held");
+    const [v] = fake.tables.synthesized_field_versions as { field_name: string; payload: Record<string, unknown>; status: string }[];
+    expect(v).toMatchObject({ field_name: `profile@${SETTING}`, status: "held" });
     expect(v.payload).toMatchObject({
       kind: "person",
-      v: 2,
+      v: 3,
       education: [{ degree: "Bachelor of Arts", field: "History", institution: "University of Michigan" }],
       positions: [
         { title: "Member", organization: "Springfield City Council", startYear: 2019, endYear: "present" },
         { title: "Teacher", startYear: 2005, endYear: 2018 },
       ],
-      platform: [{ text: "Says she will expand bus service to every neighborhood." }],
-      bio: [
-        { text: "Ann Bee has served on the Springfield City Council since 2019.", facts: ["P0"] },
-        { text: "She was a teacher from 2005 to 2018.", facts: ["P1"] },
-      ],
+      sections: {
+        // Code writes the duration from the verified years; the model never does.
+        inBrief: [{ text: "Ann Bee has served on the <mark>Springfield City Council</mark> for 7 years." }],
+        background: [{ text: "She was a public school teacher from 2005 to 2018." }],
+        priorities: [{ text: "Bus service in every neighborhood" }],
+      },
+      mightFit: [{ text: "…want bus service in every neighborhood", issue: "Transit" }],
+      timeline: [{ when: "2019", text: "Joined the Springfield City Council" }],
+      limited: ["stances", "mightFit", "endorsements"],
     });
-    const run = (fake.tables.synthesis_runs as { metadata: { rejected: { field: string; detail?: string }[]; leftOut: unknown[]; tried: { outcome: string }[] } }[])[0];
-    expect(run.metadata.rejected).toEqual(expect.arrayContaining([expect.objectContaining({ field: "education.1", detail: "institution not in quote" }), expect.objectContaining({ field: "bio.2", detail: "family background" })]));
+    const run = (fake.tables.synthesis_runs as { metadata: { rejected: { field: string; detail?: string; text?: string }[]; leftOut: unknown[]; tried: { outcome: string }[] } }[])[0];
+    expect(run.metadata.rejected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "education.1", detail: "institution not in quote" }),
+        expect.objectContaining({ field: "background.1", detail: "neutrality: family background", text: "She is the daughter of two nurses." }),
+      ]),
+    );
     expect(run.metadata.leftOut).toEqual([{ fact: "Daughter of two nurses", reason: "family background" }]);
     expect(run.metadata.tried.some((t) => t.outcome === "read")).toBe(true);
-    now = new Date(now.getTime() + 1);
+  });
+
+  it("races: wait for the candidates, write the intro, then rewrite unequal sentences instead of cutting them", async () => {
+    let now = new Date("2026-10-29T07:00:00Z");
+    const person = (bg: string) => ({ kind: "person", v: 3, education: [], positions: [], sections: { background: [{ text: bg, refs: [{ source: "s1", excerpt: "She has served on the Springfield City Council since 2019." }] }] }, mightFit: [], timeline: [], endorsements: [], limited: [], sources: {} });
+    const fake = fakeDb(
+      {
+        contests: candidateContests,
+        // The race's search already ran (shared document set): the city's election page.
+        research_state: [{ key: `${RKEY}#search`, target: {}, discovered: { urls: ["https://www.springfield.il.gov/elections"], at: now.toISOString(), searchedAt: now.toISOString() }, failures: 0 }],
+      },
+      () => now,
+    );
+    const calls: string[] = [];
+    const parse = vi.fn(async (req: Req) => {
+      const kind = kindOf(req);
+      calls.push(kind);
+      if (kind === "verify") return { stop_reason: "end_turn", usage, parsed_output: allSupported(req) };
+      if (kind === "review") {
+        const task = textOf(req.messages[0]);
+        // The fairness pass sees every candidate side by side.
+        if (task.includes("treat candidates unequally")) {
+          expect(task).toContain("c1/background.0");
+          expect(task).toContain("c2/background.0");
+          return { stop_reason: "end_turn", usage, parsed_output: { flags: [{ id: "c1/background.0", reason: "title used for one candidate only" }] } };
+        }
+        return { stop_reason: "end_turn", usage, parsed_output: { flags: [] } };
+      }
+      if (kind === "rewrite") return { stop_reason: "end_turn", usage, parsed_output: { units: [{ id: "c1/background.0", text: "Bee has served on the Springfield City Council since 2019.", refs: [] }] } };
+      expect(textOf(req.messages[0])).toContain("Candidates on the ballot: Ann Bee, Cy Cole.");
+      return {
+        stop_reason: "end_turn",
+        usage,
+        parsed_output: {
+          sections: [
+            { section: "context", sentences: [{ text: "The seat is open because the incumbent mayor is not running.", refs: [{ sourceId: "D1", excerpt: "The incumbent mayor is not running, so the seat is open." }] }] },
+            { section: "whyItMatters", sentences: [{ text: "The mayor prepares the <mark>city budget</mark>.", refs: [{ sourceId: "D1", excerpt: "prepares the city budget" }] }] },
+            { section: "whatsAtStake", sentences: [] },
+            { section: "bigPicture", sentences: [] },
+          ],
+        },
+      };
+    });
+    const deps = (n: Date) => ({ db: fake.db, electionId: "e1", config: compareCfg, client: { messages: { parse } } as never, fetchImpl: fetchImpl as never, resolve: resolve as never, sleep: async () => {}, compareKeys: [RKEY], now: n });
+    await dispatch({ ...deps(now), runRemote: async () => {} });
+    // No candidate results yet: wait.
+    expect((await runJob(deps(now), `${RKEY}@${SETTING}`)).outcome).toBe("waiting");
+    expect(parse).not.toHaveBeenCalled();
+    const field = `profile@${SETTING}`;
+    fake.tables.synthesized_field_versions.push(
+      { target_type: "candidate", target_id: "k-bee", field_name: field, is_current: true, content: "a", payload: person("Councilmember Ann Bee has served on the Springfield City Council since 2019.") },
+      { target_type: "candidate", target_id: "k-cole", field_name: field, is_current: true, content: "b", payload: person("Cole has served on the Springfield City Council since 2019.") },
+    );
+    now = new Date(now.getTime() + 3 * 60_000);
+    expect((await runJob(deps(now), `${RKEY}@${SETTING}`)).outcome).toBe("compared");
+    const row = (fake.tables.synthesized_field_versions as { target_type: string; payload: { kind: string; sections: Record<string, unknown[]>; limited: string[]; parity: { rewrites: unknown[]; unresolved: unknown[] } } }[]).find((r) => r.target_type === "race")!;
+    expect(row.payload.kind).toBe("race");
+    expect(Object.keys(row.payload.sections).sort()).toEqual(["context", "whyItMatters"]);
+    expect(row.payload.limited).toEqual(["whatsAtStake", "bigPicture"]);
+    expect(row.payload.parity.rewrites).toEqual([
+      expect.objectContaining({ target: "k-bee", unit: "background.0", text: "Bee has served on the Springfield City Council since 2019." }),
+    ]);
+    expect(row.payload.parity.unresolved).toEqual([]);
+    expect(calls).toEqual(["write", "verify", "review", "review", "rewrite", "verify", "review"]);
   });
 });

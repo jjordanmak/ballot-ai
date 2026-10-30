@@ -62,7 +62,7 @@ describe("buildTargets", () => {
       row({ contest_candidates: [{ id: "k2", ballot_name: "A B", display_name: null, campaign_url: "https://example.org" }, { id: "k3", ballot_name: "C D", display_name: null, campaign_url: null }] }),
       row({ id: "m1", kind: "measure", title: "Proposition 1" }),
     ]);
-    expect(targets.map((t) => t.kind)).toEqual(["measure", "candidate", "candidate", "office"]);
+    expect(targets.map((t) => t.kind)).toEqual(["measure", "candidate", "candidate", "race", "office"]);
     const [, withSite, without] = targets;
     expect(withSite.pages[0]).toMatchObject({ url: expect.stringMatching(/^https:\/\/voterguide\.sos\.ca\.gov\/candidates\//), official: true });
     expect(withSite.pages[1]).toEqual({ url: "https://example.org", official: false });
@@ -70,7 +70,36 @@ describe("buildTargets", () => {
     // Parity: both get the same search, which must name them.
     expect(withSite.search).toMatchObject({ kind: "person", mustMention: ["B"] });
     expect(without.search).toMatchObject({ kind: "person", mustMention: ["D"] });
-    expect(targets[3]).toMatchObject({ targetType: "contest", targetId: "ca|governor|california", search: { kind: "office" } });
+    expect(targets[4]).toMatchObject({ targetType: "contest", targetId: "ca|governor|california", search: { kind: "office" } });
+  });
+
+  it("one race intro per candidate contest (not retention), knowing its candidates, outside California too", () => {
+    const targets = buildTargets([
+      row({
+        id: "tx-gov",
+        division_key: "ocd-division/country:us/state:tx",
+        divisions: { name: "Texas", state: "TX", scope: "statewide" },
+        contest_candidates: [
+          { id: "k1", ballot_name: "ANN BEE", display_name: "Ann Bee", campaign_url: null, party: "Republican" },
+          { id: "k2", ballot_name: "CY COLE", display_name: null, campaign_url: null, party: "Democratic" },
+        ],
+      }),
+      row({ id: "ret", contest_type: "retention", title: "Justice", contest_candidates: [{ id: "j1", ballot_name: "JO DOE", display_name: null, campaign_url: null }] }),
+    ]);
+    const races = targets.filter((t) => t.kind === "race");
+    expect(races).toHaveLength(1);
+    expect(races[0]).toMatchObject({
+      key: "race:tx-gov:race",
+      targetType: "race",
+      targetId: "tx-gov",
+      field: "race",
+      state: "TX",
+      label: "Governor (Texas)",
+      search: { kind: "race" },
+      candidateIds: ["k1", "k2"],
+      candidateNames: ["Ann Bee", "Cy Cole"],
+    });
+    expect(targets.find((t) => t.targetId === "k1")?.party).toBe("Republican");
   });
 
   it("one office description per office and place, shared across districts", () => {

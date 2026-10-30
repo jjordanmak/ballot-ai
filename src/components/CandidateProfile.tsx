@@ -3,11 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ExternalLink,
-  Landmark,
-  Target,
   Wallet,
-  Star,
-  Megaphone,
   ChevronDown,
   AlertOctagon,
   Award,
@@ -34,7 +30,7 @@ import { ENDORSEMENT_ORDER } from "@/data/types";
 import { partyClass, partyDot, partyLabel, StatusPill } from "./PartyTag";
 import { RichText, RichBlock, type HighlightMode } from "./Highlight";
 import { AiLabel, Cite, Researching, SourceList } from "./ballot/Citations";
-import type { Cited, SourceDoc } from "@/domain/enrichment";
+import { LIMITED_COPY, type Cited, type SourceDoc } from "@/domain/enrichment";
 
 /**
  * SUPPLEMENTARY TINTS for variety / reducing yellow fatigue.
@@ -151,18 +147,10 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
             )}
           </div>
 
-          {/* Tighter gap between pills and current role */}
-          <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">
-            {candidate.currentRole}
-            {candidate.general && (
-              <Cite ids={candidate.general.currentRole?.sources} docs={candidate.general.sourceDocs} quotes={candidate.general.currentRole?.quotes} />
-            )}
-          </div>
-          {candidate.general?.ballotDesignation && (
-            <div className="mt-1 text-[13px] text-[var(--color-paper-3)]">
-              Ballot designation: <span className="text-[var(--color-paper-2)]">{candidate.general.ballotDesignation.text}</span>
-              <Cite ids={candidate.general.ballotDesignation.sources} docs={candidate.general.sourceDocs} />
-            </div>
+          {/* Tighter gap between pills and current role. Cited (general)
+              profiles show role, designation and links in the body instead. */}
+          {!candidate.general && (
+            <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">{candidate.currentRole}</div>
           )}
           {candidate.ballotName && normalizeForMatch(candidate.ballotName) !== normalizeForMatch(candidate.name) && (
             <div className="mt-1 font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)]">
@@ -179,8 +167,6 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
         />
       </button>
 
-      {/* Official links sit just under the header button (links can't nest inside it). */}
-      {candidate.general && <OfficialLinks general={candidate.general} />}
 
       {/* COLLAPSIBLE BODY */}
       <div
@@ -189,6 +175,7 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
       >
         <div className="overflow-hidden">
           <div className="px-5 pb-5 sm:px-8 sm:pb-8 border-t border-[var(--color-ink-3)]">
+            {candidate.general && <ProfileFacts currentRole={candidate.currentRole} general={candidate.general} />}
             {suspended ? (
               <SuspendedBlock candidate={candidate} raceId={raceId} />
             ) : candidate.general ? (
@@ -722,17 +709,25 @@ export function TrendArrow({ trend }: { trend: "up" | "down" | "flat" }) {
  * Endorsements split into columns by voter-friendly category.
  * Categories with no entries are omitted.
  */
+type EndorsementItem = { name: string; category: string; sources?: string[]; quotes?: (string | undefined)[] };
+
 function EndorsementColumns({
   endorsements,
+  docs,
+  twoByTwo,
 }: {
-  endorsements: Candidate["endorsements"];
+  endorsements: EndorsementItem[];
+  /** Nov 3: each endorsement is cited. */
+  docs?: Record<string, SourceDoc>;
+  /** Nov 3: the 4 categories as 2 rows of 2 (owner, 2026-10-30). */
+  twoByTwo?: boolean;
 }) {
-  const grouped = ENDORSEMENT_ORDER.reduce<Record<EndorsementCategory, Candidate["endorsements"]>>(
+  const grouped = ENDORSEMENT_ORDER.reduce<Record<EndorsementCategory, EndorsementItem[]>>(
     (acc, cat) => {
       acc[cat] = endorsements.filter((e) => e.category === cat);
       return acc;
     },
-    {} as Record<EndorsementCategory, Candidate["endorsements"]>
+    {} as Record<EndorsementCategory, EndorsementItem[]>
   );
 
   const categoryTone: Record<EndorsementCategory, { fg: string; bg: string }> = {
@@ -768,7 +763,7 @@ function EndorsementColumns({
   ];
   const visible: EndorsementCategory[] = [
     ...REQUIRED,
-    ...(grouped["Newspapers & Media"].length > 0 ? (["Newspapers & Media"] as const) : []),
+    ...(!twoByTwo && grouped["Newspapers & Media"].length > 0 ? (["Newspapers & Media"] as const) : []),
   ];
 
   return (
@@ -776,7 +771,7 @@ function EndorsementColumns({
     // column on xl+ when populated.
     <div
       className={`grid gap-x-8 gap-y-6 grid-cols-1 sm:grid-cols-2 ${
-        visible.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
+        twoByTwo ? "" : visible.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
       }`}
     >
       {visible.map((cat) => {
@@ -793,7 +788,8 @@ function EndorsementColumns({
               <ul className="space-y-2">
                 {items.map((e, i) => (
                   <li key={i} className="text-[13px] leading-[1.45] text-[var(--color-paper)]">
-                    <RichText text={e.name} />
+                    <RichText text={e.name} noAuto={!!docs} />
+                    {docs && e.sources && <Cite ids={e.sources} docs={docs} quotes={e.quotes} />}
                   </li>
                 ))}
               </ul>
@@ -811,20 +807,72 @@ function EndorsementColumns({
 
 
 /* ─────────────────────────── General-election profile ───────────────────────────
- * PRD §11.5 FR-K4: same sections for every candidate, every item cited,
- * "being researched" instead of filler. No strengths/criticisms, no
- * "vote for X if", no bottom line, no polling labels (PRD §14).
+ * PRD §11.5 FR-K4 (owner, 2026-10-30, WRITING_PIPELINE_PLAN.md): the same
+ * sections for every candidate, in this order, every item cited: In Brief,
+ * Background (with Education and Past Positions), Key Priorities | Key
+ * Stances, Endorsements, Might fit if you…, Timeline. A researched section
+ * the sources don't support says so ("Limited documented information…");
+ * one not researched yet says "Being researched". No strengths/criticisms,
+ * rankings or polling labels (PRD §14).
  */
 
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
+const MIGHT_FIT_TIP =
+  "These lines pair this candidate's own stated positions with priorities a voter might hold. They cover the four issues the candidate emphasizes most in their own materials. ballot.ai does not recommend or rank candidates.";
+
+/** ⓘ with a short explanation (the MapYearInfo pattern: hover, focus or tap). */
+function InfoTip({ id, title, text }: { id: string; title: string; text: string }) {
+  return (
+    <span
+      tabIndex={0}
+      aria-label={`About ${title}`}
+      aria-describedby={id}
+      className="relative group/tip inline-flex items-center align-middle cursor-help text-[var(--color-paper-3)] hover:text-[var(--color-paper)] focus:text-[var(--color-paper)] focus:outline-none normal-case"
+    >
+      <Info size={11} aria-hidden />
+      <span
+        id={id}
+        role="tooltip"
+        className="absolute left-0 top-full pt-2 z-50 w-[300px] max-w-[80vw] invisible opacity-0 group-hover/tip:visible group-hover/tip:opacity-100 group-focus-within/tip:visible group-focus-within/tip:opacity-100 transition-opacity duration-150"
+      >
+        <span className="block rounded-lg bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] shadow-xl p-3 text-left font-sans normal-case tracking-normal text-[12px] leading-[1.5] text-[var(--color-paper-2)]">
+          <span className="block mb-1 text-[var(--color-paper)] font-medium">{title}</span>
+          {text}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/** A researched section the sources don't support, or one still being researched. */
+function Empty({ limited, what }: { limited: boolean; what: string }) {
+  if (limited) return <p className="text-[13px] italic text-[var(--color-paper-3)]">{LIMITED_COPY}</p>;
+  return <Researching what={what} />;
+}
+
+/** Prose: one paragraph, every sentence with its own footnotes. */
+function Sentences({ items, docs, className }: { items: Cited[]; docs: Record<string, SourceDoc>; className: string }) {
+  return (
+    <p className={className}>
+      {items.map((b, i) => (
+        <span key={i}>
+          {i > 0 && " "}
+          <RichText text={b.text} auto="neutral" />
+          <Cite ids={b.sources} docs={docs} quotes={b.quotes} />
+        </span>
+      ))}
+    </p>
+  );
+}
+
 function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: string }) {
   const g = candidate.general!;
   const docs = g.sourceDocs;
+  const limited = new Set(g.limited ?? []);
   const hasAny =
-    !!g.platform?.length || !!g.bio?.length || !!g.education?.length || !!g.background?.length || !!g.pastPositions?.length || !!g.experience?.length ||
-    !!g.trackRecord?.length || !!g.priorities?.length || !!g.stances?.length || !!g.timeline?.length ||
-    !!g.notableFacts?.length || !!g.endorsements?.length || !!g.funding;
+    !!g.inBrief?.length || !!g.platform?.length || !!g.bio?.length || !!g.education?.length || !!g.background?.length || !!g.pastPositions?.length ||
+    !!g.priorities?.length || !!g.stances?.length || !!g.timeline?.length || !!g.endorsements?.length || !!g.mightFit?.length || !!g.funding;
 
   if (!hasAny) {
     return (
@@ -834,15 +882,20 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
       </div>
     );
   }
+  const tipId = `might-fit-${raceId}-${normalizeForMatch(candidate.name).replace(/\s+/g, "-")}`;
 
   return (
     <div className="pt-8 space-y-12">
-      {!!g.aiFields?.length && <AiLabel className="-mb-8" />}
-      {/* Their platform — the candidate's own main claims, attributed. */}
+      {/* In Brief — the Bottom Line callout: experience, track record, platform, each sentence cited. */}
       <section>
+        {!!g.aiFields?.length && <AiLabel className="mb-3" />}
         <div className="rounded-xl bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] p-6 sm:p-8">
-          <SectionHeading title="Their platform" icon={<Megaphone size={13} />} />
-          <CitedList items={g.platform} docs={docs} empty="Platform" large />
+          <SectionHeading title="In Brief" icon={<Sparkles size={13} />} />
+          {g.inBrief?.length ? (
+            <Sentences items={g.inBrief} docs={docs} className="font-display text-[18px] sm:text-[19px] leading-[1.55] text-[var(--color-paper)] text-pretty max-w-[72ch]" />
+          ) : (
+            <Empty limited={limited.has("inBrief")} what="In Brief" />
+          )}
         </div>
       </section>
 
@@ -850,16 +903,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
         <div>
           <SectionHeading title="Background" icon={<Compass size={13} />} />
           {g.bio?.length ? (
-            // One readable paragraph; every sentence carries its own footnotes.
-            <p className="text-[15px] leading-[1.7] text-[var(--color-paper-2)] text-pretty">
-              {g.bio.map((b, i) => (
-                <span key={i}>
-                  {i > 0 && " "}
-                  <RichText text={b.text} auto="neutral" />
-                  <Cite ids={b.sources} docs={docs} quotes={b.quotes} />
-                </span>
-              ))}
-            </p>
+            <Sentences items={g.bio} docs={docs} className="text-[15px] leading-[1.7] text-[var(--color-paper-2)] text-pretty" />
           ) : g.background?.length ? (
             <div className="space-y-3">
               {g.background.map((b, i) => (
@@ -870,7 +914,7 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
               ))}
             </div>
           ) : (
-            <Researching what="Background" />
+            <Empty limited={limited.has("bio")} what="Background" />
           )}
           {!!g.education?.length && (
             <div className="mt-6">
@@ -897,9 +941,10 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
                 <li key={i} className="flex gap-2 text-[13px] leading-[1.5] text-[var(--color-paper-2)]">
                   <span className="mt-1.5 w-1 h-1 shrink-0 rounded-full bg-[var(--color-paper-3)]" />
                   <span>
+                    {/* Title (years) (owner, 2026-10-30). */}
                     <span className="text-[var(--color-paper)]">{r.title}</span>
                     {r.organization && <>, {r.organization}</>}
-                    {r.years && <span className="text-[var(--color-paper-3)]"> · {r.years}</span>}
+                    {r.years && <span className="text-[var(--color-paper-3)]"> ({r.years})</span>}
                     <Cite ids={r.sources} docs={docs} quotes={r.quotes} />
                     {!!r.committees?.length && <span className="block text-[12px] text-[var(--color-paper-3)]">Committees: {r.committees.join(", ")}</span>}
                   </span>
@@ -912,68 +957,69 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
         </div>
       </div>
 
-      <section>
-        <SectionHeading title="Relevant experience" icon={<Landmark size={13} />} />
-        <CitedList items={g.experience} docs={docs} empty="Relevant experience" />
-      </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CitedPillar title="Key Priorities" icon={<Flag size={12} />} items={g.priorities} docs={docs} tint={TINT.priorities} limited={limited.has("priorities")} />
+        <CitedPillar title="Key Stances" icon={<ListChecks size={12} />} items={g.stances} docs={docs} tint={TINT.stances} limited={limited.has("stances")} />
+      </div>
 
-      <section>
-        <SectionHeading title="Track record on their priorities" icon={<Target size={13} />} />
-        {g.trackRecord?.length ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {g.trackRecord.map((t, i) => (
-              <div key={i} className="rounded-xl border border-[var(--color-ink-3)] p-5">
-                <div className="text-[14px] text-[var(--color-paper)] mb-3">{t.priority}</div>
-                <CitedList items={t.items} docs={docs} empty="Track record" />
-              </div>
-            ))}
-          </div>
+      {/* Endorsements in the slot Key Strengths and Key Criticisms used to hold: confirmed, named, cited. */}
+      <Section title="Endorsements" icon={<Award size={13} />}>
+        {g.endorsements?.length ? (
+          <EndorsementColumns endorsements={g.endorsements} docs={docs} twoByTwo />
         ) : (
-          <Researching what="Track record" />
+          <Empty limited={limited.has("endorsements")} what="Endorsements" />
+        )}
+      </Section>
+
+      {/* Might fit if you… — the candidate's own cited positions as voter priorities. Never highlighted. */}
+      <section>
+        <div className="font-mono-cap text-[11px] text-[var(--color-paper)] mb-4 flex items-center gap-2 tracking-[0.16em]">
+          <span className="text-[var(--color-accent)]">
+            <UserCheck size={13} />
+          </span>
+          Might fit if you…
+          <InfoTip id={tipId} title="Might fit if you…" text={MIGHT_FIT_TIP} />
+        </div>
+        {g.mightFit?.length ? (
+          <>
+            <ul className="no-highlights grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {g.mightFit.map((line, i) => (
+                <li
+                  key={i}
+                  className="flex items-center gap-4 sm:flex-col sm:items-center sm:text-center rounded-xl bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] px-5 py-4 sm:px-6 sm:pt-7 sm:pb-4 sm:min-h-[200px]"
+                >
+                  <span
+                    className="shrink-0 font-display italic text-[56px] sm:text-[60px] leading-none text-[var(--color-accent)]"
+                    style={{ fontVariantNumeric: "oldstyle-nums proportional-nums" }}
+                  >
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1 flex items-center">
+                    <span className="text-[15px] leading-[1.6] text-[var(--color-paper)] text-pretty">
+                      <RichText text={line.text} noAuto />
+                      <Cite ids={line.sources} docs={docs} quotes={line.quotes} />
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {g.mightFit.length < 4 && <p className="mt-3 text-[13px] italic text-[var(--color-paper-3)]">{LIMITED_COPY}</p>}
+          </>
+        ) : (
+          <Empty limited={limited.has("mightFit")} what="Might fit if you…" />
         )}
       </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CitedPillar title="Key Priorities" icon={<Flag size={12} />} items={g.priorities} docs={docs} tint={TINT.priorities} />
-        <CitedPillar title="Key Stances" icon={<ListChecks size={12} />} items={g.stances} docs={docs} tint={TINT.stances} />
-      </div>
 
       {g.timeline?.length ? (
         <TimelineSection
           auto="neutral"
-          items={g.timeline.map((t) => ({ year: t.year, event: t.event, suffix: <Cite ids={t.sources} docs={docs} /> }))}
+          items={g.timeline.map((t) => ({ year: t.year, event: t.event, suffix: <Cite ids={t.sources} docs={docs} quotes={t.quotes} /> }))}
         />
       ) : (
         <Section title="Timeline" icon={<HistoryIcon size={12} />}>
-          <Researching what="Timeline" />
+          <Empty limited={limited.has("timeline")} what="Timeline" />
         </Section>
       )}
-
-      <Section title="Notable facts" icon={<Star size={13} />}>
-        <CitedList items={g.notableFacts} docs={docs} empty="Notable facts" />
-      </Section>
-
-      <Section title="Endorsements" icon={<Award size={13} />}>
-        {g.endorsements?.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groupBy(g.endorsements, (e) => e.category).map(([cat, list]) => (
-              <div key={cat}>
-                <div className="font-mono-cap text-[9px] text-[var(--color-paper-3)] tracking-[0.16em] mb-2">{cat}</div>
-                <ul className="space-y-1.5">
-                  {list.map((en, i) => (
-                    <li key={i} className="text-[13px] text-[var(--color-paper-2)]">
-                      {en.name}
-                      <Cite ids={en.sources} docs={docs} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Researching what="Endorsements" />
-        )}
-      </Section>
 
       <Section title="Campaign funding" icon={<Wallet size={13} />}>
         {g.funding ? (
@@ -1044,57 +1090,28 @@ function GeneralBody({ candidate, raceId }: { candidate: Candidate; raceId: stri
   );
 }
 
-function CitedList({
-  items,
-  docs,
-  empty,
-  large,
-}: {
-  items: Cited[] | undefined;
-  docs: Record<string, SourceDoc>;
-  empty: string;
-  large?: boolean;
-}) {
-  if (!items?.length) return <Researching what={empty} />;
-  return (
-    <ul className="space-y-2.5">
-      {items.map((it, i) => (
-        <li key={i} className="flex gap-2.5">
-          <span className="mt-2 w-1 h-1 shrink-0 rounded-full bg-[var(--color-accent)]" />
-          <span
-            className={
-              large
-                ? "font-display text-[17px] sm:text-[18px] leading-[1.55] text-[var(--color-paper)] text-pretty"
-                : "text-[14px] leading-[1.6] text-[var(--color-paper-2)] text-pretty"
-            }
-          >
-            <RichText text={it.text} auto="neutral" />
-            <Cite ids={it.sources} docs={docs} quotes={it.quotes} />
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function CitedPillar({
   title,
   icon,
   items,
   docs,
   tint,
+  limited,
 }: {
   title: string;
   icon: React.ReactNode;
   items: Cited[] | undefined;
   docs: Record<string, SourceDoc>;
   tint: { fg: string; bg: string; hl: string };
+  limited?: boolean;
 }) {
+  const tooltip = PILLAR_TOOLTIPS[title];
   return (
     <div className={tint.hl}>
       <div className="font-mono-cap text-[10px] text-[var(--color-paper-2)] mb-3 flex items-center gap-2">
         <span className={tint.fg}>{icon}</span>
         <span>{title}</span>
+        {tooltip && <InfoTip id={`tip-${normalizeForMatch(title).replace(/\s+/g, "-")}-${normalizeForMatch(items?.[0]?.text ?? "").slice(0, 12).replace(/\s+/g, "-")}`} title={title} text={tooltip} />}
       </div>
       {items?.length ? (
         <ul className="space-y-2.5">
@@ -1109,47 +1126,59 @@ function CitedPillar({
           ))}
         </ul>
       ) : (
-        <Researching what={title} />
+        <Empty limited={!!limited} what={title} />
       )}
     </div>
   );
 }
 
 /**
- * Official campaign site and X account, each from an official filing (SoS
- * voter guide, county roster) or the ballot data. Aligned with the name column.
+ * First lines of a cited profile: current role (unless it repeats the ballot
+ * designation), ballot designation, and the official campaign site and
+ * X account, each from an official filing (SoS voter guide, county roster) or
+ * the ballot data. In the body, not the header button: [n] markers and links
+ * can't nest inside a button (React #418). The links' sources are listed in
+ * the profile's Sources block; the links themselves carry no marker (owner,
+ * 2026-10-30).
  */
-function OfficialLinks({ general }: { general: NonNullable<Candidate["general"]> }) {
+function ProfileFacts({ currentRole, general }: { currentRole: string; general: NonNullable<Candidate["general"]> }) {
+  const designation = general.ballotDesignation;
+  const role = currentRole && !(designation && normalizeForMatch(designation.text) === normalizeForMatch(currentRole)) ? currentRole : "";
   const campaign =
     general.links?.find((l) => l.kind === "campaign") ?? (general.campaignUrl ? { url: general.campaignUrl, sources: [] } : undefined);
   const x = general.links?.find((l) => l.kind === "x");
-  if (!campaign && !x) return null;
+  if (!designation && !role && !campaign && !x) return null;
   const handle = x ? x.url.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, "") : "";
   const link = "inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]";
   return (
-    <div className="-mt-2 sm:-mt-5 px-5 pb-5 sm:pl-[168px] sm:pr-8 sm:pb-7 flex flex-wrap items-center gap-x-5 gap-y-1 bg-[var(--color-ink-1)]">
-      {campaign && (
-        <span>
-          <a href={campaign.url} target="_blank" rel="noopener noreferrer" className={link}>
-            Campaign website <ExternalLink size={11} aria-hidden />
-          </a>
-          <Cite ids={campaign.sources} docs={general.sourceDocs} />
-        </span>
+    <div className="pt-8 space-y-1">
+      {role && (
+        <div className="text-[14px] text-[var(--color-paper-2)]">
+          {role}
+          <Cite ids={general.currentRole?.sources} docs={general.sourceDocs} quotes={general.currentRole?.quotes} />
+        </div>
       )}
-      {x && (
-        <span>
-          <a href={x.url} target="_blank" rel="noopener noreferrer" className={link}>
-            @{handle} on X <ExternalLink size={11} aria-hidden />
-          </a>
-          <Cite ids={x.sources} docs={general.sourceDocs} />
-        </span>
+      {designation && (
+        <div className="text-[13px] text-[var(--color-paper-3)]">
+          Ballot designation: <span className="text-[var(--color-paper-2)]">{designation.text}</span>
+          <Cite ids={designation.sources} docs={general.sourceDocs} />
+        </div>
+      )}
+      {(campaign || x) && (
+        <div className="pt-1 flex flex-wrap items-center gap-x-5 gap-y-1">
+          {campaign && (
+            <a href={campaign.url} target="_blank" rel="noopener noreferrer" className={link}>
+              Campaign website <ExternalLink size={11} aria-hidden />
+            </a>
+          )}
+          {x && (
+            <a href={x.url} target="_blank" rel="noopener noreferrer" className={link}>
+              @{handle} on X <ExternalLink size={11} aria-hidden />
+            </a>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function groupBy<T>(list: T[], key: (t: T) => string): [string, T[]][] {
-  const m = new Map<string, T[]>();
-  for (const t of list) m.set(key(t), [...(m.get(key(t)) ?? []), t]);
-  return [...m.entries()];
-}

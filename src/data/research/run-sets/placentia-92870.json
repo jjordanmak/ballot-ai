@@ -1,0 +1,474 @@
+{
+  "_about": "Writing round run set (WRITING_PIPELINE_PLAN.md): every race intro, candidate, judge and measure on the Placentia (92870) sample ballot, by durable ids only (contest and candidate ids); no address. Rebuild with scripts/run-set.ts.",
+  "ballot": "Placentia (92870) sample ballot",
+  "targets": [
+    {
+      "key": "measure:f182391b-b26b-4005-8a84-49711aab64a4:measure",
+      "kind": "measure",
+      "label": "Proposition 1",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:1bb872da-1d22-43ae-9d11-509e9192f429:measure",
+      "kind": "measure",
+      "label": "Proposition 2",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:abbbb802-7345-461f-93dc-a6d2b5458247:measure",
+      "kind": "measure",
+      "label": "Proposition 3",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:b89caa65-da96-4f45-bf42-2e5775688848:measure",
+      "kind": "measure",
+      "label": "Proposition 4",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:9e29a6cf-5d86-4ff9-85aa-9ad7bbfacccb:measure",
+      "kind": "measure",
+      "label": "Proposition 5",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:8a833916-6b1e-4e0a-b6d6-bdcd438cb8ef:measure",
+      "kind": "measure",
+      "label": "Proposition 37",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:88411ba1-2a6b-46ba-a983-b84d8653eea2:measure",
+      "kind": "measure",
+      "label": "Proposition 38",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:b686f280-f47b-4b6f-a787-a358a51085c2:measure",
+      "kind": "measure",
+      "label": "Proposition 39",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:1e55c359-f50a-4e6d-8f73-02f459625628:measure",
+      "kind": "measure",
+      "label": "Proposition 40",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:b1227221-4302-43f6-9c25-33854291d47c:measure",
+      "kind": "measure",
+      "label": "Proposition 41",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:3e822a5b-8c12-45ef-8cd5-aff86b80649a:measure",
+      "kind": "measure",
+      "label": "Proposition 42",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:84d19b4b-d71a-45f1-888f-9633838d1b32:measure",
+      "kind": "measure",
+      "label": "Proposition 43",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:ba7623bf-3b62-4be6-a8ae-c4a97e3c4f54:measure",
+      "kind": "measure",
+      "label": "Proposition 44",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:faa302f2-5604-4c74-ad2d-b22b2826524e:measure",
+      "kind": "measure",
+      "label": "Proposition 45",
+      "group": "Measures"
+    },
+    {
+      "key": "measure:78474acb-74de-4109-9f66-3513028fbe53:measure",
+      "kind": "measure",
+      "label": "City of Placentia, Placentia Hotel Tax Measure",
+      "group": "Measures"
+    },
+    {
+      "key": "race:3e4a91b6-e336-48f3-9379-2ab05f336c97:race",
+      "kind": "race",
+      "label": "Governor",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:8aaba7c5-68f7-480e-8b25-1b7a8ba47689:race",
+      "kind": "race",
+      "label": "Lieutenant Governor",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:5ee7df3b-f165-49a3-abcc-6c6cff18b50c:race",
+      "kind": "race",
+      "label": "Secretary of State",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:9823ddcc-d18e-46ad-bc5b-65ee17bb1372:race",
+      "kind": "race",
+      "label": "Controller",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:246af92a-3bc0-4fd4-98d7-7292a6b2ee4b:race",
+      "kind": "race",
+      "label": "Treasurer",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:e5f34c70-2fd5-418c-8414-14971d237ab9:race",
+      "kind": "race",
+      "label": "Attorney General",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:b8a42759-d2fc-4855-b499-5f81bb2555b9:race",
+      "kind": "race",
+      "label": "Insurance Commissioner",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:1cf8589a-f7e5-40cf-8c6c-d58150606621:race",
+      "kind": "race",
+      "label": "Superintendent of Public Instruction",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:ea55ea45-295a-42f6-b1a8-ea4a652072ed:race",
+      "kind": "race",
+      "label": "Board of Equalization 4th District",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:a7763fc7-4cb3-4eec-8bbc-d458e2b85766:race",
+      "kind": "race",
+      "label": "US Representative 45th District",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:23507c66-832d-413d-a2cc-b8c9ab9f74aa:race",
+      "kind": "race",
+      "label": "State Senator 34th District",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:66b611bd-d545-428c-8d61-d705050c8cd6:race",
+      "kind": "race",
+      "label": "State Assembly 59th District",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:efc68182-2df9-47c5-886a-de62eabcff68:race",
+      "kind": "race",
+      "label": "Supervisor 4th District",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:297fcb9d-1c52-4286-a834-60cf2b6b7d72:race",
+      "kind": "race",
+      "label": "North OC College Dist Trustee Area 6",
+      "group": "Race intros"
+    },
+    {
+      "key": "race:970b59e0-070e-49e3-8dc2-0d6ed9dbd0f6:race",
+      "kind": "race",
+      "label": "City of Placentia City Clerk",
+      "group": "Race intros"
+    },
+    {
+      "key": "candidate:cf45886a-a6d0-4c1f-b99b-9d1696ea88e7:profile",
+      "kind": "candidate",
+      "label": "Steve Hilton — Governor",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:d598371e-1f2d-43fc-bb64-af513d504211:profile",
+      "kind": "candidate",
+      "label": "Xavier Becerra — Governor",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:2c70d525-3481-445d-8772-38d624b28896:profile",
+      "kind": "candidate",
+      "label": "Fiona Ma — Lieutenant Governor",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:acc76483-8915-4536-b562-68ec21725625:profile",
+      "kind": "candidate",
+      "label": "Gloria Romero — Lieutenant Governor",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:bbbfea1d-4eaf-4a05-b383-4197f71fbb4a:profile",
+      "kind": "candidate",
+      "label": "Donald P. (Don) Wagner — Secretary of State",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:ddc4cf36-2d7c-4e4c-a5bc-6795d00e311a:profile",
+      "kind": "candidate",
+      "label": "Shirley N. Weber — Secretary of State",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:06eec406-5b48-4e31-b152-0fab51d982fb:profile",
+      "kind": "candidate",
+      "label": "Herb W Morgan — Controller",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:9e636710-a471-48f8-991a-d769162a9a26:profile",
+      "kind": "candidate",
+      "label": "Malia M. Cohen — Controller",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:2be88f0b-eb71-458f-85e0-0f1a40504de8:profile",
+      "kind": "candidate",
+      "label": "Eleni Kounalakis — Treasurer",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:679692ae-f073-4148-aa92-f92c0cc23eb7:profile",
+      "kind": "candidate",
+      "label": "Jennifer Hawks — Treasurer",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:c23e5372-dce8-4920-b042-a84f5ee80df5:profile",
+      "kind": "candidate",
+      "label": "Michael E. Gates — Attorney General",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:e32b826e-7ecc-4bf9-9801-5a5b08bfa8dd:profile",
+      "kind": "candidate",
+      "label": "Rob Bonta — Attorney General",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:fc9a2323-a622-4cda-818d-0416cce6f0e8:profile",
+      "kind": "candidate",
+      "label": "Ben Allen — Insurance Commissioner",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:5e87b0e0-b881-44dc-af30-32dd68e9210d:profile",
+      "kind": "candidate",
+      "label": "Jane Kim — Insurance Commissioner",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:05248b4d-1fcf-4934-8cde-df69c837ac82:profile",
+      "kind": "candidate",
+      "label": "Richard Barrera — Superintendent of Public Instruction",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:deffa7c5-790b-4c6e-a247-2e2b4df0010d:profile",
+      "kind": "candidate",
+      "label": "Sonja Shaw — Superintendent of Public Instruction",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:a81ec931-6d71-41d4-8489-d17fa11c7ae4:profile",
+      "kind": "candidate",
+      "label": "Denis Bilodeau — Board of Equalization 4th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:e66d0a7c-ce8b-4762-9bb1-3cfdad5d0abf:profile",
+      "kind": "candidate",
+      "label": "Tom Umberg — Board of Equalization 4th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:c0cab62e-68ce-419a-a556-faed2c038b02:profile",
+      "kind": "candidate",
+      "label": "Chuong V. Vo — US Representative 45th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:09e71194-129d-4673-8700-2adcf1cb9437:profile",
+      "kind": "candidate",
+      "label": "Derek Tran — US Representative 45th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:c2e4371b-4ddb-4553-962d-92b5b92fdb20:profile",
+      "kind": "candidate",
+      "label": "Avelino Valencia — State Senator 34th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:0054a882-e562-4bce-b650-9384b5311e45:profile",
+      "kind": "candidate",
+      "label": "Rhonda Shader — State Senator 34th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:a44a3683-6fa4-4e4c-9208-4cdc0e3b7308:profile",
+      "kind": "candidate",
+      "label": "Phillip Chen — State Assembly 59th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:25d14f1a-9631-44cd-924c-cb65b9f6211c:profile",
+      "kind": "candidate",
+      "label": "Victor Hernandez — State Assembly 59th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:c807cb97-3461-4b62-b35d-582a13ce7d5e:profile",
+      "kind": "candidate",
+      "label": "Connor Traut — Supervisor 4th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:128fc54b-2250-465e-aa93-e1560572cb8d:profile",
+      "kind": "candidate",
+      "label": "Tim Shaw — Supervisor 4th District",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:5c68eb57-47d3-497a-9127-a9ac1cb46613:profile",
+      "kind": "candidate",
+      "label": "Jeffrey P. Brown — North OC College Dist Trustee Area 6",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:9bb6c7ff-72ac-49ba-8952-358135a858ea:profile",
+      "kind": "candidate",
+      "label": "Jesus Silva — North OC College Dist Trustee Area 6",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:51302447-1fbf-468f-9cfb-7aa51281919d:profile",
+      "kind": "candidate",
+      "label": "Paulette Chaffee — North OC College Dist Trustee Area 6",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:55272daf-bc71-42c6-88fe-3879128534de:profile",
+      "kind": "candidate",
+      "label": "Zonya Townsend — North OC College Dist Trustee Area 6",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:36f1333b-a769-4ec3-b0cd-1f29afe78106:profile",
+      "kind": "candidate",
+      "label": "Robert S. \"Bob\" McKinnell — City of Placentia City Clerk",
+      "group": "Candidates"
+    },
+    {
+      "key": "candidate:e8b37815-0302-448a-8d1d-ff2a786f770b:profile",
+      "kind": "retention",
+      "label": "Joshua P. Groban — Associate Justice of the Supreme Court",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:cbf4f405-9ab0-420a-ad31-75da0c174b28:profile",
+      "kind": "retention",
+      "label": "Kelli M. Evans — Associate Justice of the Supreme Court",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:041943f3-6059-4114-8f65-1a0eeaf0b30c:profile",
+      "kind": "retention",
+      "label": "David M. Rubin — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:8eaadb4d-6345-4396-9d13-f1d436be112d:profile",
+      "kind": "retention",
+      "label": "Eran M. Bermudez — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:5f3acc67-c77e-497b-a709-964e450d740a:profile",
+      "kind": "retention",
+      "label": "Jose S. Castillo — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:1000e768-e78d-4a69-882e-38ef4910d8ee:profile",
+      "kind": "retention",
+      "label": "Julia C. Kelety — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:04ebc103-f57f-4411-b78a-6a805a2d17c0:profile",
+      "kind": "retention",
+      "label": "Lisa Rodriguez — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:831b94e8-851b-4293-9b4a-2988f55fbabb:profile",
+      "kind": "retention",
+      "label": "Truc T. Do — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:ba483b94-c245-44f9-bb90-5c9a90084290:profile",
+      "kind": "retention",
+      "label": "William S. Dato — Court of Appeal, Fourth District, Division One",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:15407efc-405c-4ffd-ae9e-446c5193ebb2:profile",
+      "kind": "retention",
+      "label": "Deborah C. Servino — Court of Appeal, Fourth District, Division Three",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:dbe78709-ffb9-47d4-929e-3968591f9e28:profile",
+      "kind": "retention",
+      "label": "Juliet O. Macaulay — Court of Appeal, Fourth District, Division Three",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:f0a9fb16-d4e1-482c-b9f7-8f9ae3db9ada:profile",
+      "kind": "retention",
+      "label": "Martha K. Gooding — Court of Appeal, Fourth District, Division Three",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:eabc849e-02db-4ccd-80e0-c52761fae273:profile",
+      "kind": "retention",
+      "label": "Nathan R. Scott — Court of Appeal, Fourth District, Division Three",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:bc04da5b-93f7-4a2e-83e0-4bf2f77c9ed5:profile",
+      "kind": "retention",
+      "label": "Thomas A. Delaney — Court of Appeal, Fourth District, Division Three",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:84ed4537-a8af-42ff-a4c7-f178a86e647b:profile",
+      "kind": "retention",
+      "label": "Joanne Motoike — Court of Appeal, Fourth District, Division Three (Presiding Justice)",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:48a2ecf7-0ea9-4c28-adc6-469630dcd70f:profile",
+      "kind": "retention",
+      "label": "Corey G. Lee — Court of Appeal, Fourth District, Division Two",
+      "group": "Judges"
+    },
+    {
+      "key": "candidate:38c02953-a948-4452-9768-31f49d49195a:profile",
+      "kind": "retention",
+      "label": "Michael J. Raphael — Court of Appeal, Fourth District, Division Two",
+      "group": "Judges"
+    }
+  ]
+}

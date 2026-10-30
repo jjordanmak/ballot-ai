@@ -40,7 +40,7 @@ const Position = z.object({
 });
 export type Position = z.infer<typeof Position>;
 
-/** Superseded by PersonFacts + PersonBio (2026-10-29); kept for reading older stored runs. */
+/** Superseded (2026-10-29); kept for reading older stored runs. */
 export const PersonResearch = z.object({
   currentRole: maybe.describe("The person's current job or office."),
   background: z.array(Answer).describe("Up to 3 facts about education and career."),
@@ -94,19 +94,6 @@ export const PersonFacts = z.object({
 });
 export type PersonFacts = z.infer<typeof PersonFacts>;
 
-/** Stage 2: a short neutral bio written only from the verified facts, each sentence naming the facts it uses. */
-export const PersonBio = z.object({
-  sentences: z
-    .array(
-      z.object({
-        text: z.string(),
-        facts: z.array(z.string()).describe("The ids of the facts this sentence uses, e.g. ['P2', 'E1']."),
-      }),
-    )
-    .describe("3 to 5 sentences."),
-});
-export type PersonBio = z.infer<typeof PersonBio>;
-
 /** The second pass: for each numbered claim, does its quote support it? */
 export const SupportCheck = z.object({
   results: z.array(z.object({ n: z.number().int(), supported: z.boolean() })),
@@ -124,3 +111,74 @@ export const OfficeResearch = z.object({
 export type OfficeResearch = z.infer<typeof OfficeResearch>;
 
 export const OFFICE_FIELDS = ["duties", "term", "seats", "salary"] as const;
+
+/*
+ * Synthesis (WRITING_PIPELINE_PLAN.md, owner 2026-10-30): readable prose
+ * written from several sources. Every sentence lists its sources and, for
+ * each, a short excerpt copied from it; code checks each excerpt is really
+ * there and every hard fact is in them, a verifier checks the meaning, and a
+ * reviewer checks neutrality. The wording may paraphrase and combine.
+ */
+export const SynthRef = z.object({
+  sourceId: z.string().describe("The id of the document, e.g. D2."),
+  excerpt: z.string().describe("A short passage (a sentence or less) from that document that supports the sentence, copied character for character."),
+});
+export type SynthRef = z.infer<typeof SynthRef>;
+
+const refs = z.array(SynthRef).describe("At least one source. Every number, date and name in the text must appear in these excerpts.");
+
+export const SynthSentence = z.object({ text: z.string(), refs });
+export type SynthSentence = z.infer<typeof SynthSentence>;
+
+const sectionsOf = <T extends readonly [string, ...string[]]>(names: T) =>
+  z.array(z.object({ section: z.enum(names), sentences: z.array(SynthSentence) })).describe("Each section once, in order. Leave a section's sentences empty when the documents don't support it.");
+
+export const RACE_SECTIONS = ["context", "whyItMatters", "whatsAtStake", "bigPicture"] as const;
+export type RaceSection = (typeof RACE_SECTIONS)[number];
+export const RaceSynthesis = z.object({ sections: sectionsOf(RACE_SECTIONS) });
+export type RaceSynthesis = z.infer<typeof RaceSynthesis>;
+
+/** The measure's own fields (MEASURE_FIELDS), written as short prose; official sources only. */
+export const MeasureSynthesis = z.object({ sections: sectionsOf(MEASURE_FIELDS) });
+export type MeasureSynthesis = z.infer<typeof MeasureSynthesis>;
+
+export const PERSON_SECTIONS = ["inBrief", "background", "priorities", "stances"] as const;
+export type PersonSection = (typeof PERSON_SECTIONS)[number];
+
+export const ENDORSEMENT_CATEGORIES = ["Elected Officials", "Unions", "Advocacy & Industry", "Local Leaders"] as const;
+
+/**
+ * People take 2 calls (2026-10-30): one combined schema was rejected by the
+ * API as too large to compile. First the lists (the facts shape that
+ * compiles), checked field by field; then the writing, given the checked
+ * positions as P0, P1… for {{years:Pn}}. Both read the same cached documents.
+ */
+export const PersonLists = z.object({
+  education: z.array(EducationFact),
+  positions: z.array(PositionFact),
+  residence: PersonFacts.shape.residence,
+  leftOut: PersonFacts.shape.leftOut,
+});
+export type PersonLists = z.infer<typeof PersonLists>;
+
+export const PersonWriting = z.object({
+  sections: sectionsOf(PERSON_SECTIONS),
+  mightFit: z
+    .array(z.object({ issue: z.string().describe("The issue, in 1 to 3 words."), text: z.string(), refs }))
+    .describe("Up to 4 lines, each a different issue."),
+  timeline: z.array(z.object({ when: z.string().describe("A year, or a date like 'May 5, 2026'."), event: z.string(), refs })),
+  endorsements: z.array(z.object({ name: z.string(), category: z.enum(ENDORSEMENT_CATEGORIES), refs })),
+});
+export type PersonWriting = z.infer<typeof PersonWriting>;
+
+/** The repair pass and the parity rewrite: replacements for the listed units only. */
+export const Rewrite = z.object({
+  units: z.array(z.object({ id: z.string().describe("The id given, e.g. background.1."), text: z.string(), refs })),
+});
+export type Rewrite = z.infer<typeof Rewrite>;
+
+/** The neutrality reviewer: only the units that break a rule. */
+export const NeutralityReview = z.object({
+  flags: z.array(z.object({ id: z.string(), reason: z.string().describe("Which rule, in a few words.") })),
+});
+export type NeutralityReview = z.infer<typeof NeutralityReview>;

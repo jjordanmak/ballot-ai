@@ -12,7 +12,7 @@ import { siteOf } from "@/lib/feeds/discover";
 import { NEWS_SOURCES } from "@/lib/feeds/sources";
 import { searchTask } from "@/lib/ai/prompts";
 
-export type SearchKind = "person" | "office" | "measure";
+export type SearchKind = "person" | "office" | "measure" | "race";
 
 export interface SearchResult {
   urls: string[];
@@ -60,10 +60,12 @@ export function keepUrls(kind: SearchKind, results: { url: string; title: string
     if (u.protocol !== "https:" && u.protocol !== "http:") continue;
     const h = u.hostname;
     const person = kind === "person";
-    const allowed = isGov(h) || (person && (isBallotpedia(h) || isWikipedia(h) || isVettedNews(h)));
+    // Race intros: .gov, vetted news and the race's Ballotpedia page; no Wikipedia.
+    const race = kind === "race";
+    const allowed = isGov(h) || (person && (isBallotpedia(h) || isWikipedia(h) || isVettedNews(h))) || (race && (isBallotpedia(h) || isVettedNews(h)));
     if (!allowed) continue;
     // Ballotpedia, Wikipedia and news results must be about this person, not a list or someone else.
-    if (!isGov(h) && !names(r.title)) continue;
+    if (person && !isGov(h) && !names(r.title)) continue;
     u.hash = "";
     if (!out.includes(u.toString())) out.push(u.toString());
   }

@@ -51,17 +51,22 @@ Chroma is held near 0.003 — warm enough to avoid cold-blue, but never reading 
 - **One Sources block per block that makes claims**: each race header, each measure card, each candidate profile ends with its own Sources block. Inline markers point into that block's list; numbering restarts per block.
 - **[n] footnote popovers** (owner, 2026-10-29): every cited item gets a marker, even when the block has one source.
   - **Opening:** hover, keyboard focus or a tap opens a card (`src/components/ballot/CiteMarker.tsx`). Escape or tapping elsewhere closes it.
-  - **The card:** the exact supporting sentence in italics (for researched items), "publisher: title" with a link, then "Official source ·" and the accessed date.
+  - **The card:** the exact supporting sentence in italics (for researched items), "publisher: title" with a link, then "Official source ·" and the accessed date. For written prose, each sentence has its own markers, and each card shows that sentence's excerpt from that source (WRITING_PIPELINE_PLAN.md).
   - **Never inline:** the quote never appears in the text itself.
   - **Mechanics:** the same hover/focus-within pattern as the district map note (`MapYearInfo`), so the link stays reachable. The trigger's tap area is enlarged to about 24px.
-- **Profiles** (research job): a short neutral bio paragraph, every sentence footnoted. Then:
-  - **Education:** one line per degree, written by code, e.g. "J.D., Stanford Law School · 1984".
-  - **Past positions:** newest first, e.g. "Title, Organization (District) · 1987–1990". A smaller "Committees: …" line goes under a legislative office.
-  - **Platform:** attributed ("Says they will…").
+- **Profiles** (owner, 2026-10-30; PRD FR-K4), in this order, every item cited:
+  1. **In Brief:** the Bottom Line callout (`rounded-xl bg-ink-0 border`, Sparkles eyebrow), 2–3 sentences in serif display type. The AI label sits just above it.
+  2. **Background** (never "Bio"): narrative prose, a marker per sentence; **Education** under it, one code-written line per degree, e.g. "J.D., Stanford Law School · 1984".
+  3. **Past Positions** (the gray callout beside Background): newest first, `Title (years)` with the district written out, e.g. "U.S. Secretary of Health and Human Services (2021–2025)". Chairs get their own line; a smaller "Committees: …" line goes under the position.
+  4. **Key Priorities | Key Stances:** 2 pillar columns of short noun phrases (no "Says…", no topic label in front); each eyebrow keeps its ⓘ tooltip (`PILLAR_TOOLTIPS`), which does the attribution.
+  5. **Endorsements:** 2 rows of 2 (Elected Officials | Unions, then Advocacy & Industry | Local Leaders), named and cited.
+  6. **Might fit if you…:** the June numbered-card list (`no-highlights`), with an ⓘ (MapYearInfo pattern) reading "These lines pair this candidate's own stated positions with priorities a voter might hold. They cover the four issues the candidate emphasizes most in their own materials. ballot.ai does not recommend or rank candidates." Never highlighted.
+  7. **Timeline**, then Campaign funding, In the news, Sources.
+  - A researched section the sources don't support says "Limited documented information in reviewed sources" (italic, `paper-3`); one not researched yet says "Being researched".
 - **Race header order** (2026-10-29): intro grid ("The office" first, full width, then Context / Why it matters / What's at stake / The big picture), then the race's Sources block, then "In the news". Sources sit above the news so they stay with the claims they back.
 - **"The office"**: same eyebrow shape as the other intro blocks. It shows the duties paragraph, then one row "Term · Seats · Salary" (salary only when an official page states it). Every item is cited and carries the AI label when it came from the research job. Until then it shows "Being researched…", which fills in live without a reload.
 - **Race and measure blocks start with "Ballot data:"** (official source · via conduit · retrieved time), then any rule source ("Vote needed: …"), then the researched sources. Candidate profiles skip the ballot-data line (the race block covers the listing).
-- **One researched source → no inline markers** and one unnumbered line; two or more → numbered `[n]` markers and a numbered list.
+- **Every cited item gets a numbered `[n]` marker, even with one source** (owner, 2026-10-29; supersedes the earlier "one source → no markers" rule).
 - Side-by-side cells link their source directly.
 
 ### Vote needed and measure questions
@@ -78,7 +83,7 @@ Used for data encoding (section pillars, news item types) — never as primary s
 |---|---|
 | `--color-tint-orange` | Priorities pillar |
 | `--color-tint-teal` | Stances pillar, news items |
-| `--color-tint-green` | Strengths pillar, endorsements |
+| `--color-tint-green` | Endorsements (Advocacy & Industry); the June Strengths pillar |
 | `--color-tint-pink` | Criticisms pillar |
 | `--color-tint-purple` | Social posts |
 
@@ -102,7 +107,20 @@ IBM Plex stack. Three weights of use:
 
 `font-display` uses: `font-feature-settings: "kern", "liga", "calt", "ss01"` and `letter-spacing: -0.018em`.
 
-`font-mono-cap` is used for all three section eyebrows ("In the news" / "Side-by-side" / "Candidate profiles") — they must all share the same shape: `font-mono-cap text-[11px] text-paper + lucide icon size=12 className="text-accent" + tracking-[0.16em]`.
+`font-mono-cap` is used for all three section eyebrows ("In the news" / "Side-by-side" / "Candidate profiles") — they must all share the same shape: `font-mono-cap text-[11px] text-paper + lucide icon size=12 className="text-accent" + tracking-[0.16em]`. Profile section eyebrows (In Brief, Background, Past Positions, Endorsements, Might fit if you…, Timeline) use the same shape at icon size 13.
+
+---
+
+## Writing style (owner, 2026-10-30)
+
+ballot.ai's own words follow the **AP Stylebook**, with these house exceptions, which win over AP:
+- **Numerals always**, including 1–9 ("3 candidates"). Rephrase rather than start a sentence with a number.
+- **Percent is always "%".**
+- **The Oxford comma always.**
+
+AP otherwise: state names abbreviated AP-style only after a city ("Fresno, Calif."); titles capitalized before a name, lowercase after ("Gov. Jerry Brown", "Brown, the governor"); AP dates and times ("Nov. 3", "May 5, 2026").
+
+Voice (from the June prototype, minus its evaluative framing): lead with the most important fact; be concrete (numbers, dates, named programs); connect facts ("which means…", "because…") only when the sources do; 2–4 sentences per section; plain words a 9th grader can follow; attribute claims ("His campaign says…", "The Legislative Analyst estimates…"). Never "surged", "struggled", "frontrunner", "fractured", "establishment", "elites", strengths or criticisms, or rankings. In the writing pipeline, code flags common AP slips (`apSlips`, `src/lib/research/synthesis.ts`) and the repair pass fixes them; a sentence is never dropped for style.
 
 ---
 
@@ -121,7 +139,17 @@ Highlights are solid-fill with rounded corners. Color is driven by CSS custom pr
 
 `autoHighlight()` in `Highlight.tsx` runs at render and marks: statistics/percentages, ballot measure references, named CA policies, and superlatives. Manual `<mark>` tags pass through unchanged.
 
-Phase 5 replaces the regex approach: the synthesis prompt wraps 2–3 load-bearing phrases per field in `<mark>` tags before storing in DB. The regex stays as fallback for non-synthesized content.
+Nov 3 surfaces pass `auto="neutral"`: only structural facts (amounts, percentages, counts, vote thresholds, dates, measure numbers).
+
+**Written prose** (writing pipeline, owner 2026-10-30): the model wraps 2–3 load-bearing phrases per section in `<mark>`; code enforces (`shapeSections`, `trimMarksToParity` in `src/lib/research/synthesis.ts`):
+- at most 3 per prose section;
+- a list highlights every item or none;
+- every candidate in a race gets the same count per section, within 1;
+- no evaluative word inside a highlight;
+- never a measure's own name or number;
+- "Might fit if you…" is never highlighted.
+
+A mark that breaks a rule is stripped (the sentence stays). The neutrality reviewer also reviews highlights. `AI_HIGHLIGHTS=off` strips every mark at read time. A later workshop turns the owner's marked example paragraphs into rules and tests.
 
 ---
 

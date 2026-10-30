@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { costMicroUsd } from "./config";
-import { RESEARCH_SYSTEM, SUPPORT_SYSTEM, supportTask } from "./prompts";
+import { RESEARCH_SYSTEM, SUPPORT_SYSTEM, supportTask, synthSupportTask } from "./prompts";
 import { SupportCheck } from "./schemas";
 
 /**
@@ -47,10 +47,10 @@ function documentsBlock(docs: Doc[]): string {
 
 const escapeAttr = (s: string) => s.replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]!);
 
-/** One structured extraction. Never throws; a failure comes back as `problem`. */
 import type { Effort } from "./config";
 export type { Effort };
 
+/** One structured extraction. Never throws; a failure comes back as `problem`. */
 export async function extract<S extends z.ZodType>(opts: {
   model: string;
   effort?: Effort;
@@ -60,24 +60,56 @@ export async function extract<S extends z.ZodType>(opts: {
   /** Instructions; defaults to the research instructions. */
   system?: string;
   client?: Pick<Anthropic, "messages">;
+  /**
+   * Cache the documents (synthesis): they go in their own block, ahead of
+   * the task, so a person's two calls and the repair pass read them from
+   * the cache. Same setting only; a different model or effort is a
+   * different cache.
+   */
+  cacheDocs?: boolean;
+  /** The repair pass: the first answer, then the repair request, after the same first turn. */
+  followUp?: { answer: string; task: string };
+  maxTokens?: number;
+  timeoutMs?: number;
 }): Promise<CallResult<z.infer<S>>> {
   const c = opts.client ?? anthropic();
+  const first = opts.docs.length ? `${documentsBlock(opts.docs)}\n\n${opts.task}` : opts.task;
+  const cached: Anthropic.TextBlockParam[] = opts.docs.length
+    ? [
+        { type: "text", text: documentsBlock(opts.docs), cache_control: { type: "ephemeral" } },
+        { type: "text", text: opts.task },
+      ]
+    : [{ type: "text", text: opts.task }];
+  const messages: Anthropic.MessageParam[] = [
+    { role: "user", content: opts.cacheDocs ? cached : first },
+    ...(opts.followUp ? ([{ role: "assistant", content: opts.followUp.answer }, { role: "user", content: opts.followUp.task }] as Anthropic.MessageParam[]) : []),
+  ];
   try {
-    const res = await c.messages.parse({
-      model: opts.model,
-      max_tokens: 16000,
-      system: [{ type: "text", text: opts.system ?? RESEARCH_SYSTEM, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: opts.docs.length ? `${documentsBlock(opts.docs)}\n\n${opts.task}` : opts.task }],
-      output_config: { effort: opts.effort ?? "medium", format: zodOutputFormat(opts.schema) },
-    });
+    const res = await c.messages.parse(
+      {
+        model: opts.model,
+        max_tokens: opts.maxTokens ?? 16000,
+        system: [{ type: "text", text: opts.system ?? RESEARCH_SYSTEM, cache_control: { type: "ephemeral" } }],
+        messages,
+        output_config: { effort: opts.effort ?? "medium", format: zodOutputFormat(opts.schema) },
+      },
+      opts.timeoutMs ? { timeout: opts.timeoutMs } : undefined,
+    );
     const cost = costMicroUsd(opts.model, res.usage);
     if (res.stop_reason === "refusal") return { data: null, problem: "refusal", costMicroUsd: cost, usage: res.usage };
     if (res.stop_reason === "max_tokens") return { data: null, problem: "max_tokens", costMicroUsd: cost, usage: res.usage };
     if (!res.parsed_output) return { data: null, problem: "unparsed", costMicroUsd: cost, usage: res.usage };
     return { data: res.parsed_output as z.infer<S>, costMicroUsd: cost, usage: res.usage };
   } catch (e) {
-    return { data: null, problem: e instanceof Anthropic.APIError ? `api_${e.status ?? "error"}` : "error", costMicroUsd: 0 };
+    return { data: null, problem: apiProblem(e), costMicroUsd: 0 };
   }
+}
+
+/** "api_400: <the API's message>": the status for retry decisions, the message so a rejected request can be diagnosed. */
+function apiProblem(e: unknown): string {
+  if (!(e instanceof Anthropic.APIError)) return "error";
+  const msg = (e.message ?? "").replace(/\s+/g, " ").slice(0, 300);
+  return `api_${e.status ?? "error"}${msg ? `: ${msg}` : ""}`;
 }
 
 export interface Claim {
@@ -95,10 +127,13 @@ export async function checkSupport(opts: {
   effort?: Effort;
   claims: Claim[];
   client?: Pick<Anthropic, "messages">;
+  /** synthesis: several excerpts per claim, paraphrase and combination allowed (WRITING_PIPELINE_PLAN.md). */
+  mode?: "quote" | "synthesis";
 }): Promise<{ supported: boolean[]; costMicroUsd: number; problem?: string }> {
   if (!opts.claims.length) return { supported: [], costMicroUsd: 0 };
   const c = opts.client ?? anthropic();
-  const list = opts.claims.map((cl, i) => `${i + 1}. Text: ${cl.text}\n   Quote: ${cl.quote}`).join("\n");
+  const synth = opts.mode === "synthesis";
+  const list = opts.claims.map((cl, i) => `${i + 1}. Text: ${cl.text}\n   ${synth ? "Excerpts" : "Quote"}: ${cl.quote}`).join("\n");
   try {
     const res = await c.messages.parse({
       model: opts.model,
@@ -107,7 +142,7 @@ export async function checkSupport(opts: {
       messages: [
         {
           role: "user",
-          content: supportTask(list),
+          content: synth ? synthSupportTask(list) : supportTask(list),
         },
       ],
       output_config: { effort: opts.effort ?? "low", format: zodOutputFormat(SupportCheck) },
@@ -118,6 +153,6 @@ export async function checkSupport(opts: {
     for (const r of res.parsed_output.results) if (r.n >= 1 && r.n <= out.length) out[r.n - 1] = r.supported;
     return { supported: out, costMicroUsd: cost };
   } catch (e) {
-    return { supported: opts.claims.map(() => false), costMicroUsd: 0, problem: e instanceof Anthropic.APIError ? `api_${e.status ?? "error"}` : "error" };
+    return { supported: opts.claims.map(() => false), costMicroUsd: 0, problem: apiProblem(e) };
   }
 }
