@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalUrl } from "./canonical";
-import { buildMatcher, nameVariants, placeTerm, type TrackedContest } from "./match";
+import { aboutInText, buildMatcher, districtTerms, nameVariants, placeTerm, type TrackedContest } from "./match";
 import { parseFeed } from "./parse";
 
 const CONTESTS: TrackedContest[] = [
@@ -133,10 +133,9 @@ describe("feed matcher on article text", () => {
     expect(m).toMatchObject({ candidateIds: ["becerra"], via: "article" });
     // A passing mention isn't a story about them.
     expect(match("House race guide", "Two Democrats face off.", national, long("The seat was once held by Xavier Becerra, now running for governor."))).toBeNull();
-    // Personal news counts: identity, not topic, decides.
-    expect(
-      match("Family business sold", "A longtime shop changes hands.", national, long("The shop belongs to the family of Xavier Becerra, the former California attorney general. Becerra declined to comment."))?.candidateIds,
-    ).toEqual(["becerra"]);
+    // Named twice with context but neither quoted nor acting: the rules can't tell, so the AI check decides (about.ts).
+    const unsure = match("Family business sold", "A longtime shop changes hands.", national, long("The shop belongs to the family of Xavier Becerra, the former California attorney general. Becerra declined to comment."));
+    expect(unsure).toMatchObject({ candidateIds: [], contestIds: [], raceIds: [], unclear: [{ candidateId: "becerra", contestId: "gov" }] });
   });
 
   it("doesn't take bare election words as proof of who a story-only name is", () => {
@@ -171,6 +170,104 @@ describe("feed matcher on article text", () => {
     const story = long("Rosalind Alvarado, the attorney general candidate, met with farmers. Alvarado promised water aid.");
     expect(tx("Drought hits farms", "Crops suffer.", { scope: "state", state: "TX" }, story)?.candidateIds).toEqual(["alvarado"]);
     expect(tx("Drought hits farms", "Crops suffer.", { scope: "state", state: "OK" }, story)).toBeNull();
+  });
+});
+
+describe("three independent checks: race, person, measure", () => {
+  const long = (s: string) => `${s} ${"More background on the region and its history. ".repeat(30)}`;
+  const ca = { scope: "state" as const, state: "CA" };
+
+  it("keeps a story about one candidate off the race's feed", () => {
+    const m = match("Steve Hilton unveils plan to cut state rules", "The Republican gubernatorial candidate wants fewer regulations.", ca);
+    expect(m).toMatchObject({ raceIds: [], candidateIds: ["hilton"], contestIds: ["gov"] });
+  });
+
+  it("puts race stories on the race: race phrases, 2 candidates, polls", () => {
+    expect(match("Becerra widens lead in governor's race", "A new survey of likely voters.", ca)?.raceIds).toEqual(["gov"]);
+    expect(match("Steve Hilton rips Xavier Becerra's mileage tax idea", "", ca)?.raceIds).toEqual(["gov"]);
+    expect(match("Latest poll shows California governor candidate pulling away", "", national)?.raceIds).toEqual(["gov"]);
+    // Another state's governor's race isn't this one.
+    expect(match("Governor's race tightens in Ohio", "Ohio voters…", national)).toBeNull();
+  });
+
+  it("the Choudri case: candidates' positions in a story about something else go on their feeds, not the race's", () => {
+    const story = [
+      "The chief executive of the state's high-speed rail authority resigned Wednesday, days before a board vote on a key part of the route.",
+      "The authority has faced questions about costs and delays for years, and board members met in closed session this week.",
+      "More reporting on the rail project and its funding follows here, with details on the route and the vote. ".repeat(8),
+      "Xavier Becerra, the Democratic candidate for governor, said the authority needs new leadership and a realistic plan.",
+      "Steve Hilton, the Republican running for governor, said the project should be stopped. Hilton has made it a theme of the governor's race.",
+      "Becerra did not say whether he would keep the current board.",
+    ].join("\n");
+    const m = match("State rail authority chief resigns under fire", "The chief executive abruptly resigned before a crucial board vote.", ca, story);
+    expect(m?.raceIds).toEqual([]);
+    expect(m?.candidateIds).toEqual(expect.arrayContaining(["becerra", "hilton"]));
+    expect(m?.contestIds).toEqual(["gov"]);
+    expect(m?.decisions.people.map((p) => p.how)).toEqual(["said", "said"]);
+  });
+
+  it("puts a race on its feed when the story's lead and text are about it", () => {
+    const story = long("The race for governor tops Tuesday's ballot. Here is what to know. Turnout in the governor's race may be high.");
+    expect(match("What to know before Tuesday", "A guide to the ballot.", ca, story)?.raceIds).toEqual(["gov"]);
+  });
+
+  it("the Mission Local case: a district roundup goes on the race, each profiled candidate, and the measure they discuss", () => {
+    const sf = buildMatcher([
+      {
+        id: "d8",
+        kind: "candidate",
+        title: "Member, Board of Supervisors, District 8",
+        divisionName: "Supervisorial District 8",
+        state: "CA",
+        candidates: [
+          { id: "ann", names: ["Ann Sample"] },
+          { id: "bo", names: ["Bo Example"] },
+          { id: "cy", names: ["Cy Placeholder"] },
+        ],
+      },
+      { id: "p40", kind: "measure", title: "Proposition 40", divisionName: "California", state: "CA", stateLevel: true, candidates: [] },
+    ]);
+    const story = [
+      "Ann Sample, Bo Example and Cy Placeholder are running for supervisor in District 8. We asked how they will vote.",
+      "Ann Sample",
+      "I will vote yes on Prop 40 because the state needs the revenue, and the supervisor seat should say so.",
+      "Bo Example",
+      "No on Prop 40. Example said the tax would push investment out of San Francisco.",
+      "Cy Placeholder",
+      "Placeholder declined to share a position on any statewide measure this year, saying it was a matter for voters.",
+    ].join("\n");
+    const m = sf("Meet the District 8 candidates: Who will you vote for?", "The District 8 supervisor candidates share how they will vote.", { scope: "local", state: "CA", jurisdictions: ["San Francisco"] }, story);
+    expect(m?.raceIds).toEqual(expect.arrayContaining(["d8", "p40"]));
+    expect(m?.candidateIds).toEqual(expect.arrayContaining(["ann", "bo", "cy"]));
+  });
+
+  it("matches a district race by its district and state (a non-CA case)", () => {
+    const tx = buildMatcher(
+      [7, 9].map((n) => ({
+        id: `tx-${n}`,
+        kind: "candidate" as const,
+        title: `U.S. Representative, District ${n}`,
+        divisionName: `Texas's ${n}th congressional district`,
+        state: "TX",
+        stateLevel: true,
+        candidates: [
+          { id: `a${n}`, names: [`Alma Rivera${n}`] },
+          { id: `b${n}`, names: [`Ben Ortiz${n}`] },
+        ],
+      })),
+    );
+    expect(tx("Flooding dominates 7th District race", "Texas candidates debate drainage in Houston.", national)?.raceIds).toEqual(["tx-7"]);
+    expect(tx("Flooding dominates 7th District race", "Ohio candidates debate drainage.", national)).toBeNull();
+    expect(districtTerms("US HOUSE OF REP DISTRICT 11", "11TH CONG")).toEqual(expect.arrayContaining(["district 11", "11th district", "11th congressional district"]));
+  });
+
+  it("decides 'about them' from Q&A blocks and attributed sentences only", () => {
+    const v = ["jane sample"];
+    expect(aboutInText("Intro.\nJane Sample\nI would build more housing near transit and fix the buses.", v, "sample")?.how).toBe("qa");
+    expect(aboutInText("Jane Sample: We need more housing near transit.", v, "sample")?.how).toBe("qa");
+    expect(aboutInText("The plan drew fire. “It's too costly,” said Jane Sample, a candidate.", v, "sample")).toMatchObject({ how: "said" });
+    expect(aboutInText("Sample, who chairs the committee, proposed a cap on rents.", v, "sample")?.how).toBe("said");
+    expect(aboutInText("Mayor Lee said Sample would be a fine pick. The seat was once held by Jane Sample.", v, "sample")).toBeNull();
   });
 });
 

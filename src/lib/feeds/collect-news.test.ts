@@ -169,7 +169,8 @@ describe("collectNews article text", () => {
       return new Response("", { status: 404 });
     });
     const summary = await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
-    expect(inserted).toMatchObject([{ url: "https://news.test/insurance", contest_ids: ["gov"], candidate_ids: ["becerra"], match: { via: "article" } }]);
+    // About Becerra (he "said"), not about the race: on his feed and loaded with the race, not on the race's own feed.
+    expect(inserted).toMatchObject([{ url: "https://news.test/insurance", contest_ids: ["gov"], race_ids: [], candidate_ids: ["becerra"], match: { v: 2, via: "article", people: [{ id: "becerra", how: "said" }] } }]);
     expect(summary).toMatchObject({ matched: 1, matchedOnText: 1, articlesRead: 2, readsFailed: 1 });
     expect(reads.map((r) => [r.url, r.outcome, r.matched])).toEqual(
       expect.arrayContaining([
@@ -193,10 +194,31 @@ describe("collectNews article text", () => {
     const fetchImpl = vi.fn(async (url: string | URL | Request) =>
       String(url) === "https://a.test/feed" ? new Response(feed) : new Response(page("Xavier Becerra for governor. Becerra said."), { headers: { "content-type": "text/html" } }),
     );
-    await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns });
-    expect(inserted).toMatchObject([{ url: "https://news.test/trail", match: { via: "article" } }]);
+    // Named twice but neither quoted nor acting: the AI person check decides, given the story and the candidate.
+    const aboutCheck = vi.fn(async (a: { name: string; office: string; article: string }) => ({ about: a.article.includes("toured a clinic"), quote: "Xavier Becerra, running for governor, toured a clinic.", costMicroUsd: 120 }));
+    const summary = await collectNews({ db: db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns, aboutCheck });
+    expect(aboutCheck).toHaveBeenCalledWith(expect.objectContaining({ name: "xavier becerra", office: "Governor" }));
+    expect(inserted).toMatchObject([{ url: "https://news.test/trail", candidate_ids: ["becerra"], race_ids: [], match: { via: "article", people: [{ id: "becerra", how: "ai" }] } }]);
+    expect(summary).toMatchObject({ aboutChecked: 1, aboutAccepted: 1 });
     expect(fetchImpl.mock.calls.map(([u]) => String(u))).toEqual(["https://a.test/feed"]);
     expect(reads).toEqual([]);
+    // The story's text and the AI's sentence are never stored.
+    expect(JSON.stringify(inserted)).not.toContain("toured a clinic");
+  });
+
+  it("leaves a candidate off when the AI person check says the story only mentions them, or when it's switched off", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const full = `Xavier Becerra, running for governor, was in the crowd. ${"Details of the parade. ".repeat(100)} Becerra waved.`;
+    const feed = rss(`<item><title>Parade draws thousands</title><link>https://news.test/parade</link><description>Floats.</description><content:encoded><![CDATA[<p>${full}</p>]]></content:encoded><pubDate>Thu, 29 Oct 2026 09:00:00 GMT</pubDate></item>`);
+    const fetchImpl = vi.fn(async () => new Response(feed));
+    const no = fakeDb();
+    const summary = await collectNews({ db: no.db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns, aboutCheck: async () => ({ about: false, costMicroUsd: 90 }) });
+    expect(no.inserted).toEqual([]);
+    expect(summary).toMatchObject({ aboutChecked: 1, aboutAccepted: 0 });
+    // No key in tests: the check is off, so the rules alone decide and the story isn't stored.
+    const off = fakeDb();
+    expect(await collectNews({ db: off.db as never, electionId: "e", sources, now: NOW, fetchImpl: fetchImpl as unknown as typeof fetch, resolve: publicDns })).toMatchObject({ aboutChecked: 0, aboutSkipped: 1 });
+    expect(off.inserted).toEqual([]);
   });
 
   it("skips a site that refused 3 reads in the last day", async () => {

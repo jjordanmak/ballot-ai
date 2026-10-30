@@ -1,5 +1,23 @@
 /**
- * Decides which tracked contests and candidates an article is about.
+ * Decides which tracked contests and candidates an article is about, in
+ * three independent checks (owner, 2026-10-30):
+ *
+ * - Race: the race itself is the subject (a roundup, a debate, a poll, the
+ *   contest): one of its race phrases ("governor's race", "District 8
+ *   candidates") in the headline or summary, 2 of its candidates in the
+ *   headline, a poll headline naming the office, or race phrases repeated in
+ *   the story and in its lead. A story about one candidate stays off the
+ *   race's feed. Only these go in `raceIds`.
+ * - Person: the story is about the candidate, not a passing mention. Named
+ *   in the headline or summary, a Q&A block of theirs, or a sentence where
+ *   they speak or act ("Becerra said", "according to Hilton") decide it;
+ *   anything else that passes the identity rules below is `unclear`, for
+ *   the collector's AI check (about.ts).
+ * - Measure: its identifier plus its jurisdiction.
+ *
+ * `contestIds` is every contest the story relates to: its races and
+ * measures, and each attached candidate's race (so the page loads, pages
+ * and broadcasts candidate stories with their race).
  *
  * The context rules are about identity, not topic (owner, 2026-10-30: any
  * news about a candidate's personal or political life counts). A trusted
@@ -52,9 +70,19 @@ export interface SourceContext {
   jurisdictions?: string[];
 }
 
+/** How the person check decided: the rules (headline, Q&A block, an attributed sentence) or the AI check (about.ts). */
+export type PersonHow = "headline" | "qa" | "said" | "ai";
+
 export interface MatchResult {
+  /** Every contest the story relates to (its races and measures, and attached candidates' races). */
   contestIds: string[];
+  /** Races and measures whose own feed shows the story: the race or measure check passed. */
+  raceIds: string[];
   candidateIds: string[];
+  /** Candidates who pass the identity rules but only an AI check can say whether the story is about them. */
+  unclear: { candidateId: string; contestId: string; office: string; name: string; variants: string[]; surname: string }[];
+  /** Why each check passed, for `feed_items.match`. */
+  decisions: { races: { id: string; how: string }[]; people: { id: string; how: PersonHow; sentence?: string }[] };
   terms: string[];
   /** "article" when the article's text was given (the collector tries the headline and summary first). */
   via: "headline" | "article";
@@ -84,7 +112,42 @@ const OFFICE_SYNONYMS: [RegExp, string[]][] = [
   [/mayor/, ["mayor"]],
   [/board of education|school|college|trustee/, ["trustee", "board of education", "school board", "college board"]],
   [/justice|court/, ["justice", "court", "retention", "supreme court", "court of appeal"]],
+  [/district attorney/, ["district attorney"]],
+  [/sheriff/, ["sheriff"]],
+  [/assessor/, ["assessor"]],
+  [/public defender/, ["public defender"]],
+  [/clerk/, ["clerk"]],
+  [/auditor/, ["auditor"]],
 ];
+
+/** Nouns that make an office or district the subject: "governor's race", "District 8 candidates". */
+const RACE_NOUNS = ["race", "contest", "election", "candidates", "debate", "matchup", "runoff", "poll", "polls"];
+const POLL_WORDS = ["poll", "polls", "survey"];
+/** A story's subject is in its lead: a race phrase must appear this early for the story text alone to put it on the race. */
+const LEAD_CHARS = 1_200;
+
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+
+/** "District 11", "11th Congressional District", "11TH CONG", "Trustee Area 6" → the ways an article names that district. */
+export function districtTerms(title: string, divisionName: string): string[] {
+  const t = normalizeForMatch(`${title} ${splitMapYear(divisionName).name}`);
+  const out = new Set<string>();
+  const n = /\bdistrict (\d{1,3})\b/.exec(t)?.[1] ?? /\b(\d{1,3})(?:st|nd|rd|th)\b/.exec(t)?.[1];
+  if (n) {
+    const num = Number(n);
+    out.add(`district ${num}`);
+    out.add(`${ordinal(num)} district`);
+    for (const kind of ["congressional", "assembly", "senate", "supervisorial", "council"]) if (t.includes(kind.slice(0, 4))) out.add(`${ordinal(num)} ${kind} district`);
+  }
+  const area = /\btrustee area (\d{1,3})\b/.exec(t)?.[1];
+  if (area) out.add(`trustee area ${Number(area)}`);
+  return [...out];
+}
+
+/** Phrases that make this office or district the subject of a story. */
+export function racePhrases(keys: string[]): string[] {
+  return [...new Set(keys.flatMap((k) => [...RACE_NOUNS.map((n) => `${k} ${n}`), `${k} s race`, `race for ${k}`, `election for ${k}`, `candidates for ${k}`]))];
+}
 
 export const STATE_NAMES: Record<string, string> = {
   AL: "alabama", AK: "alaska", AZ: "arizona", AR: "arkansas", CA: "california", CO: "colorado",
@@ -139,6 +202,7 @@ export function measureIds(title: string): string[] {
 interface CompiledCandidate {
   id: string;
   contestId: string;
+  office: string;
   state?: string;
   stateLevel: boolean;
   /** Local contests: the article must name the place or an opponent (many people share a name). */
@@ -152,6 +216,21 @@ interface CompiledCandidate {
   needed: number;
 }
 
+interface CompiledRace {
+  contestId: string;
+  state?: string;
+  phrases: string[];
+  /** Office words, for poll headlines ("poll shows governor candidate ahead"). */
+  offices: string[];
+  /** One must be in the story (or implied by the outlet): the state, the place, or the district with the state. */
+  scope: string[];
+  district: string[];
+  stateName?: string;
+  statewide: boolean;
+  /** Candidates' name variants, by candidate. */
+  people: string[][];
+}
+
 interface CompiledMeasure {
   contestId: string;
   state?: string;
@@ -161,6 +240,7 @@ interface CompiledMeasure {
 
 export function buildMatcher(contests: TrackedContest[]) {
   const candidates: CompiledCandidate[] = [];
+  const races: CompiledRace[] = [];
   const measures: CompiledMeasure[] = [];
   // Names shared by more than one tracked person always need extra context.
   const nameCount = new Map<string, number>();
@@ -175,6 +255,20 @@ export function buildMatcher(contests: TrackedContest[]) {
       measures.push({ contestId: c.id, state: c.state, ids: measureIds(c.title), places: places.filter((x): x is string => !!x) });
       continue;
     }
+    const district = districtTerms(c.title, c.divisionName);
+    const offices = officeTerms(c.title);
+    const statewide = contestTier(c) === 0;
+    races.push({
+      contestId: c.id,
+      state: c.state,
+      phrases: racePhrases([...offices, ...district]),
+      offices,
+      scope: statewide ? [stateName ?? place] : district.length ? [] : [place].filter(Boolean),
+      district,
+      stateName,
+      statewide,
+      people: c.candidates.map((k) => [...new Set(k.names.flatMap(nameVariants))]),
+    });
     for (const k of c.candidates) {
       const variants = [...new Set(k.names.flatMap(nameVariants))];
       const opponents = c.candidates
@@ -186,6 +280,7 @@ export function buildMatcher(contests: TrackedContest[]) {
       candidates.push({
         id: k.id,
         contestId: c.id,
+        office: c.title,
         state: c.state,
         stateLevel: !!c.stateLevel,
         anchors: c.stateLevel ? [] : [place, ...opponents].filter(Boolean),
@@ -204,7 +299,9 @@ export function buildMatcher(contests: TrackedContest[]) {
    */
   return function match(title: string, summary: string, source: SourceContext, article?: string): MatchResult | null {
     const head = ` ${normalizeForMatch(`${title} ${summary}`)} `;
-    const text = article ? ` ${normalizeForMatch(`${title} ${summary} ${article.slice(0, MAX_ARTICLE_CHARS)}`)} ` : head;
+    const body = article?.slice(0, MAX_ARTICLE_CHARS);
+    const text = body ? ` ${normalizeForMatch(`${title} ${summary} ${body}`)} ` : head;
+    const lead = body ? ` ${normalizeForMatch(body.slice(0, LEAD_CHARS))} ` : "";
     const national = source.scope === "national";
     // A state or local outlet's "Smith" is about that state's Smith, never another state's.
     const inScope = (state?: string) => national || (!!source.state && state === source.state);
@@ -215,13 +312,36 @@ export function buildMatcher(contests: TrackedContest[]) {
     const impliedState = !national && source.state ? STATE_NAMES[source.state] : undefined;
     const inContext = (term: string) => has(text, term) || implied.includes(term);
     const contestIds = new Set<string>();
+    const raceIds = new Set<string>();
     const candidateIds = new Set<string>();
     const terms = new Set<string>();
+    const unclear: MatchResult["unclear"] = [];
+    const decisions: MatchResult["decisions"] = { races: [], people: [] };
 
+    // Race: the race itself is the subject.
+    for (const r of races) {
+      if (!inScope(r.state)) continue;
+      const named = r.people.filter((vs) => vs.some((v) => has(text, v))).length;
+      // Which race: its district (with the state) or its place in the story, or one of its own candidates named.
+      const inPlace = named > 0 || (r.district.length ? r.district.some((d) => has(text, d)) && (!r.stateName || inContext(r.stateName)) : r.scope.some(inContext));
+      if (!inPlace) continue;
+      const phrase = r.phrases.find((p) => has(head, p));
+      const pair = r.people.length >= 2 && r.people.filter((vs) => vs.some((v) => has(head, v))).length >= 2;
+      const poll = POLL_WORDS.some((w) => has(head, w)) && r.offices.some((o) => has(head, o)) && (r.statewide || named > 0);
+      const told = !!body && r.phrases.some((p) => has(lead, p)) && r.phrases.reduce((n, p) => n + count(text, p), 0) >= 2;
+      const how = phrase ? "headline" : pair ? "candidates in headline" : poll ? "poll headline" : told ? "story" : null;
+      if (!how) continue;
+      raceIds.add(r.contestId);
+      contestIds.add(r.contestId);
+      decisions.races.push({ id: r.contestId, how });
+      if (phrase) terms.add(phrase);
+    }
+
+    // Person: who the story is about, decided per candidate.
     for (const k of candidates) {
       if (!inScope(k.state)) continue;
       const inHead = k.variants.find((v) => has(head, v));
-      const name = inHead ?? (article ? k.variants.find((v) => has(text, v)) : undefined);
+      const name = inHead ?? (body ? k.variants.find((v) => has(text, v)) : undefined);
       if (!name) continue;
       // The outlet's own state is implied context only for state-level contests,
       // and implied context never stands alone: the article must say something.
@@ -233,24 +353,63 @@ export function buildMatcher(contests: TrackedContest[]) {
       // Named only in the story: election words alone don't say which person this is,
       // and a story about someone names them more than once (a passing mention doesn't count).
       if (!inHead && (k.strong.filter((t) => has(text, t)).length < k.needed || count(text, k.surname) < 2)) continue;
+      const about = inHead ? { how: "headline" as const } : aboutInText(body!, k.variants, k.surname);
+      if (!about) {
+        unclear.push({ candidateId: k.id, contestId: k.contestId, office: k.office, name, variants: k.variants, surname: k.surname });
+        continue;
+      }
       candidateIds.add(k.id);
       contestIds.add(k.contestId);
+      decisions.people.push({ id: k.id, ...about });
       terms.add(name);
       ctx.slice(0, 3).forEach((t) => terms.add(t));
     }
+
+    // Measure: its identifier plus its jurisdiction.
     for (const m of measures) {
       if (!inScope(m.state)) continue;
       const inHead = m.ids.find((i) => has(head, i));
-      const id = inHead ?? (article ? m.ids.find((i) => count(text, i) >= 2) : undefined);
+      const id = inHead ?? (body ? m.ids.find((i) => count(text, i) >= 2) : undefined);
       if (!id) continue;
       const place = m.places.find(inContext);
       if (!place) continue;
       contestIds.add(m.contestId);
+      raceIds.add(m.contestId);
+      decisions.races.push({ id: m.contestId, how: inHead ? "headline" : "story" });
       terms.add(id);
       terms.add(place);
     }
-    return contestIds.size ? { contestIds: [...contestIds], candidateIds: [...candidateIds], terms: [...terms], via: article ? "article" : "headline" } : null;
+    if (!contestIds.size && !unclear.length) return null;
+    return { contestIds: [...contestIds], raceIds: [...raceIds], candidateIds: [...candidateIds], unclear, decisions, terms: [...terms], via: body ? "article" : "headline" };
   };
+}
+
+/** Verbs that report what a person said, decided or did ("Becerra said", "Hilton proposed"). */
+const SAID = "said|says|told|tells|argued|argues|wrote|writes|stated|added|announced|announces|proposed|proposes|pledged|pledges|promised|promises|vowed|vows|wants|supports|opposes|opposed|called|calls|urged|urges|criticized|criticizes|blasted|responded|countered|answered|noted|explained|insisted|warned|unveiled|released|endorsed|signed|filed|voted|introduced|launched|campaigned";
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Whether the story's text shows it is about this person, by rule: a Q&A
+ * block that is theirs (a line that is just their name, or "Name: …"), or
+ * a sentence where they speak or act. Null when the rules can't tell.
+ */
+export function aboutInText(article: string, variants: string[], surname: string): { how: PersonHow; sentence?: string } | null {
+  const last = escapeRe(surname);
+  const names = [...variants.map((v) => v.split(" ").map(escapeRe).join("[\\s.'’-]+")), last].join("|");
+  const lines = article.split(/\n+/).map((l) => l.trim());
+  // Q&A: "Jane Sample" on its own line (a short heading), or "Jane Sample: I would…".
+  const heading = new RegExp(`^(?:[A-Z][\\w.'’-]*\\s+){0,3}(?:${names})(?:\\s*\\([^)]{1,30}\\))?\\s*[:\\-–—]?\\s*$`, "i");
+  const answer = new RegExp(`^(?:${names})\\s*:\\s+\\S`, "i");
+  if (lines.some((l, i) => (heading.test(l) && l.split(/\s+/).length <= 6 && (lines[i + 1] ?? "").length > 40) || answer.test(l))) return { how: "qa" };
+  const said = [
+    new RegExp(`\\b(?:${names})(?:['’]s? (?:campaign|office|spokesperson|spokeswoman|spokesman))?(?:,[^,]{1,80},)?\\s+(?:also\\s+|has\\s+|had\\s+|then\\s+)?(?:${SAID})\\b`, "i"),
+    new RegExp(`\\b(?:said|says|according to|told reporters)\\s+(?:[\\w.]+\\s+){0,3}?(?:${names})\\b(?!\\s+(?:is|was|would|will|has|had|and))`, "i"),
+  ];
+  for (const sentence of article.split(/(?<=[.!?”"])\s+|\n+/)) {
+    if (said.some((re) => re.test(sentence))) return { how: "said", sentence: sentence.trim().slice(0, 200) };
+  }
+  return null;
 }
 
 function count(hay: string, needle: string): number {

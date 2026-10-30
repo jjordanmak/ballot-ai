@@ -152,6 +152,7 @@ These are enforced structurally, not only by prompt:
 2. AI output is written only to `synthesized_field_versions` with `source_ids` (non-empty required), `model`, and `prompt_version`.
 3. The UI renders AI content in a distinct "AI-generated summary · sources" container, visibly separate from **Official** and **Source-derived** content.
 4. **The voter's residential address is never in any prompt.** Prompts are built from stored entities (candidate, contest, sources), never from request context.
+5. **News relevance (owner, 2026-10-30).** The news collector asks Haiku one narrow question when its rules can't tell: is this article about this candidate, or a passing mention (`src/lib/feeds/about.ts`)? The input is the outlet's article and the candidate's name and office; the answer must copy a sentence from the article reporting what they said or did, and code accepts it only if that sentence is in the article word for word, next to their name. It decides only which feed a story goes on, never a ballot fact; at most 12 a run, counted in the same monthly budget; neither the article's text nor the sentence is stored.
 
 ## 3. Processing strategy
 

@@ -125,10 +125,11 @@ describe("collectApiNews", () => {
     expect(summary).toMatchObject({ nytReturned: 2, nytTagged: 1, nytFound: 1 });
     expect(states.find((s) => s.source_key === "nyt:hilton")).toMatchObject({ items_seen: 2 });
     expect(states.find((s) => s.source_key === "nyt:becerra")).toMatchObject({ items_seen: 0 });
-    // A story attaches to a candidate only when its headline names them.
-    expect(byUrl.filter((r) => (r.match as { via: string }).via === "gdelt").map((r) => [r.contest_ids, r.candidate_ids])).toEqual([
-      [["gov", "appeal"], ["becerra"]],
-      [["gov", "appeal"], ["becerra"]],
+    // A story attaches to a candidate only when its headline names them, and to a race's own feed only when the
+    // headline is about the race: these are about Becerra, so they stay off the Governor feed and off the court race.
+    expect(byUrl.filter((r) => (r.match as { via: string }).via === "gdelt").map((r) => [r.contest_ids, r.race_ids, r.candidate_ids])).toEqual([
+      [["gov"], [], ["becerra"]],
+      [["gov"], [], ["becerra"]],
     ]);
     expect(states.map((s) => s.source_key)).toEqual(expect.arrayContaining(["gdelt:race:gov", "gdelt:race:appeal", "nyt:hilton", "nyt:becerra"]));
     expect(states.find((s) => s.source_key === "gdelt:_backoff")).toMatchObject({ failures: 0, retry_at: null });

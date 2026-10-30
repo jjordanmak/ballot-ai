@@ -37,7 +37,10 @@ export interface FeedRow {
   published_at: string;
   ingested_at: string;
   status: string;
+  /** Every contest the item relates to (its races, measures, and its candidates' races). */
   contest_ids: string[];
+  /** The races and measures whose own feed shows it (migration 0020); older rows without it use contest_ids. */
+  race_ids?: string[] | null;
   candidate_ids: string[];
   /** Type-specific fields (poll numbers for type "poll"). */
   payload?: Json;
@@ -205,7 +208,8 @@ export function useFeedItems(target?: { contestId?: string; candidateId?: string
     if (!ctx || !target || (!target.contestId && !target.candidateId)) return undefined;
     const out: NewsItem[] = [];
     for (const r of ctx.rows.values()) {
-      const hit = target.candidateId ? r.candidate_ids.includes(target.candidateId) : r.contest_ids.includes(target.contestId!);
+      // A race's carousel shows stories about the race; a story about one candidate shows on that candidate's.
+      const hit = target.candidateId ? r.candidate_ids.includes(target.candidateId) : (r.race_ids ?? r.contest_ids).includes(target.contestId!);
       if (hit) out.push(toNewsItem(r, ctx.names));
     }
     return out.sort((a, b) => b.date.localeCompare(a.date));
