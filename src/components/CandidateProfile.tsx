@@ -151,18 +151,10 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
             )}
           </div>
 
-          {/* Tighter gap between pills and current role */}
-          <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">
-            {candidate.currentRole}
-            {candidate.general && (
-              <Cite ids={candidate.general.currentRole?.sources} docs={candidate.general.sourceDocs} quotes={candidate.general.currentRole?.quotes} />
-            )}
-          </div>
-          {candidate.general?.ballotDesignation && (
-            <div className="mt-1 text-[13px] text-[var(--color-paper-3)]">
-              Ballot designation: <span className="text-[var(--color-paper-2)]">{candidate.general.ballotDesignation.text}</span>
-              <Cite ids={candidate.general.ballotDesignation.sources} docs={candidate.general.sourceDocs} />
-            </div>
+          {/* Tighter gap between pills and current role. Cited (general) role
+              and designation lines render below, in HeaderDetails. */}
+          {!candidate.general && (
+            <div className="mt-2 text-[14px] text-[var(--color-paper-2)]">{candidate.currentRole}</div>
           )}
           {candidate.ballotName && normalizeForMatch(candidate.ballotName) !== normalizeForMatch(candidate.name) && (
             <div className="mt-1 font-mono-cap text-[9px] tracking-[0.16em] text-[var(--color-paper-4)]">
@@ -179,8 +171,9 @@ export function CandidateProfile({ candidate, raceId, unopposed, forceOpen }: Pr
         />
       </button>
 
-      {/* Official links sit just under the header button (links can't nest inside it). */}
-      {candidate.general && <OfficialLinks general={candidate.general} />}
+      {/* Cited lines and official links sit just under the header button: their
+          [n] buttons and links can't nest inside it (React #418). */}
+      {candidate.general && <HeaderDetails currentRole={candidate.currentRole} general={candidate.general} />}
 
       {/* COLLAPSIBLE BODY */}
       <div
@@ -1116,33 +1109,51 @@ function CitedPillar({
 }
 
 /**
- * Official campaign site and X account, each from an official filing (SoS
- * voter guide, county roster) or the ballot data. Aligned with the name column.
+ * Under the header button, aligned with the name column: the cited current
+ * role and ballot designation, then the official campaign site and X account,
+ * each from an official filing (SoS voter guide, county roster) or the ballot
+ * data. Outside the button because [n] markers and links can't nest in it.
  */
-function OfficialLinks({ general }: { general: NonNullable<Candidate["general"]> }) {
+function HeaderDetails({ currentRole, general }: { currentRole: string; general: NonNullable<Candidate["general"]> }) {
   const campaign =
     general.links?.find((l) => l.kind === "campaign") ?? (general.campaignUrl ? { url: general.campaignUrl, sources: [] } : undefined);
   const x = general.links?.find((l) => l.kind === "x");
-  if (!campaign && !x) return null;
+  if (!currentRole && !general.ballotDesignation && !campaign && !x) return null;
   const handle = x ? x.url.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, "") : "";
   const link = "inline-flex items-center gap-1 text-[13px] text-[var(--color-paper-2)] hover:text-[var(--color-accent)]";
   return (
-    <div className="-mt-2 sm:-mt-5 px-5 pb-5 sm:pl-[168px] sm:pr-8 sm:pb-7 flex flex-wrap items-center gap-x-5 gap-y-1 bg-[var(--color-ink-1)]">
-      {campaign && (
-        <span>
-          <a href={campaign.url} target="_blank" rel="noopener noreferrer" className={link}>
-            Campaign website <ExternalLink size={11} aria-hidden />
-          </a>
-          <Cite ids={campaign.sources} docs={general.sourceDocs} />
-        </span>
+    <div className="-mt-2 sm:-mt-5 px-5 pb-5 sm:pl-[168px] sm:pr-8 sm:pb-7 bg-[var(--color-ink-1)]">
+      {currentRole && (
+        <div className="text-[14px] text-[var(--color-paper-2)]">
+          {currentRole}
+          <Cite ids={general.currentRole?.sources} docs={general.sourceDocs} quotes={general.currentRole?.quotes} />
+        </div>
       )}
-      {x && (
-        <span>
-          <a href={x.url} target="_blank" rel="noopener noreferrer" className={link}>
-            @{handle} on X <ExternalLink size={11} aria-hidden />
-          </a>
-          <Cite ids={x.sources} docs={general.sourceDocs} />
-        </span>
+      {general.ballotDesignation && (
+        <div className="mt-1 text-[13px] text-[var(--color-paper-3)]">
+          Ballot designation: <span className="text-[var(--color-paper-2)]">{general.ballotDesignation.text}</span>
+          <Cite ids={general.ballotDesignation.sources} docs={general.sourceDocs} />
+        </div>
+      )}
+      {(campaign || x) && (
+        <div className={`${currentRole || general.ballotDesignation ? "mt-2 " : ""}flex flex-wrap items-center gap-x-5 gap-y-1`}>
+          {campaign && (
+            <span>
+              <a href={campaign.url} target="_blank" rel="noopener noreferrer" className={link}>
+                Campaign website <ExternalLink size={11} aria-hidden />
+              </a>
+              <Cite ids={campaign.sources} docs={general.sourceDocs} />
+            </span>
+          )}
+          {x && (
+            <span>
+              <a href={x.url} target="_blank" rel="noopener noreferrer" className={link}>
+                @{handle} on X <ExternalLink size={11} aria-hidden />
+              </a>
+              <Cite ids={x.sources} docs={general.sourceDocs} />
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
