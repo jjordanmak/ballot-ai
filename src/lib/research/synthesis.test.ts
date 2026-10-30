@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { PersonSynthesis, PositionFact } from "@/lib/ai/schemas";
+import type { PersonWriting } from "@/lib/ai/schemas";
 import {
   apSlips,
   applyParity,
   factText,
   hardFactProblem,
   mightFitProblem,
-  positionYears,
+  yearsHeld,
   screenUnit,
   shapeSections,
   textHash,
@@ -98,15 +98,16 @@ describe("wording", () => {
 });
 
 describe("durations", () => {
-  const raw: PositionFact[] = [
-    { title: "U.S. Representative", organization: null, district: null, startYear: 1993, endYear: "2017", type: "elected", committees: [], quote: "", sourceId: "D1" },
-    { title: "Mayor", organization: null, district: null, startYear: null, endYear: null, type: "elected", committees: [], quote: "", sourceId: "D1" },
+  // The writer sees the checked positions as P0, P1…; code writes the number.
+  const verified = [
+    { startYear: 1993, endYear: 2017 as const },
+    { startYear: undefined, endYear: undefined },
   ];
-  const verified = [{ title: "U.S. Representative", startYear: 1993, endYear: 2017 as const, type: "elected" as const, quote: "", source: "x" }];
-  const years = positionYears(raw, verified, new Date("2026-10-30T00:00:00Z"));
+  const years = yearsHeld(verified, new Date("2026-10-30T00:00:00Z"));
 
   it("code writes the number from the verified years", () => {
     expect(years.get("P0")).toBe(24);
+    expect(yearsHeld([{ startYear: 2019, endYear: "present" }], new Date("2026-10-30T00:00:00Z")).get("P0")).toBe(7);
     const s = screenUnit(unit("Newsom spent {{years:P0}} as governor.", "Governor Gavin Newsom is term-limited.", { id: "inBrief.0", section: "inBrief" }), { ...ctx, years });
     expect(s.text).toBe("Newsom spent 24 years as governor.");
     expect(s.problems).toEqual([]);
@@ -160,11 +161,7 @@ describe("shapeSections", () => {
 
 describe("units and parity", () => {
   it("numbers every unit so repairs and reviewers can refer to it", () => {
-    const data: PersonSynthesis = {
-      education: [],
-      positions: [],
-      residence: null,
-      leftOut: [],
+    const data: PersonWriting = {
       sections: [
         { section: "background", sentences: [{ text: "a", refs: [] }, { text: "b", refs: [] }] },
         { section: "background", sentences: [{ text: "duplicate section", refs: [] }] },

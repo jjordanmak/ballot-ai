@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 vi.mock("server-only", () => ({}));
@@ -332,6 +333,19 @@ describe("runJob", () => {
     expect(s.parse).not.toHaveBeenCalled();
   });
 
+  it("keeps the API's error message on a rejected request, so it can be diagnosed", async () => {
+    const s = setup();
+    const err = new Anthropic.BadRequestError(400, { type: "error", error: { type: "invalid_request_error", message: "Schema is too complex for compilation." } }, "Schema is too complex for compilation.", new Headers());
+    const parse = vi.fn(async () => {
+      throw err;
+    });
+    const deps = { ...s.deps(publishCfg), client: { messages: { parse } } as never };
+    await dispatch({ ...deps, runRemote: async () => {} });
+    expect((await runJob(deps, KEY)).outcome).toBe("failed");
+    const run = (s.tables.synthesis_runs as { error: string }[])[0];
+    expect(run.error).toMatch(/^api_400: .*Schema is too complex for compilation/);
+  });
+
   it("stops at the monthly budget", async () => {
     const s = setup();
     await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
@@ -383,6 +397,7 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
   it("people: lists checked field by field, sections written and checked, a failed sentence repaired once then dropped", async () => {
     const now = new Date("2026-10-29T07:00:00Z");
     const fake = fakeDb({ contests: candidateContests }, () => now);
+    let lists = 0;
     const parse = vi.fn(async (req: Req) => {
       const kind = kindOf(req);
       if (kind === "verify") return { stop_reason: "end_turn", usage, parsed_output: allSupported(req) };
@@ -393,13 +408,19 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
         return { stop_reason: "end_turn", usage, parsed_output: { units: [] } };
       }
       const content = textOf(req.messages[0]);
-      expect(content).toContain("Residence: the city or area where they live");
-      expect(content).toContain("Leave out, for everyone: family background");
-      return {
-        stop_reason: "end_turn",
-        usage,
-        parsed_output: {
-          education: [
+      // Both calls send the documents as their own cached block, ahead of the task.
+      const blocks = req.messages[0].content as { text: string; cache_control?: unknown }[];
+      expect(blocks[0].text).toContain('<document id="D1"');
+      expect(blocks[0].cache_control).toEqual({ type: "ephemeral" });
+      if (content.includes("Return their lists only")) {
+        lists++;
+        expect(content).toContain("Residence: the city or area where they live");
+        expect(content).toContain("Leave out, for everyone: family background");
+        return {
+          stop_reason: "end_turn",
+          usage,
+          parsed_output: {
+            education: [
             { degree: "Bachelor of Arts", field: "History", institution: "University of Michigan", year: null, quote: "Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.", sourceId: "D1" },
             { degree: "J.D.", field: null, institution: "Harvard Law School", year: null, quote: "Ann Bee earned a Bachelor of Arts degree in history from the University of Michigan.", sourceId: "D1" },
           ],
@@ -407,8 +428,18 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
             { title: "Member", organization: "Springfield City Council", district: null, startYear: 2019, endYear: "present", type: "elected", committees: [], quote: "She has served on the Springfield City Council since 2019.", sourceId: "D1" },
             { title: "Teacher", organization: "public school", district: null, startYear: 2005, endYear: "2018", type: "job", committees: [], quote: "Before that, she was a public school teacher from 2005 to 2018.", sourceId: "D1" },
           ],
-          residence: null,
-          leftOut: [{ fact: "Daughter of two nurses", reason: "family background" }],
+            residence: null,
+            leftOut: [{ fact: "Daughter of two nurses", reason: "family background" }],
+          },
+        };
+      }
+      // The writer gets only the checked positions (the Harvard degree and anything unchecked are gone), as P0, P1….
+      expect(content).toContain("P0: Member, Springfield City Council (2019–present)");
+      expect(content).toContain("P1: Teacher, public school (2005–2018)");
+      return {
+        stop_reason: "end_turn",
+        usage,
+        parsed_output: {
           sections: [
             { section: "inBrief", sentences: [{ text: "Ann Bee has served on the <mark>Springfield City Council</mark> for {{years:P0}}.", refs: ref("She has served on the Springfield City Council since 2019.") }] },
             {
@@ -430,6 +461,8 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
     const deps = { db: fake.db, electionId: "e1", config: compareCfg, client: { messages: { parse } } as never, fetchImpl: fetchImpl as never, resolve: resolve as never, sleep: async () => {}, compareKeys: [PKEY], now };
     await dispatch({ ...deps, runRemote: async () => {} });
     expect((await runJob(deps, `${PKEY}@${SETTING}`)).outcome).toBe("compared");
+    expect(lists).toBe(1);
+    expect(parse.mock.calls.map((c) => kindOf(c[0] as Req))).toEqual(["write", "write", "verify", "review", "repair"]);
 
     const [v] = fake.tables.synthesized_field_versions as { field_name: string; payload: Record<string, unknown>; status: string }[];
     expect(v).toMatchObject({ field_name: `profile@${SETTING}`, status: "held" });

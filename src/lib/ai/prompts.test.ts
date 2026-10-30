@@ -7,6 +7,7 @@ import {
   REWRITE_SYSTEM,
   SYNTH_SYSTEM,
   parityTask,
+  personListsTask,
   repairTask,
   researchTask,
   reviewTask,
@@ -45,7 +46,8 @@ describe("prompts", () => {
       SYNTH_SYSTEM,
       race: synthesisTask({ ...base, kind: "race", label: "Governor (California)", candidateNames: ["Ann Bee", "Cy Cole"] }),
       measure: synthesisTask(base),
-      candidate: synthesisTask({ ...base, kind: "candidate", personName: "Ann Bee", office: "Governor", division: "California" }),
+      candidate: synthesisTask({ ...base, kind: "candidate", personName: "Ann Bee", office: "Governor", division: "California" }, ["Member, Springfield City Council (2019–present)"]),
+      candidateLists: personListsTask({ ...base, kind: "candidate", personName: "Ann Bee", office: "Governor", division: "California", local: true }),
       retention: synthesisTask({ ...base, kind: "retention", personName: "Ann Bee", office: "Associate Justice", division: "California" }),
       repair: repairTask([{ id: "context.0", text: "a", reasons: ["excerpt not found in its document"] }]),
       synthSupport: synthSupportTask('1. Text: a\n   Excerpts: [1] "b"'),
@@ -57,11 +59,16 @@ describe("prompts", () => {
     }).toMatchSnapshot();
   });
 
-  it("people's writing task drops the old 'Platform' rule (priorities replace it) and keeps the list rules", () => {
-    const t = synthesisTask({ ...base, kind: "candidate", personName: "Ann Bee", office: "Governor", division: "California" });
-    expect(t).not.toMatch(/^Platform:/m);
-    expect(t).toMatch(/Positions: everything they have done in adult life/);
-    expect(t).toMatch(/\{\{years:Pn\}\}/);
+  it("people take 2 calls: the lists task has the list rules, the writing task gets the checked positions", () => {
+    const t = { ...base, kind: "candidate" as const, personName: "Ann Bee", office: "Governor", division: "California" };
+    const lists = personListsTask(t);
+    expect(lists).toMatch(/Positions: everything they have done in adult life/);
+    expect(lists).not.toMatch(/^Platform:/m);
+    const writing = synthesisTask(t, ["Member, Springfield City Council (2019–present)"]);
+    expect(writing).toContain("P0: Member, Springfield City Council (2019–present)");
+    expect(writing).toMatch(/\{\{years:Pn\}\}/);
+    expect(writing).not.toMatch(/Positions: everything they have done/);
+    expect(synthesisTask(t)).toContain("Checked positions: none.");
   });
 
   it("keep the cached instructions free of anything that varies per request", () => {

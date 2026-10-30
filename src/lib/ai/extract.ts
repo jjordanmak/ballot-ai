@@ -61,9 +61,10 @@ export async function extract<S extends z.ZodType>(opts: {
   system?: string;
   client?: Pick<Anthropic, "messages">;
   /**
-   * Cache the documents and task too (synthesis): the repair pass resends
-   * the same first turn, so it reads them from the cache. Same setting only;
-   * a different model or effort is a different cache.
+   * Cache the documents (synthesis): they go in their own block, ahead of
+   * the task, so a person's two calls and the repair pass read them from
+   * the cache. Same setting only; a different model or effort is a
+   * different cache.
    */
   cacheDocs?: boolean;
   /** The repair pass: the first answer, then the repair request, after the same first turn. */
@@ -73,8 +74,14 @@ export async function extract<S extends z.ZodType>(opts: {
 }): Promise<CallResult<z.infer<S>>> {
   const c = opts.client ?? anthropic();
   const first = opts.docs.length ? `${documentsBlock(opts.docs)}\n\n${opts.task}` : opts.task;
+  const cached: Anthropic.TextBlockParam[] = opts.docs.length
+    ? [
+        { type: "text", text: documentsBlock(opts.docs), cache_control: { type: "ephemeral" } },
+        { type: "text", text: opts.task },
+      ]
+    : [{ type: "text", text: opts.task }];
   const messages: Anthropic.MessageParam[] = [
-    { role: "user", content: opts.cacheDocs ? [{ type: "text", text: first, cache_control: { type: "ephemeral" } }] : first },
+    { role: "user", content: opts.cacheDocs ? cached : first },
     ...(opts.followUp ? ([{ role: "assistant", content: opts.followUp.answer }, { role: "user", content: opts.followUp.task }] as Anthropic.MessageParam[]) : []),
   ];
   try {
@@ -94,8 +101,15 @@ export async function extract<S extends z.ZodType>(opts: {
     if (!res.parsed_output) return { data: null, problem: "unparsed", costMicroUsd: cost, usage: res.usage };
     return { data: res.parsed_output as z.infer<S>, costMicroUsd: cost, usage: res.usage };
   } catch (e) {
-    return { data: null, problem: e instanceof Anthropic.APIError ? `api_${e.status ?? "error"}` : "error", costMicroUsd: 0 };
+    return { data: null, problem: apiProblem(e), costMicroUsd: 0 };
   }
+}
+
+/** "api_400: <the API's message>": the status for retry decisions, the message so a rejected request can be diagnosed. */
+function apiProblem(e: unknown): string {
+  if (!(e instanceof Anthropic.APIError)) return "error";
+  const msg = (e.message ?? "").replace(/\s+/g, " ").slice(0, 300);
+  return `api_${e.status ?? "error"}${msg ? `: ${msg}` : ""}`;
 }
 
 export interface Claim {
@@ -139,6 +153,6 @@ export async function checkSupport(opts: {
     for (const r of res.parsed_output.results) if (r.n >= 1 && r.n <= out.length) out[r.n - 1] = r.supported;
     return { supported: out, costMicroUsd: cost };
   } catch (e) {
-    return { supported: opts.claims.map(() => false), costMicroUsd: 0, problem: e instanceof Anthropic.APIError ? `api_${e.status ?? "error"}` : "error" };
+    return { supported: opts.claims.map(() => false), costMicroUsd: 0, problem: apiProblem(e) };
   }
 }

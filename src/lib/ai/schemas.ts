@@ -147,11 +147,21 @@ export type PersonSection = (typeof PERSON_SECTIONS)[number];
 
 export const ENDORSEMENT_CATEGORIES = ["Elected Officials", "Unions", "Advocacy & Industry", "Local Leaders"] as const;
 
-export const PersonSynthesis = z.object({
+/**
+ * People take 2 calls (2026-10-30): one combined schema was rejected by the
+ * API as too large to compile. First the lists (the facts shape that
+ * compiles), checked field by field; then the writing, given the checked
+ * positions as P0, P1… for {{years:Pn}}. Both read the same cached documents.
+ */
+export const PersonLists = z.object({
   education: z.array(EducationFact),
-  positions: z.array(PositionFact).describe("Numbered from P0 in this order; In Brief refers to them as {{years:P0}}."),
+  positions: z.array(PositionFact),
   residence: PersonFacts.shape.residence,
   leftOut: PersonFacts.shape.leftOut,
+});
+export type PersonLists = z.infer<typeof PersonLists>;
+
+export const PersonWriting = z.object({
   sections: sectionsOf(PERSON_SECTIONS),
   mightFit: z
     .array(z.object({ issue: z.string().describe("The issue, in 1 to 3 words."), text: z.string(), refs }))
@@ -159,7 +169,7 @@ export const PersonSynthesis = z.object({
   timeline: z.array(z.object({ when: z.string().describe("A year, or a date like 'May 5, 2026'."), event: z.string(), refs })),
   endorsements: z.array(z.object({ name: z.string(), category: z.enum(ENDORSEMENT_CATEGORIES), refs })),
 });
-export type PersonSynthesis = z.infer<typeof PersonSynthesis>;
+export type PersonWriting = z.infer<typeof PersonWriting>;
 
 /** The repair pass and the parity rewrite: replacements for the listed units only. */
 export const Rewrite = z.object({
