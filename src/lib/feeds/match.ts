@@ -10,9 +10,9 @@
  * identifier plus its jurisdiction.
  *
  * Given the article's own text, a name that appears only there needs
- * stronger context (office, opponent, place or state, not just "vote"), and a
- * measure named only there must be named at least twice: a passing mention
- * in a long story is rarely about the race. Pure and unit-tested.
+ * stronger context (office, opponent, place or state, not just "vote"), and
+ * the person or measure must be named at least twice: a passing mention in a
+ * long story is rarely about them. Pure and unit-tested.
  */
 import { splitMapYear } from "@/domain/districtMaps";
 import { normalizeForMatch } from "@/domain/text";
@@ -147,6 +147,8 @@ interface CompiledCandidate {
   context: string[];
   /** Context that identifies the race (office, opponents, place, state), unlike bare election words. */
   strong: string[];
+  /** Last name, for counting how often a story names them. */
+  surname: string;
   needed: number;
 }
 
@@ -190,6 +192,7 @@ export function buildMatcher(contests: TrackedContest[]) {
         variants,
         context: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...ELECTION_TERMS, ...opponents].filter(Boolean))],
         strong: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...opponents].filter(Boolean))],
+        surname: variants[0]?.split(" ").filter((t) => !SUFFIXES.has(t)).pop() ?? "",
         needed: shared || shortest <= 9 ? 2 : 1,
       });
     }
@@ -227,8 +230,9 @@ export function buildMatcher(contests: TrackedContest[]) {
       const ctx = k.context.filter((t) => has(text, t) || (implied.includes(t) && (t !== impliedState || k.stateLevel)));
       if (ctx.length < k.needed) continue;
       if (k.anchors.length && !k.anchors.some((a) => ctx.includes(a))) continue;
-      // Named only in the story: election words alone don't say which person this is.
-      if (!inHead && k.strong.filter((t) => has(text, t)).length < k.needed) continue;
+      // Named only in the story: election words alone don't say which person this is,
+      // and a story about someone names them more than once (a passing mention doesn't count).
+      if (!inHead && (k.strong.filter((t) => has(text, t)).length < k.needed || count(text, k.surname) < 2)) continue;
       candidateIds.add(k.id);
       contestIds.add(k.contestId);
       terms.add(name);
