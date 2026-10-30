@@ -121,6 +121,10 @@ describe("collectApiNews", () => {
     // The hotel story names no tracked person in a way that identifies them.
     expect(inserted.some((r) => String(r.url).includes("hilton-hotels"))).toBe(false);
     expect(summary).toMatchObject({ gdeltThrottled: false, stored: 3, published: 2 });
+    // The NYT returned 2 articles for Hilton (1 tagged with him, 1 about a hotel) and none for Becerra.
+    expect(summary).toMatchObject({ nytReturned: 2, nytTagged: 1, nytFound: 1 });
+    expect(states.find((s) => s.source_key === "nyt:hilton")).toMatchObject({ items_seen: 2 });
+    expect(states.find((s) => s.source_key === "nyt:becerra")).toMatchObject({ items_seen: 0 });
     // A story attaches to a candidate only when its headline names them.
     expect(byUrl.filter((r) => (r.match as { via: string }).via === "gdelt").map((r) => [r.contest_ids, r.candidate_ids])).toEqual([
       [["gov", "appeal"], ["becerra"]],

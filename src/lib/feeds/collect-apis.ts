@@ -51,6 +51,10 @@ export interface ApiSummary {
   gdeltThrottled: boolean;
   gdeltSkipped?: string;
   nytAsked: number;
+  /** Articles the NYT returned, before our identity checks. */
+  nytReturned: number;
+  /** Of those, how many the NYT itself tagged with the person. */
+  nytTagged: number;
   nytFound: number;
   nytSkipped?: string;
   stored: number;
@@ -94,7 +98,7 @@ export async function collectApiNews(opts: {
   const now = opts.now ?? new Date();
   const publish = opts.publish ?? true;
   const sleep = opts.sleep ?? wait;
-  const summary: ApiSummary = { gdeltAsked: 0, gdeltFound: 0, gdeltThrottled: false, nytAsked: 0, nytFound: 0, stored: 0, published: 0 };
+  const summary: ApiSummary = { gdeltAsked: 0, gdeltFound: 0, gdeltThrottled: false, nytAsked: 0, nytReturned: 0, nytTagged: 0, nytFound: 0, stored: 0, published: 0 };
   const tracked = await loadTracked(db, electionId);
   const people = candidateQueries(tracked);
   if (!people.length) return summary;
@@ -102,7 +106,7 @@ export async function collectApiNews(opts: {
   const match = buildMatcher(tracked);
   const since = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000);
   const rows = new Map<string, FeedInsert>();
-  const asked: { source_key: string; last_fetched_at: string; last_status: number | null; last_error: string | null; failures: number; retry_at?: string | null }[] = [];
+  const asked: { source_key: string; last_fetched_at: string; last_status: number | null; last_error: string | null; failures: number; retry_at?: string | null; items_seen?: number }[] = [];
 
   const add = (a: ApiArticle, src: { key: string; name: string }, on: { contestId: string; candidateIds: string[] }, via: "gdelt" | "nyt-api", terms: string[]) => {
     const link = canonicalUrl(a.link);
@@ -194,6 +198,7 @@ export async function collectApiNews(opts: {
       summary.nytAsked++;
       let status = 0;
       let error: string | null = null;
+      let returned = 0;
       try {
         // The key is a query parameter by the API's design; it never appears in logs or stored rows.
         const res = await (opts.fetchImpl ?? fetch)(nytUrl(c, opts.nytKey, since), { headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(GDELT_TIMEOUT_MS) });
@@ -201,8 +206,12 @@ export async function collectApiNews(opts: {
         if (res.status === 429) {
           error = "rate limited";
         } else if (res.ok) {
-          for (const a of parseNyt(await res.text())) {
+          const docs = parseNyt(await res.text());
+          returned = docs.length;
+          summary.nytReturned += docs.length;
+          for (const a of docs) {
             const tagged = nytTagged(a.persons, c);
+            if (tagged) summary.nytTagged++;
             const m = tagged ? null : match(a.title, a.summary ?? "", { scope: "national" }, a.body);
             if (!tagged && !m?.candidateIds.includes(c.candidateId)) continue;
             summary.nytFound++;
@@ -214,7 +223,8 @@ export async function collectApiNews(opts: {
       } catch (e) {
         error = e instanceof Error ? e.name : "fetch failed";
       }
-      asked.push({ source_key: `nyt:${c.candidateId}`, last_fetched_at: now.toISOString(), last_status: status || null, last_error: error, failures: error ? 1 : 0 });
+      // items_seen: how many articles the NYT returned for this person, so "found nothing" can be told apart from "nothing passed".
+      asked.push({ source_key: `nyt:${c.candidateId}`, last_fetched_at: now.toISOString(), last_status: status || null, last_error: error, failures: error ? 1 : 0, items_seen: returned });
       if (status === 429) break;
     }
   };
