@@ -10,7 +10,7 @@
  */
 import type { Target } from "@/lib/research/targets";
 
-export const PROMPT_VERSION = "synthesis-2026-10-30.r2";
+export const PROMPT_VERSION = "synthesis-2026-10-30.r3";
 
 /** Research instructions: the same for every item and every model, so they are cached. */
 export const RESEARCH_SYSTEM = `You extract facts for ballot.ai, an independent, nonpartisan voter guide.
@@ -72,7 +72,8 @@ export function supportTask(list: string): string {
 }
 
 /** The search step: finds URLs only; code decides which may be used. */
-export function searchTask(kind: "person" | "office" | "measure" | "race", query: string): string {
+export function searchTask(kind: "person" | "office" | "measure" | "race" | "claim", query: string): string {
+  if (kind === "claim") return `Find news articles from established outlets, or official .gov pages, that report these facts:\n${query}\nSearch, then reply "done". Do not summarize anything.`;
   const where =
     kind === "person"
       ? "official .gov pages, the person's Ballotpedia page, their Wikipedia page, and news articles from established outlets, including coverage from the last 60 days (debates, forums, endorsements, recent actions)"
@@ -142,6 +143,7 @@ What may be written without a citation ("refs": []), in race introductions and m
 - How the office or process works: its duties, what a bond is, what a retention vote decides, how the general election works.
 - Stable, widely known background that a civics textbook would state.
 - Connecting sentences that tie cited facts together and explain why they matter to a voter.
+Use these where they help a voter follow the cited facts: a section of nothing but cited facts reads like a list. When a cited fact comes with an explanation its excerpts don't state, write them as 2 sentences: the fact with its refs, then the explanation with "refs": [].
 An uncited sentence adds no new specific fact: no numbers, dates, names of people or organizations, events or claims about a candidate. Keep it descriptive, symmetric across candidates and in the plainest common terms, never either side's framing. If it's specific or time-sensitive, cite it or leave it out.
 The ballot data in the task (names, parties, ballot designations, the office, the election date) is always true and needs no source.
 
@@ -168,7 +170,7 @@ Writing standard: AP Stylebook, with ballot.ai's exceptions, which win over AP:
 
 Highlights:
 - In prose, wrap the 2 or 3 load-bearing phrases of each section in <mark></mark>: the facts a voter most needs. At most 3 per section.
-- Never highlight a judgment, a measure's own name or number, or anything in "Might fit if you…".
+- Never highlight a judgment, a person's name, a party, a measure's own name or number, or anything in "Might fit if you…".
 - In a list, highlight one phrase in every item or in none.
 
 ${STYLE_EXAMPLES}`;
@@ -176,8 +178,13 @@ ${STYLE_EXAMPLES}`;
 const RACE_SECTION_SPECS = `Sections (each has its own job; never repeat a fact across them):
 - context: what's happening in this race: whether the seat is open or contested, the field, and what voters say they care about.
 - whyItMatters: what this office controls, and the conditions that make this cycle different here (a budget shortfall, gas prices, an insurance crisis). No lines that would be true of every office in every state and year.
-- whatsAtStake: the decisions the next officeholder will face here and now: pending issues, deadlines, recent events from the news coverage. Not a list of candidate platforms.
-- bigPicture: where this race fits: the office's recent history (who held it, an open seat, a recent appointment), how the candidates got here (primary results), and what's been happening in the campaign (debates, endorsements, notable coverage). The election's format only if it shaped this race (for example, 2 candidates of the same party). No polls.`;
+- whatsAtStake: the decisions the next officeholder will face here and now: pending issues, deadlines, recent events from the news coverage. Not a list of candidate platforms and not the candidates' résumés.
+- bigPicture: where this race fits: the office's recent history (who held it, an open seat, a recent appointment), how the candidates got here (primary results), and what's been happening in the campaign (debates, endorsements, notable coverage). The election's format only if it shaped this race (for example, 2 candidates of the same party). No polls.
+
+Candidates in the introduction (every section; owner, 2026-10-30): the introduction is about the race, and each candidate's own story is in their profile.
+- In each section, name every candidate or none. When a section names one, give each candidate the same kind of fact (one cited issue each, one cited event each) or write about the issue without names.
+- Never single out one candidate: no identity milestones ("would be the first…"), no one campaign's issue on its own, no résumé lines.
+- bigPicture draws evenly on every candidate's coverage. If the coverage is mostly about one campaign, write about the race as a whole.`;
 
 const MEASURE_SECTION_SPECS = `Official sources only: use only the official documents (the official voter guide, the impartial or legislative analysis, the measure's text). Each answer is 1 to 3 sentences that start with the answer.
 - summary: what the measure would do.
@@ -193,13 +200,13 @@ const MEASURE_SECTION_SPECS = `Official sources only: use only the official docu
 /** The lists (people's first call): education, positions, residence. Code checks each field against its quote. */
 const PERSON_LIST_RULES = PERSON_RULES.replace(/\n\nPlatform:[\s\S]*?(?=\n\nLeave out)/, "");
 
-const PERSON_SECTION_SPECS = `Sources, in order of trust when they disagree: official pages and statements (government sites, the official voter guide, court biographies), then Ballotpedia, then news articles, then the campaign's own site. A campaign site may be used only for the platform (priorities, stances, mightFit).
+const PERSON_SECTION_SPECS = `Sources, in order of trust when they disagree: official pages and statements (government sites, the official voter guide, court biographies), then Ballotpedia, then news articles, then the campaign's own site. A campaign site may be used only for the platform (priorities, stances, mightFit) and the campaign's own list of endorsements.
 
 Leave out, for everyone: family background ("son of…", "first in their family…"), awards and honors, personal anecdotes, campaign slogans, and anything that judges or predicts.
 
-Sections:
-- inBrief: 2 or 3 sentences, each cited, in this order: (1) experience: the offices they held, with durations written as {{years:Pn}} (code fills in the number from that position's years; never write the number yourself); (2) track record: the most-cited fact from their record in office; (3) positioning and platform, attributed to the campaign. You may name their party only as the ballot prints it. Never compare them with other candidates, never use labels ("establishment", "outsider"), rankings ("deepest résumé"), electability, momentum, strengths, criticisms or character judgments.
-- background: narrative prose, 3 to 5 sentences: their path and what they've done recently, including news coverage of their record and this campaign (debates, endorsements, recent actions), with notable facts merged in under one rule for everyone (for example "the first Latino to serve as attorney general"). No family background, awards or anecdotes.
+Sections (never repeat a fact in the same words across sections):
+- inBrief: 2 or 3 sentences, each cited, in this order: (1) experience: the offices they held, each with its duration written as {{years:Pn}} when the checked positions mark it * ("spent {{years:P3}} in the U.S. House"; code fills in the number from that position's years; never write the number yourself); (2) track record: the most-cited fact from their record in office; (3) positioning and platform, attributed to the campaign. You may name their party only as the ballot prints it. Never compare them with other candidates, never use labels ("establishment", "outsider"), rankings ("deepest résumé"), electability, momentum, strengths, criticisms or character judgments.
+- background: narrative prose, 3 to 5 sentences: their path and what they've done recently, in more detail than inBrief and never restating an inBrief sentence, including news coverage of their record and this campaign (debates, endorsements, recent actions), with notable facts merged in under one rule for everyone (for example "the first Latino to serve as attorney general"). No family background, awards or anecdotes.
 - priorities: up to 5 short noun phrases, the priorities the candidate states in their own materials (statement, campaign site, Ballotpedia campaign themes). No "Says…" in front and no topic label in front.
 - stances: up to 5 short phrases, the candidate's stated positions on specific issues, in the same style.
 
@@ -211,7 +218,7 @@ mightFit ("Might fit if you…"): exactly 4 lines when the documents allow, each
 
 timeline: offices, past elections and results, key decisions and track-record events, and this election (debates, primary result, Nov. 3), oldest first. "when" is a year or a date; "event" is a short past-tense phrase.
 
-endorsements: only confirmed, named endorsements a document states, each in one category: Elected Officials, Unions, Advocacy & Industry, or Local Leaders. No "soft" endorsements, no unnamed "leadership".`;
+endorsements: only confirmed, named endorsements a document states (a news report, Ballotpedia, or the campaign's own endorsements page), each in one category: Elected Officials, Unions, Advocacy & Industry, or Local Leaders. No "soft" endorsements, no unnamed "leadership".`;
 
 const JUDGE_SPECS = `This is a judge on the ballot for a retention vote. Write only background (2 to 4 sentences: their path to the bench and their court) and timeline. Leave inBrief, priorities, stances, mightFit and endorsements empty.
 
@@ -242,7 +249,7 @@ export function synthesisTask(t: Target, positions: string[] = [], ballotFacts =
     return `Race: ${t.label}.${field}${ballot}\nWrite the race introduction for this contest only.\n\n${RACE_SECTION_SPECS}`;
   }
   const checked = positions.length
-    ? `Checked positions (write a duration only as {{years:Pn}}, and only for a position listed with both its start and end years; code fills in the number):\n${positions.map((p, i) => `P${i}: ${p}`).join("\n")}`
+    ? `Checked positions (write a duration only as {{years:Pn}}, and only for a position marked *, which has both its years; code fills in the number):\n${positions.map((p, i) => `P${i}: ${p}`).join("\n")}`
     : "Checked positions: none. Don't state durations.";
   return `${who(t)}${ballot}\n${onlyThem(t)}\n\n${checked}\n\n${t.kind === "retention" ? JUDGE_SPECS : PERSON_SECTION_SPECS}`;
 }
@@ -250,7 +257,12 @@ export function synthesisTask(t: Target, positions: string[] = [], ballotFacts =
 /** The single repair pass: only the listed units, with why each failed. */
 export function repairTask(failures: { id: string; text: string; reasons: string[] }[], thin: string[] = []): string {
   const fix = failures.length
-    ? `Some sentences you wrote failed ballot.ai's checks. Rewrite these, following every rule above. Keep what each one says when the documents support it; fix only what the reasons name: reword loaded terms neutrally, attribute claims, cite what needs a source (excerpts copied character for character). If a sentence can't be fixed, leave it out.\n\n${failures
+    ? `Some sentences you wrote failed ballot.ai's checks. Rewrite these, following every rule above. Keep what each one says when the documents support it; fix only what the reasons name: reword loaded terms neutrally, attribute claims, cite what needs a source (excerpts copied character for character).
+- A fact its excerpts don't support: look through every document above, not only the one you cited, for the passage that states it, and cite that.
+- In race introductions and measures, a sentence that joins a cited fact with an explanation the excerpts don't state: split it. Return the fact with its refs under the sentence's id and the explanation, with "refs": [], under "<id>+1" (for example "context.2+1").
+- A section that names one candidate more than another: give each candidate the same kind of cited fact (new sentences "<section>.new<n>") or rewrite the sentence without names.
+- A sentence that repeats another: say something new or leave it out.
+If a sentence can't be fixed, leave it out.\n\n${failures
         .map((f) => `${f.id}: ${f.text}\n  Reasons: ${f.reasons.join("; ")}`)
         .join("\n")}`
     : "";
@@ -260,9 +272,17 @@ export function repairTask(failures: { id: string; text: string; reasons: string
   return [fix, fill].filter(Boolean).join("\n\n");
 }
 
+/**
+ * The source finder (owner, 2026-10-30): sentences the writer's documents didn't support, with documents a
+ * search just found for them. Each is kept only if these documents support it, and goes through every check again.
+ */
+export function rescueTask(failures: { id: string; text: string }[]): string {
+  return `These sentences were left out because the documents they cited don't support them. The documents above were just found for them. For each sentence a document supports, return its id with the sentence, rewritten if needed to say only what the documents support, and refs with excerpts copied character for character from these documents. Follow every rule above. Leave out any sentence these documents don't support.\n\n${failures.map((f) => `${f.id}: ${f.text}`).join("\n")}`;
+}
+
 /** The verifier, synthesis mode: paraphrase and combination are allowed; meaning may not change. */
 export function synthSupportTask(list: string): string {
-  return `For each numbered item, answer supported=true if a careful reader would agree the text is a fair paraphrase, summary or combination of its excerpts (and the ballot data, which is always true). Wording, order and emphasis may differ, and a plain connecting phrase ("which means…") that follows from them is fine. Answer supported=false only if the text states a fact the excerpts don't support, changes a number, name or meaning, or contradicts them.\n\n${list}`;
+  return `For each numbered item, answer supported=true if a careful reader would agree the text is a fair paraphrase, summary or combination of its excerpts (and the ballot data, which is always true). Wording, order and emphasis may differ. Judge the factual claims only: a clause that explains why a fact matters to a voter or connects the facts ("which means…", "which makes this relevant to homeowners"), without adding a new number, name, event or cause, never makes an item unsupported. Answer supported=false only if the text states a fact the excerpts don't support, changes a number, name or meaning, or contradicts them.\n\n${list}`;
 }
 
 export const REVIEW_SYSTEM = `You review text for ballot.ai, an independent, nonpartisan voter guide, against its neutrality rules. You flag; you don't rewrite. Judge only the wording, not whether facts are true.`;
@@ -277,7 +297,8 @@ Flag a unit (with its id and the rule) if it has:
 5. a ranking, a recommendation or advice on how to vote;
 6. generic filler: a sentence that would be just as true of any race, office or year and tells this voter nothing about this race;
 7. for a unit marked (uncited): a specific or time-sensitive claim, a claim about a candidate, or a contested characterization, which would need a source;
-8. a highlight (<mark>) on a judgment or on anything other than a load-bearing fact. When only the highlight is wrong, set highlightOnly=true.
+8. a highlight (<mark>) on a judgment, a name, a party or anything other than a load-bearing fact. When only the highlight is wrong, set highlightOnly=true;
+9. in a race introduction: a fact or framing about one candidate that the section doesn't give the others (an identity milestone, one campaign's issue on its own, a résumé line).
 Return no flags if everything follows the rules.`;
 
 export function reviewTask(context: string, units: { id: string; text: string; uncited?: boolean }[]): string {

@@ -20,6 +20,7 @@ import {
   parityTask,
   personListsTask,
   repairTask,
+  rescueTask,
   reviewTask,
   rewriteTask,
   synthesisTask,
@@ -30,7 +31,11 @@ import { neutralityProblem } from "@/lib/ai/checks";
 import { screenFacts, usedSources } from "./person";
 import { positionLine } from "@/domain/profileFormat";
 import {
+  balanceRace,
   hardFactProblem,
+  lastName,
+  raceImbalance,
+  repeats,
   mightFitProblem,
   personUnits,
   yearsHeld,
@@ -68,7 +73,16 @@ export interface WriteResult {
 }
 
 const reasonOf = (p: string): Rejection["reason"] =>
-  /unknown document/.test(p) ? "unknown source" : /excerpt not found/.test(p) ? "quote not found" : /neutrality|reviewer|In Brief|Might fit/.test(p) ? "neutrality" : "unsupported";
+  /unknown document/.test(p) ? "unknown source" : /excerpt not found/.test(p) ? "quote not found" : /neutrality|reviewer|In Brief|Might fit|unbalanced/.test(p) ? "neutrality" : "unsupported";
+
+/** A unit dropped only for want of support (not for wording): the source finder may find what it needs. */
+const unsupportedOnly = (problems: string[]) => problems.length > 0 && problems.every((p) => /verifier|not in its sources|excerpt not found|unknown document|needs a source/.test(p));
+
+/** Most sentences one search looks for, per item. */
+const MAX_FINDER_CLAIMS = 4;
+
+/** Documents the source finder found for a set of sentences (run.ts searches once and reads them politely). */
+export type FindSources = (claims: string[]) => Promise<{ docs: FetchedDoc[]; spent: number; tried: { url: string; outcome: string }[] }>;
 
 /** The item's own names: always allowed in its prose without an excerpt. */
 function ownNamesFor(t: Target): string[] {
@@ -86,7 +100,7 @@ function thinSections(kind: SynthKind, screened: Screened[], judgeOnly: boolean)
 
 /** A race's candidates by full and last name: an uncited sentence may not be about one of them. */
 function personNamesOf(t: Target): string[] {
-  return (t.candidateNames ?? []).flatMap((n) => [n, n.split(/\s+/).filter((w) => !/^(jr|sr|ii|iii|iv)\.?$/i.test(w)).pop() ?? n]);
+  return (t.candidateNames ?? []).flatMap((n) => [n, lastName(n)]);
 }
 
 /** A measure's own name and number: never highlighted. */
@@ -169,14 +183,24 @@ export function ballotFactsFor(t: Target, electionDate: string): string {
 }
 
 /** Write one item's sections and keep only what passes every check. */
-export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Target; docs: FetchedDoc[]; now: Date; client?: Client; electionDate?: string }): Promise<WriteResult> {
+export async function writeItem(opts: {
+  cfg: AiConfig;
+  setting: Setting;
+  t: Target;
+  docs: FetchedDoc[];
+  now: Date;
+  client?: Client;
+  electionDate?: string;
+  /** The source finder: one search for the sentences still unsupported after the repair pass (owner, 2026-10-30). */
+  findSources?: FindSources;
+}): Promise<WriteResult> {
   const { cfg, setting, t, now, client } = opts;
   const ballotFacts = ballotFactsFor(t, opts.electionDate ?? "Nov. 3, 2026");
   const kind: SynthKind = t.kind === "measure" ? "measure" : t.kind === "race" ? "race" : "person";
   const judgeOnly = t.kind === "retention";
   // Measures: official analyses only (CLAUDE.md).
   const docs = kind === "measure" ? opts.docs.filter((d) => d.meta.official) : opts.docs;
-  const rejected: Rejection[] = [];
+  let rejected: Rejection[] = [];
   const usage: unknown[] = [];
   let spent = 0;
   const empty = (problem?: string): WriteResult => ({ payload: null, sourceIds: [], rejected, spent, usage, raw: null, problem, extra: {} });
@@ -202,7 +226,8 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   }
 
   // The writing call. People get their checked positions as P0, P1… for {{years:Pn}}.
-  const call = { ...base, task: synthesisTask(t, lists?.positions.map(positionLine) ?? [], ballotFacts) };
+  // Positions marked * have both years, so In Brief can state their durations.
+  const call = { ...base, task: synthesisTask(t, lists?.positions.map((p, i) => `${positionLine(p)}${years?.get(`P${i}`) ? " *" : ""}`) ?? [], ballotFacts) };
   const schema = kind === "measure" ? MeasureSynthesis : kind === "race" ? RaceSynthesis : PersonWriting;
   const first = await extract({ ...call, schema });
   spent += first.costMicroUsd;
@@ -222,6 +247,16 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   usage.push(...j1.usage);
   if (j1.problem) return empty(j1.problem);
 
+  // Race intros name every candidate or none, equally, in each section; no sentence repeats another. Both ask for a repair
+  // (rewrite, not cut); what the repair can't fix is settled after it.
+  const field = kind === "race" ? t.candidateNames ?? [] : [];
+  const live = () => screened.filter((s) => !s.problems.length);
+  const imbalance = raceImbalance(live(), field);
+  for (const b of imbalance) {
+    for (const id of b.units) screened.find((s) => s.unit.id === id)?.style.push(`unbalanced: ${b.section} names ${b.over.join(", ")} more than ${b.under.join(", ")}`);
+  }
+  for (const [id, twin] of repeats(live())) screened.find((s) => s.unit.id === id)?.style.push(`repeats ${twin}`);
+
   // One repair attempt for everything that failed (or has a style slip), reusing the cached documents.
   // The same call fills prose sections left empty or thin (owner, 2026-10-30: "some sections feel too thin").
   const needs = screened.filter((s) => s.problems.length || s.style.length);
@@ -238,15 +273,23 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
     usage.push(rep.usage ?? null);
     const byId = new Map(needs.map((s) => [s.unit.id, s]));
     const next = new Map<string, number>();
+    const open = new Set([...thin, ...imbalance.map((b) => b.section)]);
     for (const r of rep.data?.units ?? []) {
       const orig = byId.get(r.id);
       if (orig && !repaired.has(r.id)) {
         repaired.set(r.id, screenUnit({ ...orig.unit, text: r.text, refs: r.refs }, ctx));
         continue;
       }
-      // A new sentence for a thin section: "<section>.new<n>".
+      // A split: the explanation half of a sentence, "<id>+1", right after it.
+      const base = /^(.+)\+1$/.exec(r.id)?.[1];
+      const from = base ? byId.get(base) : undefined;
+      if (from && !added.some((a) => a.unit.id === r.id)) {
+        added.push(screenUnit({ ...from.unit, id: r.id, text: r.text, refs: r.refs }, ctx));
+        continue;
+      }
+      // A new sentence for a thin or unbalanced section: "<section>.new<n>".
       const section = /^(\w+)\.new\d+$/.exec(r.id)?.[1];
-      if (!section || !thin.includes(section)) continue;
+      if (!section || !open.has(section)) continue;
       const n = next.get(section) ?? screened.filter((x) => x.unit.section === section).length;
       next.set(section, n + 1);
       const unit: Unit = { id: `${section}.${n}`, section, kind: LIST_SECTIONS.has(section) ? "list" : "prose", text: r.text, refs: r.refs };
@@ -261,7 +304,13 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
     if (j2.problem) return empty(j2.problem);
   }
 
-  const kept: Screened[] = [];
+  let kept: Screened[] = [];
+  // Sentences dropped only for want of support, in their latest version: the source finder's input.
+  const unsupported: Screened[] = [];
+  const reject = (s: Screened) => {
+    for (const p of s.problems) rejected.push({ field: s.unit.id, reason: reasonOf(p), detail: p, text: stripMarks(s.text) });
+    if (unsupportedOnly(s.problems)) unsupported.push(s);
+  };
   for (const s of screened) {
     if (!s.problems.length && !s.style.length) {
       kept.push(s);
@@ -269,15 +318,82 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
     }
     const r = repaired.get(s.unit.id);
     if (r && !r.problems.length) kept.push(r);
-    else if (!s.problems.length) kept.push(s); // style only: never dropped
-    else for (const p of s.problems) rejected.push({ field: s.unit.id, reason: reasonOf(p), detail: p, text: stripMarks(s.text) });
+    else if (!s.problems.length) kept.push(s); // style only: never dropped here
+    else reject(r ?? s);
   }
+  // A split's explanation stays only with its fact (which the source finder may still rescue).
+  const splitOf = (s: Screened) => /^(.+)\+1$/.exec(s.unit.id)?.[1];
+  const orphans: Screened[] = [];
   for (const s of added) {
-    if (!s.problems.length) kept.push(s);
-    else for (const p of s.problems) rejected.push({ field: s.unit.id, reason: reasonOf(p), detail: p, text: stripMarks(s.text) });
+    if (s.problems.length) reject(s);
+    else if (splitOf(s) && !kept.some((k) => k.unit.id === splitOf(s))) orphans.push(s);
+    else kept.push(s);
   }
 
-  const shaped = shapeSections(kind, kept, { measureNames: kind === "measure" ? measureNamesFor(t) : [], judge: judgeOnly });
+  // The source finder (owner, 2026-10-30): one search for what's still unsupported, then the same checks on what it finds.
+  // Measures use official documents only, so they never search.
+  const allDocs = [...docs];
+  let finder: { tried: { url: string; outcome: string }[]; rescued: string[] } | undefined;
+  if (opts.findSources && kind !== "measure" && unsupported.length) {
+    const pick = unsupported.filter((s) => s.unit.kind !== "endorsement").slice(0, MAX_FINDER_CLAIMS);
+    const found = pick.length ? await opts.findSources(pick.map((s) => stripMarks(s.text))) : { docs: [], spent: 0, tried: [] };
+    spent += found.spent;
+    finder = { tried: found.tried, rescued: [] };
+    const fresh = found.docs.map((d, i) => ({ ...d, id: `D${docs.length + i + 1}` }));
+    if (fresh.length) {
+      for (const d of fresh) docMap.set(d.id, d);
+      allDocs.push(...fresh);
+      const res = await extract({
+        model: setting.model,
+        effort: setting.effort,
+        system: SYNTH_SYSTEM,
+        schema: Rewrite,
+        task: rescueTask(pick.map((s) => ({ id: s.unit.id, text: stripMarks(s.text) }))),
+        docs: fresh.map((d) => ({ id: d.id, title: d.meta.title, url: d.meta.url, text: d.text })),
+        maxTokens: 8000,
+        timeoutMs: 120_000,
+        client,
+      });
+      spent += res.costMicroUsd;
+      usage.push(res.usage ?? null);
+      const back = (res.data?.units ?? [])
+        .map((r) => {
+          const s = pick.find((x) => x.unit.id === r.id);
+          return s && r.refs.length ? screenUnit({ ...s.unit, text: r.text, refs: r.refs }, ctx) : null;
+        })
+        .filter((s): s is Screened => !!s && !s.problems.length);
+      const j3 = await judge(back, { cfg, client, context, ballotFacts });
+      spent += j3.spent;
+      usage.push(...j3.usage);
+      if (!j3.problem) {
+        for (const s of back.filter((x) => !x.problems.length)) {
+          kept.push(s);
+          finder.rescued.push(s.unit.id);
+        }
+        rejected = rejected.filter((r) => !finder!.rescued.includes(r.field));
+      }
+    }
+  }
+
+  for (const s of orphans) if (kept.some((k) => k.unit.id === splitOf(s))) kept.push(s);
+
+  // Back in the order written (a split right after its fact, new sentences last).
+  const at = new Map(screened.map((s, i) => [s.unit.id, i]));
+  const order = (id: string) => (at.has(id) ? at.get(id)! : at.has(id.replace(/\+1$/, "")) ? at.get(id.replace(/\+1$/, ""))! + 0.5 : 1e6);
+  kept = kept.map((s, i) => ({ s, i })).sort((a, b) => order(a.s.unit.id) - order(b.s.unit.id) || a.i - b.i).map((x) => x.s);
+
+  // What the repair couldn't settle: an intro section still unbalanced loses its extra mentions; a sentence that still repeats another goes.
+  if (field.length > 1) {
+    const b = balanceRace(kept, field);
+    kept = b.kept;
+    for (const d of b.dropped) rejected.push({ field: d.item.unit.id, reason: "neutrality", detail: d.reason, text: stripMarks(d.item.text) });
+  }
+  const twins = repeats(kept);
+  for (const s of kept.filter((k) => twins.has(k.unit.id))) rejected.push({ field: s.unit.id, reason: "repeat", detail: `repeats ${twins.get(s.unit.id)}`, text: stripMarks(s.text) });
+  kept = kept.filter((k) => !twins.has(k.unit.id));
+
+  const markNames = kind === "race" ? personNamesOf(t) : t.personName ? [t.personName, lastName(t.personName)] : [];
+  const shaped = shapeSections(kind, kept, { measureNames: kind === "measure" ? measureNamesFor(t) : [], names: markNames, judge: judgeOnly });
   const refSources = kept.flatMap((s) => s.refs.map((r) => r.source));
   let payload: WriteResult["payload"];
   let listSources: string[] = [];
@@ -304,9 +420,17 @@ export async function writeItem(opts: { cfg: AiConfig; setting: Setting; t: Targ
   } else if (kind === "race") payload = { kind: "race", v: 1, sections: shaped.sections, limited: shaped.limited, sources: {} };
   else payload = { kind: "measure", v: 2, sections: shaped.sections, limited: shaped.limited, sources: {} };
   const sourceIds = [...new Set([...listSources, ...refSources])];
-  payload.sources = usedSources(docs, sourceIds);
+  payload.sources = usedSources(allDocs, sourceIds);
   const leftOut = listsRaw ? listsRaw.leftOut.slice(0, 10) : undefined;
-  return { payload, sourceIds, rejected, spent, usage, raw: listsRaw ? { lists: listsRaw, writing: data } : data, extra: { leftOut, conflicts: lists?.conflicts, repaired: repaired.size } };
+  return {
+    payload,
+    sourceIds,
+    rejected,
+    spent,
+    usage,
+    raw: listsRaw ? { lists: listsRaw, writing: data } : data,
+    extra: { leftOut, conflicts: lists?.conflicts, repaired: repaired.size, ...(finder ? { finder } : {}) },
+  };
 }
 
 /**

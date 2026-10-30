@@ -36,13 +36,13 @@ import type { Resolver } from "@/lib/feeds/safeFetch";
 import { logEvent } from "@/lib/observability/log";
 import { focusText, getDocument, REREAD_AFTER_MS, type Fetched, type FetchDeps } from "./fetch";
 import { ballotpediaCampaignSite, isBallotpedia, isGov, isVettedNews, isWikipedia, searchUrls } from "./search";
-import { buildTargets, pdfHostOk, taskFor, type ContestRow, type Target, type TargetPage } from "./targets";
+import { buildTargets, ENDORSEMENT_FOLLOW, pdfHostOk, taskFor, type ContestRow, type Target, type TargetPage } from "./targets";
 import { findLinkEntries } from "./text";
 import { TIER_RANK } from "./person";
 import { buildPayload, payloadIsEmpty, screenOffice, type FetchedDoc, type Payload, type Rejection, type SourceTier } from "./verify";
 import { runSet } from "./runSet";
 import type { PersonPayloadV3 } from "./synthesis";
-import { parityPass, writeItem } from "./write";
+import { parityPass, writeItem, type FindSources } from "./write";
 
 type Db = SupabaseClient<Database>;
 
@@ -54,8 +54,16 @@ const MAX_TOTAL_CHARS = 240_000; // ~60K tokens: under Haiku's 100K-token price 
 /** Articles the news feed matched to a race or candidate (round 2, owner 2026-10-30): newest first, this recent. */
 const FEED_ARTICLES = { race: 4, person: 3 } as const;
 const FEED_WINDOW_DAYS = 75;
-/** Bump when the search queries change, so the shared search runs again instead of reusing last week's results. */
-const SEARCH_VERSION = 2;
+/**
+ * The document set's version: bump it to gather every set again. A set from
+ * SEARCH_QUERY_VERSION on keeps its search results (the queries haven't
+ * changed since); round 3 (v3) follows campaign endorsement pages.
+ */
+const SEARCH_VERSION = 3;
+/** Bump when the search queries change, so the search itself runs again instead of reusing last week's results. */
+const SEARCH_QUERY_VERSION = 2;
+/** The source finder reads at most this many pages, each narrowed to the sentences it looks for. */
+const FINDER = { pages: 3, chars: 8000 } as const;
 const MAX_FOLLOW = 4;
 const SEARCH_TTL_MS = 7 * 24 * 3600_000;
 const RECHECK_MS = 6 * 3600_000;
@@ -190,6 +198,8 @@ interface SearchCache {
   at: string;
   /** Articles the news feed matched to this target, when the set was gathered (every setting reads the same ones). */
   feed?: { url: string; publisher: string }[];
+  /** The campaign site's endorsement pages (round 3). */
+  campaignPages?: string[];
 }
 
 /** Waits for a busy site before running anyway with what's there. */
@@ -219,11 +229,12 @@ async function prepareShared(
     .from("research_state")
     .upsert({ key, target: { kind: "documents", of: t.key } as Json, next_check_at: "2999-01-01T00:00:00Z", locked_until: new Date(now.getTime() + SHARED_LOCK_MS).toISOString() }, { onConflict: "key" });
   const searchedAt = cached?.searchedAt ?? cached?.at;
-  if (!t.search || (cached && searchedAt && current && now.getTime() - Date.parse(searchedAt) < SEARCH_TTL_MS)) {
+  const queriesCurrent = (cached?.v ?? 1) >= SEARCH_QUERY_VERSION;
+  if (!t.search || (cached && searchedAt && queriesCurrent && now.getTime() - Date.parse(searchedAt) < SEARCH_TTL_MS)) {
     return { cache: cached ?? null, owner: true, cost: 0 };
   }
   const res = await searchUrls({ kind: t.search.kind, query: t.search.query, mustMention: t.search.mustMention, client: deps.client });
-  return { cache: { v: SEARCH_VERSION, urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], searchedAt: now.toISOString(), at: now.toISOString() }, owner: true, cost: res.costMicroUsd };
+  return { cache: { v: cached?.v, urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], searchedAt: now.toISOString(), at: now.toISOString() }, owner: true, cost: res.costMicroUsd };
 }
 
 async function releaseShared(db: Db, t: Target, now: Date, cache: SearchCache | null) {
@@ -301,7 +312,7 @@ async function gatherDocuments(
   cache: SearchCache | null,
   owner = true,
   maxAgeMs = REREAD_AFTER_MS,
-): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; refs: string[]; feed: { url: string; publisher: string }[]; busy: number; tried: Tried[] }> {
+): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; refs: string[]; feed: { url: string; publisher: string }[]; campaignPages: string[]; busy: number; tried: Tried[] }> {
   const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
   const got: { f: Fetched; page: TargetPage }[] = [];
   const seen = new Set<string>();
@@ -333,8 +344,9 @@ async function gatherDocuments(
 
   // 1. Registry pages (official guides, county page, campaign site from an official filing), and the links they point to.
   const follow: TargetPage[] = [];
-  // The job gathering the shared set reads the pages afresh when it has no list of links to follow yet.
-  const needHtml = owner && t.follow.length > 0 && !cache?.followed?.length;
+  // The job gathering the shared set reads the pages afresh when it has no list of links to follow yet (or an older set's list).
+  const stale = (cache?.v ?? 1) < SEARCH_VERSION;
+  const needHtml = owner && t.follow.length > 0 && (!cache?.followed?.length || stale);
   for (const p of t.pages) {
     const r = await read(p, needHtml);
     if (!r?.html || !t.follow.length) continue;
@@ -363,7 +375,13 @@ async function gatherDocuments(
     if (r?.html && isBallotpedia(h)) campaign = ballotpediaCampaignSite(r.html) ?? campaign;
   }
   for (const u of refs) await read({ url: u, official: isGovHost(u), publisher: new URL(u).hostname });
-  if (campaign && t.kind === "candidate") await read({ url: campaign, official: false });
+  // The campaign site, and its endorsement pages (round 3): the campaign's own list, for the Endorsements section.
+  let campaignPages: string[] = stale ? [] : cache?.campaignPages ?? [];
+  if (campaign && t.kind === "candidate") {
+    const home = await read({ url: campaign, official: false }, owner && (stale || !cache?.campaignPages));
+    if (home?.html && owner) campaignPages = findLinkEntries(home.html, home.url, ENDORSEMENT_FOLLOW).map((l) => l.url).slice(0, 2);
+    for (const u of campaignPages) await read({ url: u, official: false });
+  }
 
   // 3. News coverage the feed already matched to this race or person (vetted outlets only; never for measures).
   const feed = cache?.feed && !owner ? cache.feed : owner ? await feedArticles(deps.db, t, deps.now) : cache?.feed ?? [];
@@ -387,7 +405,48 @@ async function gatherDocuments(
       meta: { url: f.url, title: f.title, publisher: page.publisher ?? new URL(f.url).hostname, official: tier === "official", fetchedAt: f.fetchedAt, tier },
     });
   }
-  return { docs, campaign, followed, refs, feed, busy, tried };
+  return { docs, campaign, followed, refs, feed, campaignPages, busy, tried };
+}
+
+/** Words worth narrowing a found page to: the sentences' names and longer words, and the target's own. */
+function finderTerms(t: Target, claims: string[]): string[] {
+  const words = claims.flatMap((c) => c.match(/\b[A-Z][\p{L}'-]{3,}\b/gu) ?? []);
+  return [...new Set([...t.focus, ...words])].slice(0, 20);
+}
+
+/**
+ * The source finder (owner, 2026-10-30): one search for the sentences an
+ * item's documents didn't support, then those pages read politely and
+ * narrowed to them. Only .gov, Ballotpedia and vetted news are kept
+ * (search.ts); write.ts checks every sentence against them like any source.
+ * The query is the model's own sentences about public candidates and races:
+ * never an address or anything from a visitor.
+ */
+function sourceFinder(deps: ResearchDeps & { now: Date }, t: Target, have: FetchedDoc[]): FindSources {
+  const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
+  const known = new Set(have.map((d) => d.meta.url));
+  return async (claims) => {
+    const res = await searchUrls({ kind: "claim", query: claims.map((c, i) => `${i + 1}. ${c}`).join("\n"), maxUses: 1, client: deps.client });
+    const tried: Tried[] = [];
+    const docs: FetchedDoc[] = [];
+    for (const url of res.urls.filter((u) => !known.has(u)).slice(0, FINDER.pages)) {
+      const official = isGovHost(url);
+      const tier = tierFor(url, official);
+      const r = await getDocument(fdeps, url, { official, publisher: new URL(url).hostname, sourceType: tier === "ballotpedia" ? "civic" : tier });
+      if ("skipped" in r) {
+        tried.push({ url, outcome: r.skipped });
+        continue;
+      }
+      tried.push({ url, outcome: "read (source finder)" });
+      docs.push({
+        id: "",
+        sourceId: r.sourceId,
+        text: focusText(r.text, finderTerms(t, claims), FINDER.chars),
+        meta: { url: r.url, title: r.title, publisher: new URL(r.url).hostname, official: tier === "official", fetchedAt: r.fetchedAt, tier },
+      });
+    }
+    return { docs, spent: res.costMicroUsd, tried };
+  };
 }
 
 function inputHash(t: Target, setting: Setting, docs: FetchedDoc[], extra: string[] = []): string {
@@ -474,7 +533,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
     await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000, failures: state.failures });
     return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
   }
-  const { docs, campaign, followed, refs, feed, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner, maxAge);
+  const { docs, campaign, followed, refs, feed, campaignPages, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner, maxAge);
   await recordSpend(db, now, shared.cost);
   // A site was too busy to read right now: wait and try again rather than run on fewer documents
   // (after a few tries, run with what's there).
@@ -493,6 +552,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
       campaign,
       followed: followed.length ? followed : shared.cache?.followed ?? [],
       refs,
+      campaignPages,
       searchedAt: shared.cache?.searchedAt ?? shared.cache?.at,
       at: now.toISOString(),
     });
@@ -663,7 +723,7 @@ async function synthesizeOne(
   run: { runId: string | null; field: string; started: number },
 ): Promise<{ outcome: "published" | "held" | "compared" | "failed"; spent: number; problem?: string }> {
   const { db, now } = deps;
-  const w = await writeItem({ cfg, setting, t, docs, now, client: deps.client, electionDate: apDate(deps.electionSlug ?? "2026-11-03") });
+  const w = await writeItem({ cfg, setting, t, docs, now, client: deps.client, electionDate: apDate(deps.electionSlug ?? "2026-11-03"), findSources: sourceFinder(deps, t, docs) });
   let spent = w.spent;
   const usage = [...w.usage];
   let parityProblem: string | undefined;

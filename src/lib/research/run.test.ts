@@ -600,4 +600,108 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
     expect(row.payload.parity.unresolved).toEqual([]);
     expect(calls).toEqual(["write", "verify", "review", "repair", "verify", "review", "review", "rewrite", "verify", "review"]);
   });
+
+  it("races (round 3): a section naming one candidate gets the other's counterpart, and the source finder rescues an unsupported sentence", async () => {
+    const now = new Date("2026-10-29T07:00:00Z");
+    const PAGE = `<html><body><main><h1>City election</h1>
+<p>Ann Bee says she will expand bus service. Cy Cole says he will repave Main Street.</p>
+<p>The mayor prepares the city budget.</p>
+${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></html>`;
+    const ARTICLE = `<html><body><main><h1>Springfield budget</h1>
+<p>Springfield's budget grew by 40% this year, the city said.</p>
+${"<p>More of the article, for length.</p>".repeat(8)}</main></body></html>`;
+    const fetchRound3 = vi.fn(async (url: string) => {
+      if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
+      if (url.startsWith("https://www.springfield.il.gov/elections")) return new Response(PAGE, { status: 200, headers: { "content-type": "text/html" } });
+      if (url.startsWith("https://calmatters.org/politics/2026/10/springfield-budget/")) return new Response(ARTICLE, { status: 200, headers: { "content-type": "text/html" } });
+      return new Response("not found", { status: 404, headers: { "content-type": "text/html" } });
+    });
+    const person = { kind: "person", v: 3, education: [], positions: [], sections: {}, mightFit: [], timeline: [], endorsements: [], limited: [], sources: {} };
+    const field = `profile@${SETTING}`;
+    const fake = fakeDb(
+      {
+        contests: candidateContests,
+        research_state: [{ key: `${RKEY}#search`, target: {}, discovered: { v: 3, urls: ["https://www.springfield.il.gov/elections"], at: now.toISOString(), searchedAt: now.toISOString() }, failures: 0 }],
+        synthesized_field_versions: [
+          { target_type: "candidate", target_id: "k-bee", field_name: field, is_current: true, content: "a", payload: person },
+          { target_type: "candidate", target_id: "k-cole", field_name: field, is_current: true, content: "b", payload: person },
+        ],
+      },
+      () => now,
+    );
+    const D1 = (excerpt: string) => [{ sourceId: "D1", excerpt }];
+    const calls: string[] = [];
+    const parse = vi.fn(async (req: Req) => {
+      const kind = kindOf(req);
+      const task = textOf(req.messages[req.messages.length - 1]);
+      const label = task.includes("were just found for them") ? "rescue" : kind;
+      calls.push(label);
+      if (kind === "verify") return { stop_reason: "end_turn", usage, parsed_output: allSupported(req) };
+      if (kind === "review") return { stop_reason: "end_turn", usage, parsed_output: { flags: [] } };
+      if (label === "rescue") {
+        // Only the found article is sent, and only the sentence its documents didn't support.
+        expect(textOf(req.messages[0])).toContain('<document id="D2"');
+        expect(task).toContain("bigPicture.0: Springfield's budget grew by 40% this year.");
+        return { stop_reason: "end_turn", usage, parsed_output: { units: [{ id: "bigPicture.0", text: "Springfield's budget grew by 40% this year.", refs: [{ sourceId: "D2", excerpt: "Springfield's budget grew by 40% this year" }] }] } };
+      }
+      if (kind === "repair") {
+        expect(task).toContain("unbalanced: context names Ann Bee more than Cy Cole");
+        expect(task).toContain("number 40 not in its sources");
+        return { stop_reason: "end_turn", usage, parsed_output: {
+            units: [
+              { id: "context.new1", text: "Cy Cole says he will repave Main Street.", refs: D1("Cy Cole says he will repave Main Street.") },
+              // A split: the explanation half, kept with its fact (rescued below).
+              { id: "bigPicture.0+1", text: "That growth gives the next mayor more to decide.", refs: [] },
+            ],
+          },
+        };
+      }
+      return {
+        stop_reason: "end_turn",
+        usage,
+        parsed_output: {
+          sections: [
+            { section: "context", sentences: [{ text: "Ann Bee says she will expand bus service.", refs: D1("Ann Bee says she will expand bus service.") }] },
+            { section: "whyItMatters", sentences: [{ text: "The mayor prepares the city budget.", refs: D1("The mayor prepares the city budget.") }, { text: "That budget sets what the city can spend.", refs: [] }] },
+            { section: "whatsAtStake", sentences: [{ text: "The next mayor prepares the city budget.", refs: D1("The mayor prepares the city budget.") }, { text: "The budget decides which city services grow.", refs: [] }] },
+            { section: "bigPicture", sentences: [{ text: "Springfield's budget grew by 40% this year.", refs: D1("The mayor prepares the city budget.") }, { text: "A bigger budget means more choices for the next mayor.", refs: [] }] },
+          ],
+        },
+      };
+    });
+    // One search for what's still unsupported; only vetted outlets, .gov and Ballotpedia are kept.
+    const create = vi.fn(async (req: { tools: { max_uses: number }[]; messages: Msg[] }) => {
+      expect(req.tools[0].max_uses).toBe(1);
+      expect(textOf(req.messages[0])).toContain("1. Springfield's budget grew by 40% this year.");
+      return {
+        content: [
+          {
+            type: "web_search_tool_result",
+            content: [
+              { type: "web_search_result", url: "https://calmatters.org/politics/2026/10/springfield-budget/", title: "Springfield budget" },
+              { type: "web_search_result", url: "https://someblog.example.com/budget", title: "Budget" },
+            ],
+          },
+        ],
+        usage: { input_tokens: 1000, output_tokens: 50, server_tool_use: { web_search_requests: 1 } },
+      };
+    });
+    const deps = { db: fake.db, electionId: "e1", config: compareCfg, client: { messages: { parse, create } } as never, fetchImpl: fetchRound3 as never, resolve: resolve as never, sleep: async () => {}, compareKeys: [RKEY], now };
+    await dispatch({ ...deps, runRemote: async () => {} });
+    expect((await runJob(deps, `${RKEY}@${SETTING}`)).outcome).toBe("compared");
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(fetchRound3.mock.calls.some((c) => String(c[0]).includes("someblog"))).toBe(false);
+    const row = (fake.tables.synthesized_field_versions as { target_type: string; payload: { sections: Record<string, { text: string; refs: { source: string }[] }[]>; sources: Record<string, { url: string }> } }[]).find((r) => r.target_type === "race")!;
+    expect(row.payload.sections.context.map((s) => s.text)).toEqual(["Ann Bee says she will expand bus service.", "Cy Cole says he will repave Main Street."]);
+    expect(row.payload.sections.bigPicture.map((s) => s.text)).toEqual(["Springfield's budget grew by 40% this year.", "That growth gives the next mayor more to decide.", "A bigger budget means more choices for the next mayor."]);
+    // The rescued sentence cites the found article, which is listed with the race's sources.
+    expect(Object.values(row.payload.sources).map((x) => x.url)).toContain("https://calmatters.org/politics/2026/10/springfield-budget/");
+    // whatsAtStake repeats whyItMatters' cited sentence: it goes.
+    expect(row.payload.sections.whatsAtStake.map((s) => s.text)).toEqual(["The budget decides which city services grow."]);
+    const run = (fake.tables.synthesis_runs as { target_type: string; metadata: { rejected: { field: string; reason: string }[]; finder: { rescued: string[] } } }[]).find((r) => r.target_type === "race")!;
+    expect(run.metadata.finder.rescued).toEqual(["bigPicture.0"]);
+    expect(run.metadata.rejected.map((r) => r.field)).not.toContain("bigPicture.0");
+    expect(run.metadata.rejected).toEqual(expect.arrayContaining([expect.objectContaining({ field: "whatsAtStake.0", reason: "repeat" })]));
+    expect(calls).toEqual(["write", "verify", "review", "repair", "verify", "review", "rescue", "verify", "review", "review"]);
+  });
 });

@@ -406,12 +406,13 @@ export function yearsHeld(verified: Pick<StoredPositionV2, "startYear" | "endYea
 
 const EVALUATIVE = /\b(historic|landmark|sweeping|major|massive|huge|critical|crucial|key|important|significant|controversial|radical|extreme|bold|failed|successful|popular|unpopular|strong|weak|best|worst|leading)\b/i;
 
-/** Marks that break a rule are stripped (the text stays). */
-function stripBadMarks(text: string, measureNames: string[]): string {
+/** Marks that break a rule are stripped (the text stays): judgments, a measure's own name or number, a person's name, a party. */
+function stripBadMarks(text: string, measureNames: string[], names: string[] = []): string {
   return text.replace(/<mark>([\s\S]*?)<\/mark>/g, (m, inner: string) => {
     if (EVALUATIVE.test(inner) || neutralityProblem(inner)) return inner;
     const n = normalizeForQuote(inner);
     if (measureNames.some((x) => x && (n === normalizeForQuote(x) || n.includes(normalizeForQuote(x))))) return inner;
+    if (PARTY.test(inner) || names.some((x) => x.length > 2 && wordIn(normalizeForQuote(x), n))) return inner;
     return m;
   });
 }
@@ -432,6 +433,90 @@ export function sectionMarks(list: { text: string }[]): number {
   return list.reduce((n, s) => n + markCount(s.text), 0);
 }
 
+/* ---------- Balance and repetition ---------- */
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A candidate's last name as prose uses it ("Xavier Becerra Jr." → "Becerra"). */
+export const lastName = (full: string) => full.split(/\s+/).filter((w) => !/^(jr|sr|ii|iii|iv)\.?$/i.test(w)).pop() ?? full;
+
+/** Does the sentence name this candidate (full or last name, as a capitalized word)? */
+const namesIn = (text: string, full: string) => new RegExp(`(^|[^\\p{L}])(${escapeRe(full)}|${escapeRe(lastName(full))})(?![\\p{L}])`, "u").test(stripMarks(text));
+
+/**
+ * Race intros name every candidate or none, the same number of times, in
+ * each section (owner, 2026-10-30: "the Governor big picture section is
+ * basically all about Hilton"). For each unbalanced section: the units naming
+ * a candidate who is named more than another (a sentence naming everyone is
+ * balanced), and the candidates named least. Pure.
+ */
+export function raceImbalance(units: { unit: { id: string; section: string }; text: string }[], candidates: string[]): { section: string; over: string[]; under: string[]; units: string[] }[] {
+  if (candidates.length < 2) return [];
+  const out: { section: string; over: string[]; under: string[]; units: string[] }[] = [];
+  for (const section of new Set(units.map((u) => u.unit.section))) {
+    const list = units.filter((u) => u.unit.section === section);
+    const count = candidates.map((c) => list.filter((u) => namesIn(u.text, c)).length);
+    const min = Math.min(...count);
+    if (count.every((n) => n === min)) continue;
+    const over = candidates.filter((_, i) => count[i] > min);
+    out.push({
+      section,
+      over,
+      under: candidates.filter((_, i) => count[i] === min),
+      units: list.filter((u) => over.some((c) => namesIn(u.text, c)) && !candidates.every((c) => namesIn(u.text, c))).map((u) => u.unit.id),
+    });
+  }
+  return out;
+}
+
+/**
+ * The last resort after the repair pass: in each unbalanced section, drop the
+ * latest sentence naming a candidate named most, until the counts match.
+ * Returns what stays and what was dropped. Pure.
+ */
+export function balanceRace<T extends { unit: { id: string; section: string }; text: string }>(kept: T[], candidates: string[]): { kept: T[]; dropped: { item: T; reason: string }[] } {
+  let list = [...kept];
+  const dropped: { item: T; reason: string }[] = [];
+  for (let guard = 0; guard < 40; guard++) {
+    const bad = raceImbalance(list, candidates)[0];
+    if (!bad) break;
+    const id = bad.units[bad.units.length - 1];
+    const item = list.find((x) => x.unit.id === id);
+    if (!item) break;
+    list = list.filter((x) => x !== item);
+    dropped.push({ item, reason: `unbalanced: ${bad.section} names ${bad.over.join(", ")} more than ${bad.under.join(", ")}` });
+  }
+  return { kept: list, dropped };
+}
+
+const contentWords = (t: string) => new Set(factText(t).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 || /^\d+$/.test(w)));
+
+/**
+ * Sentences that say what an earlier one already says (round 2: In Brief and
+ * Background repeating each other): most of their content words are in one
+ * earlier prose or list sentence. Returns repeat id → the earlier id. Pure.
+ */
+export function repeats(units: { unit: { id: string; kind: string }; text: string }[]): Map<string, string> {
+  const out = new Map<string, string>();
+  const seen: { id: string; words: Set<string> }[] = [];
+  for (const u of units) {
+    if (u.unit.kind !== "prose" && u.unit.kind !== "list") continue;
+    const words = contentWords(u.text);
+    if (words.size >= 5) {
+      const twin = seen.find((x) => {
+        const shared = [...words].filter((w) => x.words.has(w)).length;
+        return shared / Math.min(words.size, x.words.size) >= 0.75;
+      });
+      if (twin) {
+        out.set(u.unit.id, twin.id);
+        continue;
+      }
+    }
+    seen.push({ id: u.unit.id, words });
+  }
+  return out;
+}
+
 /* ---------- Shaping a payload ---------- */
 
 /** Most units per section, the same for every item of a kind. */
@@ -442,6 +527,8 @@ const PROSE_MARKS = 3;
 export interface ShapeOptions {
   /** A measure's own name and number: never highlighted. */
   measureNames?: string[];
+  /** People's names (the candidate; a race's candidates): never highlighted. */
+  names?: string[];
   /** Judges: background and timeline only. */
   judge?: boolean;
 }
@@ -481,7 +568,7 @@ export function shapeSections(kind: SynthKind, kept: Screened[], opts: ShapeOpti
       });
     }
     list = list.slice(0, SECTION_MAX[name] ?? PROSE_MAX);
-    const stored = list.map((s) => ({ text: stripBadMarks(s.text, opts.measureNames ?? []), refs: s.refs }));
+    const stored = list.map((s) => ({ text: stripBadMarks(s.text, opts.measureNames ?? [], opts.names), refs: s.refs }));
     if (name === "mightFit") mightFit.push(...list.map((s, i) => ({ text: stripMarks(stored[i].text), refs: s.refs, issue: s.unit.issue ?? "" })));
     else if (name === "timeline") timeline.push(...list.map((s, i) => ({ text: stripMarks(stored[i].text), refs: s.refs, when: cleanText(s.unit.when ?? "", 40) })));
     else if (name === "endorsements") endorsements.push(...list.map((s) => ({ name: s.text, category: s.unit.category as (typeof ENDORSEMENT_CATEGORIES)[number], refs: s.refs })));
