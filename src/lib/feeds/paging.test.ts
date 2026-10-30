@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialPages, nextPage, targetKey } from "./paging";
+import { initialPages, nextPage, pageFor, targetKey } from "./paging";
 
 const row = (id: string, at: string, contests: string[], type = "news") => ({ id, type, published_at: at, contest_ids: contests });
 
@@ -28,5 +28,16 @@ describe("news paging", () => {
 
   it("keeps races and candidates apart", () => {
     expect(targetKey({ contestId: "gov" })).not.toBe(targetKey({ candidateId: "gov" }));
+  });
+
+  it("treats a candidate as complete once their race is, without asking again", () => {
+    const pages = initialPages([row("a", "2026-10-29T10:00:00Z", ["gov"])], ["gov", "busy"], 1);
+    pages.set(targetKey({ contestId: "busy" }), { cursor: { at: "2026-10-01T00:00:00Z", id: "z" }, done: false });
+    // "gov" came back short, so it's done; "busy" still has older stories.
+    expect(pageFor(new Map([[targetKey({ contestId: "gov" }), { cursor: null, done: true }]]), { candidateId: "becerra", contestId: "gov" })).toEqual({ cursor: null, done: true });
+    expect(pageFor(pages, { candidateId: "kim", contestId: "busy" })).toBeUndefined();
+    // A candidate's own pages win once it has some.
+    pages.set(targetKey({ candidateId: "kim" }), { cursor: null, done: true });
+    expect(pageFor(pages, { candidateId: "kim", contestId: "busy" })).toEqual({ cursor: null, done: true });
   });
 });

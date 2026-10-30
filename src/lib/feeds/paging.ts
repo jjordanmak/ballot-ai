@@ -28,7 +28,9 @@ interface PagedRow {
   contest_ids: string[];
 }
 
-export const targetKey = (t: { contestId?: string; candidateId?: string }) => (t.candidateId ? `c:${t.candidateId}` : `r:${t.contestId}`);
+type Target = { contestId?: string; candidateId?: string };
+
+export const targetKey = (t: Target) => (t.candidateId ? `c:${t.candidateId}` : `r:${t.contestId}`);
 
 /** Newest first, ties by id (the order `ballot_feed` and `feed_page` use). */
 const newer = (a: PagedRow, b: PagedRow) => b.published_at.localeCompare(a.published_at) || b.id.localeCompare(a.id);
@@ -51,4 +53,15 @@ export function initialPages(rows: PagedRow[], contestIds: Iterable<string>, pag
 export function nextPage(rows: PagedRow[], pageSize = FEED_PAGE): PageState {
   const last = [...rows].sort(newer)[rows.length - 1];
   return { cursor: last ? { at: last.published_at, id: last.id } : null, done: rows.length < pageSize };
+}
+
+/**
+ * A target's paging state. Every story tagged with a candidate is also tagged
+ * with their race, so once a race is fully loaded its candidates are too: no
+ * request needed.
+ */
+export function pageFor<P extends PageState>(pages: Map<string, P>, t: Target): P | PageState | undefined {
+  const own = pages.get(targetKey(t));
+  if (own || !t.candidateId || !t.contestId) return own;
+  return pages.get(targetKey({ contestId: t.contestId }))?.done ? { cursor: null, done: true } : undefined;
 }

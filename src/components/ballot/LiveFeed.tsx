@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import type { NewsItem } from "@/data/types";
 import type { Json } from "@/lib/supabase/types";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
-import { FEED_PAGE, initialPages, nextPage, targetKey, type PageState } from "@/lib/feeds/paging";
+import { FEED_PAGE, initialPages, nextPage, pageFor, targetKey, type PageState } from "@/lib/feeds/paging";
 
 export interface FeedRow {
   id: string;
@@ -101,7 +101,7 @@ export function LiveFeedProvider({
   const loadOlder = useCallback(
     async (target: { contestId?: string; candidateId?: string }) => {
       const key = targetKey(target);
-      const cur = pagesRef.current.get(key) ?? { cursor: null, done: false };
+      const cur: FeedState["pages"] extends Map<string, infer V> ? V : never = pageFor(pagesRef.current, target) ?? { cursor: null, done: false };
       if (cur.done || cur.loading || (cur.retryAt ?? 0) > Date.now()) return;
       setPage(key, { ...cur, loading: true });
       const { data, error } = await getSupabaseBrowser().rpc("feed_page", {
@@ -196,7 +196,7 @@ export function useFeedItems(target?: { contestId?: string; candidateId?: string
 export function useFeedPaging(target?: { contestId?: string; candidateId?: string }) {
   const ctx = useContext(FeedContext);
   const key = target && (target.contestId || target.candidateId) ? targetKey(target) : undefined;
-  const page = key ? ctx?.pages.get(key) : undefined;
+  const page = key && ctx && target ? (pageFor(ctx.pages, target) as (PageState & { loading?: boolean }) | undefined) : undefined;
   const load = ctx?.loadOlder;
   const contestId = target?.contestId;
   const candidateId = target?.candidateId;
