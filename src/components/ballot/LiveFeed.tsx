@@ -16,9 +16,9 @@
  * summary for something on this ballot is published, the page re-renders its
  * server data in place, so "being researched" sections fill in without a reload.
  *
- * Each card names the candidates the matcher found in the story (from the
- * row's `candidate_ids`, printed as on this ballot) and up to two topics, so
- * items that arrive live carry the same tags as the first render.
+ * Each card can name the candidates the matcher found in the story (from the
+ * row's `candidate_ids`, printed as on this ballot), so items that arrive live
+ * carry the same mentions as the first render.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -26,7 +26,6 @@ import type { NewsItem } from "@/data/types";
 import type { Json } from "@/lib/supabase/types";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 import { FEED_PAGE, initialPages, nextPage, pageFor, targetKey, type PageState } from "@/lib/feeds/paging";
-import { newsTopics } from "@/lib/feeds/topics";
 
 export interface FeedRow {
   id: string;
@@ -196,7 +195,6 @@ function toNewsItem(r: FeedRow, names: FeedState["names"]): NewsItem {
     url: r.url,
     date: r.published_at,
     mentions: [...new Set(mentions)],
-    topics: newsTopics(r.title, r.excerpt),
   };
 }
 

@@ -102,10 +102,32 @@ describe("NewsFeed", () => {
       expect(html).not.toContain("Mentions:");
     });
 
-    it("keeps the tags on a candidate's own carousel", () => {
+    it("puts mentions and topics on separate rows", () => {
+      const html = render([row("a", at, { contest_ids: ["tx-gov"], candidate_ids: ["tx-c1"], title: "Ruiz on school funding" })]);
+      expect(html).toMatch(/data-news-mentions[^]*Ana Ruiz[^]*<\/div><div[^>]*data-news-topics[^]*Education/);
+    });
+
+    it("drops mentions on a candidate's own carousel, keeps topics", () => {
       const html = render([row("a", at, { contest_ids: ["tx-gov"], candidate_ids: ["tx-c1"], title: "Ruiz on school funding" })], { candidateId: "tx-c1" });
-      expect(html).toContain("Mentions: Ana Ruiz.");
+      expect(html).not.toContain("Mentions:");
       expect(html).toContain("Topics: Education.");
+    });
+
+    it("shows mentions on a measure's carousel", () => {
+      const html = text(
+        renderToString(
+          <LiveFeedProvider electionId="e" state="TX" contestIds={["tx-prop-1"]} initial={[row("m", at, { contest_ids: ["tx-prop-1"], candidate_ids: ["tx-c2"], title: "Ortiz campaigns against Proposition 1 water plan" })]} renderedAt={RENDERED_AT} candidateNames={names}>
+            <NewsFeed items={[]} feed={{ contestId: "tx-prop-1" }} hideWhenEmpty />
+          </LiveFeedProvider>,
+        ),
+      );
+      expect(html).toContain("Mentions: Ben Ortiz.");
+    });
+
+    it("tags topics on every card, live or not", () => {
+      const html = text(renderToString(<NewsFeed items={[{ id: "s", type: "news", source: "Example News", title: "Clinic closures leave rural Ohio without hospitals", date: "2026-10-29" }]} />));
+      expect(html).toContain("Topics: Health care.");
+      expect(html).not.toContain("Mentions:");
     });
 
     it("renders no tag row when there's nothing to say, and never a contest tag", () => {
