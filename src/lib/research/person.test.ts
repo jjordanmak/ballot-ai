@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PersonFacts } from "@/lib/ai/schemas";
 import { educationLine, positionLine } from "@/domain/profileFormat";
-import { checkBio, factList, latestYear, mentions, screenFacts } from "./person";
+import { latestYear, mentions, screenFacts } from "./person";
 import type { FetchedDoc } from "./verify";
 
 const BIO =
@@ -39,7 +39,7 @@ describe("screenFacts", () => {
     );
     expect(s.rejected).toEqual([]);
     expect(s.education.map(educationLine)).toEqual(["J.D., Stanford Law School", "B.A., Economics, Stanford University"]);
-    expect(s.positions.map(positionLine)).toEqual(["Deputy Attorney General, California Department of Justice · 1987–1990"]);
+    expect(s.positions.map(positionLine)).toEqual(["Deputy Attorney General, California Department of Justice (1987–1990)"]);
   });
 
   it("rejects a year or school the quote doesn't state", () => {
@@ -91,7 +91,7 @@ describe("screenFacts", () => {
     );
     expect(s.positions).toHaveLength(1);
     expect(s.positions[0].startYear).toBe(2015);
-    expect(s.conflicts).toEqual([{ fact: "Mayor", kept: "Mayor, Springfield, Ohio · 2015–2019", dropped: "Mayor, Springfield, Ohio · 2014–2019" }]);
+    expect(s.conflicts).toEqual([{ fact: "Mayor", kept: "Mayor, Springfield, Ohio (2015–2019)", dropped: "Mayor, Springfield, Ohio (2014–2019)" }]);
   });
 
   it("platform comes from the candidate's own words, never news; residence only for local races", () => {
@@ -113,38 +113,7 @@ describe("screenFacts", () => {
       opts,
     );
     expect(s.positions[0].committees).toEqual(["Finance Committee", "Education Committee"]);
-    expect(positionLine(s.positions[0])).toBe("State Representative, Ohio House of Representatives (41st House District) · 2021–present");
-  });
-});
-
-describe("checkBio", () => {
-  const list = factList({
-    positions: [{ title: "Deputy Attorney General", organization: "California Department of Justice", startYear: 1987, endYear: 1990, type: "appointed", quote: "q", source: "s" }],
-    education: [{ degree: "Juris Doctor", institution: "Stanford Law School", quote: "q", source: "s" }],
-    platform: [],
-  });
-
-  it("keeps sentences built from the cited facts", () => {
-    const r = checkBio({ sentences: [{ text: "Becerra was a Deputy Attorney General at the California Department of Justice from 1987 to 1990.", facts: ["P0"] }, { text: "He earned a J.D. from Stanford Law School.", facts: ["E0"] }] }, list, "Xavier Becerra");
-    expect(r.rejected).toEqual([]);
-    expect(r.kept).toHaveLength(2);
-  });
-
-  it("drops invented numbers or names, family background and judgments", () => {
-    const r = checkBio(
-      {
-        sentences: [
-          { text: "He served for 12 years in Congress.", facts: ["P0"] },
-          { text: "He earned a J.D. from Harvard.", facts: ["E0"] },
-          { text: "He is the son of farmworkers and studied at Stanford Law School.", facts: ["E0"] },
-          { text: "He struggled at the California Department of Justice.", facts: ["P0"] },
-        ],
-      },
-      list,
-      "Xavier Becerra",
-    );
-    expect(r.kept).toEqual([]);
-    expect(r.rejected.map((x) => x.detail)).toEqual(["number 12 not in cited facts", '"Harvard" not in cited facts', "family background", "judgment"]);
+    expect(positionLine(s.positions[0])).toBe("State Representative, Ohio House of Representatives, 41st House District (2021–present)");
   });
 });
 

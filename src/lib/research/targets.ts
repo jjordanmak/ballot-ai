@@ -9,7 +9,9 @@
  * - judges and candidates: their official statement (state guide or
  *   county), `.gov` pages and their Ballotpedia page (both by search), and
  *   their campaign site when an official filing or Ballotpedia links it;
- * - "what this office does": `.gov` pages by search.
+ * - "what this office does": `.gov` pages by search;
+ * - race intros (one per candidate contest): `.gov` pages, vetted news and
+ *   the race's Ballotpedia page, by search.
  *
  * Pure: no I/O. The job fetches; this only says where to look.
  */
@@ -20,7 +22,7 @@ import type { EnrichmentBundle } from "@/domain/enrichment";
 import { normalizeForMatch, readableName } from "@/domain/text";
 import type { SearchKind } from "./search";
 
-export type TargetKind = "measure" | "retention" | "candidate" | "office";
+export type TargetKind = "measure" | "retention" | "candidate" | "race" | "office";
 
 export interface TargetPage {
   url: string;
@@ -35,9 +37,9 @@ export interface Target {
   key: string;
   kind: TargetKind;
   /** synthesized_field_versions.target_type / target_id / field_name */
-  targetType: "measure" | "candidate" | "contest";
+  targetType: "measure" | "candidate" | "contest" | "race";
   targetId: string;
-  field: "measure" | "profile" | "office";
+  field: "measure" | "profile" | "office" | "race";
   /** Shown to the model: stored entity data only. */
   label: string;
   state?: string;
@@ -52,6 +54,11 @@ export interface Target {
   division?: string;
   /** County, city, school or special-district race (residence is shown only for these). */
   local?: boolean;
+  /** The party as the ballot prints it (people): one of the item's own names in the writing checks. */
+  party?: string;
+  /** Race intros: the candidates' target ids (the fairness pass reads their results) and names. */
+  candidateIds?: string[];
+  candidateNames?: string[];
 }
 
 export interface ContestRow {
@@ -61,7 +68,7 @@ export interface ContestRow {
   title: string;
   division_key: string;
   divisions: { name: string; state: string | null; scope: string | null } | null;
-  contest_candidates: { id: string; ballot_name: string; display_name: string | null; campaign_url: string | null }[];
+  contest_candidates: { id: string; ballot_name: string; display_name: string | null; campaign_url: string | null; party?: string | null }[];
 }
 
 interface CountyGuide {
@@ -202,6 +209,27 @@ export function buildTargets(rows: ContestRow[], bundle?: EnrichmentBundle): Tar
     }
 
     const retention = c.contest_type === "retention" && c.contest_candidates.length === 1;
+    const names = c.contest_candidates.map((k) => k.display_name || readableName(k.ballot_name));
+    if (!retention && c.contest_candidates.length) {
+      out.push({
+        key: `race:${c.id}:race`,
+        kind: "race",
+        targetType: "race",
+        targetId: c.id,
+        field: "race",
+        label: `${c.title} (${where})`,
+        state,
+        pages: [],
+        follow: [],
+        search: { kind: "race", query: `${c.title} ${where} 2026 election`.replace(/\s+/g, " ") },
+        focus: [c.title, ok.office],
+        office: c.title,
+        division: where,
+        local: !statewide && !LEGISLATIVE.test(c.title),
+        candidateIds: c.contest_candidates.map((k) => k.id),
+        candidateNames: names,
+      });
+    }
     for (const k of c.contest_candidates) {
       const name = k.display_name || readableName(k.ballot_name);
       const last = name.split(/\s+/).filter((w) => !/^(jr|sr|ii|iii|iv)\.?$/i.test(w)).pop() ?? name;
@@ -232,14 +260,15 @@ export function buildTargets(rows: ContestRow[], bundle?: EnrichmentBundle): Tar
         office: c.title,
         division: where,
         local: !retention && !statewide && !LEGISLATIVE.test(c.title),
+        ...(k.party ? { party: k.party } : {}),
       });
     }
   }
-  // Statewide measures first (one answer serves a whole state), then judges, candidates, offices.
-  const order: Record<TargetKind, number> = { measure: 0, retention: 1, candidate: 2, office: 3 };
+  // Statewide measures first (one answer serves a whole state), then judges, candidates, races (they wait for their candidates), offices.
+  const order: Record<TargetKind, number> = { measure: 0, retention: 1, candidate: 2, race: 3, office: 4 };
   return [...out, ...offices.values()].sort((a, b) => order[a.kind] - order[b.kind]);
 }
 
-export { researchTask as taskFor } from "@/lib/ai/prompts";
+export { researchTask as taskFor, synthesisTask } from "@/lib/ai/prompts";
 
 export { pdfHostOk };

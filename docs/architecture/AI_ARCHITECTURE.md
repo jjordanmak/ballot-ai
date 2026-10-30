@@ -66,13 +66,25 @@ The research pipeline exists, runs in the app (never in a Claude Code session), 
 - **Other settings** wait for that, then read the same stored copies, so every comparison column sees byte-identical documents.
 - **Busy site:** if the site is too busy to read, the job waits 1–2 minutes and retries rather than running on fewer documents. After 10 waits it runs with what it has.
 
-**People: facts first, then a bio (owner, 2026-10-29).**
-- **Stage 1 (`PersonFacts`):** the model returns fields only, each with its exact quote. Code (`src/lib/research/person.ts`) checks every institution, title, organization and year against that quote; the AI support checker is not used here. Code also drops "present" from archived or long-outdated pages, merges duplicates (keeping the more trusted source and recording the conflict), and writes every line itself (`src/domain/profileFormat.ts`).
+**Synthesized writing (owner, 2026-10-30; `docs/elections/2026-11-03/WRITING_PIPELINE_PLAN.md`).** Race intros, people and measures are written as prose; offices keep the quoted-answer flow below.
+- **One call per item** (`writeItem`, `src/lib/research/write.ts`) writes every section from the shared document set. Every sentence is `{ text, refs: [{ sourceId, excerpt }] }`: it may paraphrase and combine sources, and its excerpts must together say what it says.
+- **5 checks per sentence** (code in `src/lib/research/synthesis.ts`):
+  1. each excerpt is found in its document (`quoteFound`);
+  2. every number, %, $, date and proper name is in its excerpts or the item's own names (number words and AP abbreviations are normalized; durations in In Brief are written by code from verified years via `{{years:Pn}}`, never by the model);
+  3. a verifier (`checkSupport`, synthesis mode, one batched call): "does this follow from these excerpts, allowing paraphrase and combination?";
+  4. the neutrality lint (`neutralityProblem`, plus In Brief / Might fit / profile rules) and a reviewer call (Haiku, `ANTHROPIC_MODEL_REVIEW`) with the rubric: loaded or partisan language, predictions and horse-race framing, unattributed motive, "critics say", highlights;
+  5. parity: every candidate in a race gets the same sections; the race job's fairness pass reviews a race's candidates side by side and **rewrites** unequal sentences (keeping their facts and excerpts, re-checked) instead of cutting them (owner, 2026-10-30). Rewrites apply on the page only while the sentence is unchanged.
+- **One repair pass:** whatever failed (or has an AP slip) goes back to the writer with its reasons, in the same conversation, so the documents are read from the cache. A sentence that still fails a trust check is dropped and logged with its text; a style slip never drops a sentence. A section left empty is listed as `limited` and the page says "Limited documented information in reviewed sources".
+- **Lists stay code-written:** education and positions are checked field by field (`screenFacts`, `src/lib/research/person.ts`) and formatted by `src/domain/profileFormat.ts` (`Title (years)`).
+- **Race intros** (`race:<contestId>:race`): `.gov` pages, vetted news and the race's Ballotpedia page by search; the job waits (up to 30 × 2 minutes) for its candidates' results so the fairness pass can run.
+- **Payloads:** race `v1`, measure `v2` (sections), person `v3` (sections, Might fit, timeline, endorsements, lists). The read path (`src/lib/ballot/research.ts`) maps each sentence to a `Cited` with its excerpts for the [n] popover, applies the fairness rewrites, and evens highlights out across a race.
+- **Rounds:** `src/data/research/round.json` names the run set (`src/data/research/run-sets/`, durable ids only) and the settings (`model:effort:round`). Each round's results are held under their own tag and shown with `?preview=<setting>` on the real ballot page, on previews only (production ignores it). Rounds reuse stored pages (14 days) instead of reading them again.
+
+**People (lists): facts checked field by field.**
+- Code (`src/lib/research/person.ts`) checks every institution, title, organization and year against that field's quote; drops "present" from archived or long-outdated pages; merges duplicates (keeping the more trusted source and recording the conflict); and writes every line itself (`src/domain/profileFormat.ts`).
   - **Education:** degree, field, institution, year.
   - **Positions:** title, organization, district, years, type, plus committee memberships.
-  - **Platform:** 3–5 items, attributed, and never from news.
   - **Residence:** local races only.
-- **Stage 2 (`PersonBio`):** the model gets only the checked facts (no documents) and writes 3–5 neutral sentences, each naming the facts it uses. Code rejects any number or capitalized name not in those facts, plus family background, awards and judgment words. In publish mode the writer is `ANTHROPIC_MODEL_BIO`.
 - **Selection rules:** these are in `PERSON_RULES` (`src/lib/ai/prompts.ts`). In compare mode the model also lists what it left out and why.
 - **Sources for people, in trust order:**
   1. official pages (`.gov`, voter guides, court bios);
@@ -82,21 +94,18 @@ The research pipeline exists, runs in the app (never in a Claude Code session), 
 
   Wikipedia is a finder only: its reference links are followed, and it is never cited. Measures and offices stay official-only.
 - **Diagnostics:** every page tried, and why any was skipped, is in `synthesis_runs.metadata.tried` and shown on `/internal/compare`.
-- **Checker:** Haiku at medium effort by default. Haiku at low effort wrongly rejected supported claims in the first comparison. In compare mode the settings in `AI_CHECK_COMPARE` also judge every prose claim, for calibration.
+- **Checker:** Haiku at high effort by default (owner, 2026-10-30, from the calibration data in MODEL_DECISIONS.md row 16). In compare mode the settings in `AI_CHECK_COMPARE` also judge every prose claim, for calibration.
 
 **Prompts and caching (owner, 2026-10-29).**
 - **One file:** every prompt lives in `src/lib/ai/prompts.ts`, with one `PROMPT_VERSION` and a snapshot test, so wording changes are deliberate.
-- **Already cached:** the frozen research instructions (about 1.2K tokens, over the 512-token minimum on Haiku/Sonnet/Opus 5.5). The run log shows reads on repeat calls, and the review page has an "Input from cache" column.
-- **Documents are not cached, by design:**
-  - Changing effort invalidates the message-level cache on these models, so the three effort columns of one model can't share them.
-  - In publishing, each item runs once per document change, so a cache write (1.25×) would usually never be read.
-  - Moving documents into the system prompt to share them is ruled out: fetched pages are untrusted data and must not carry instruction authority.
+- **Already cached:** the frozen instructions (research, and the writing guide with its style examples). The run log shows reads on repeat calls, and the review page has an "Input from cache" column.
+- **Documents:** the writing call caches its first user turn (documents + task) because the repair pass resends it within the same setting (2026-10-30). The quoted-answer flow (offices) still doesn't: changing effort invalidates the message-level cache, so effort columns can't share it. Documents never go in the system prompt: fetched pages are untrusted data and must not carry instruction authority.
 
 **Compare mode (`AI_MODE=compare`, the default until the owner decides).**
-- Only the comparison set runs, once per setting in `AI_COMPARE` (default: Haiku, Sonnet and Opus at low, medium and high).
-- Each result is stored as `held` ("model comparison") under `<field>@<model>:<effort>`. The ballot page reads only `published` rows, so none of it is served.
+- Only the round's run set runs (`src/data/research/round.json`), once per setting in the round file or `AI_COMPARE`. The first comparison (9 columns on the Daly City set) is `DEFAULT_COMPARE` with run set `daly-city-compare`.
+- Each result is stored as `held` ("model comparison") under `<field>@<model>:<effort>[:<round>]`. The ballot page reads only `published` rows, so none of it is served.
 - `synthesis_runs.metadata` keeps the setting, raw output, every rejected answer with its reason, tokens, cost and seconds.
-- **`AI_MODE=publish`:** every item at its kind's setting (`ANTHROPIC_MODEL_MEASURE` / `_PROFILE` / `_OFFICE`, each `model[:effort]`).
+- **`AI_MODE=publish`:** every item at its kind's setting (`ANTHROPIC_MODEL_MEASURE` / `_PROFILE` / `_OFFICE` / `_RACE`, each `model[:effort]`).
 
 **Live refresh.** A published row fires the `research` event on the ballot's existing Broadcast channel `feed:{election}:{state}` (trigger in 0012). The page re-renders its server data in place (`LiveFeed.tsx`), so a visitor never reloads.
 
@@ -174,33 +183,31 @@ Implementation notes for when the pipeline is built (P2):
 - Use prompt caching for the stable system prompt and source bundle. Use the Batches API (50% cost) for bulk offline enrichment.
 - Re-verify model IDs against the live Anthropic docs at implementation time. Do not trust this table blindly.
 
-## 5. Output schema (revised from Phase 5 per PRD §14 / FR-K4)
+## 5. Output schema (WRITING_PIPELINE_PLAN.md, owner 2026-10-30)
 
-The output schema has these fields. Every claim carries `sourceIds: string[]` (non-empty):
+Defined in `src/lib/ai/schemas.ts` (zod, via `messages.parse` structured output):
 
 ```ts
-type Cited<T> = T & { sourceIds: string[] }        // every item; rendered as inline citation markers
+SynthSentence = { text: string; refs: { sourceId: string; excerpt: string }[] }
+sections      = { section: <name>; sentences: SynthSentence[] }[]
 
-platform:      Cited<{ claim: string }>[]                          // 3–5 main claims ("Proposes…")
-background:    Cited<{ text: string }>[]
-pastPositions: Cited<{ title; organization; kind: 'elected'|'appointed'|'job'|'nonprofit'|'board'|'military'|'advisory'|'other'; start?; end? }>[]
-experience:    Cited<{ text: string }>[]                           // past roles ↔ this office's duties ↔ platform
-trackRecord:   { priority: string; actions: Cited<{ text; date? }>[] }[]
-priorities:    Cited<{ text: string }>[]
-issues:        Record<issueId, Cited<{ stance: string }>>          // "key stances"
-history:       Cited<{ year; event }>[]                            // timeline
-notableFacts:  Cited<{ text; rule: string }>[]                     // rule-based, e.g. "historic_first"
+RaceSynthesis    = { sections }   // context, whyItMatters, whatsAtStake, bigPicture
+MeasureSynthesis = { sections }   // summary, yesMeans, noMeans, taxes, cost, money, affected, currentLaw, kind (official sources only)
+PersonSynthesis  = {
+  education, positions, residence, leftOut,       // lists, checked field by field
+  sections,                                        // inBrief, background, priorities, stances
+  mightFit:     { issue; text; refs }[],           // up to 4, distinct issues
+  timeline:     { when; event; refs }[],
+  endorsements: { name; category: "Elected Officials" | "Unions" | "Advocacy & Industry" | "Local Leaders"; refs }[],
+}
+Rewrite          = { units: { id; text; refs }[] } // the repair pass and the fairness rewrite
+NeutralityReview = { flags: { id; reason }[] }
 ```
 
-Endorsements are stored as rows (`endorsements` plus a `source_id`), not synthesized text. News items are ingested (Phase 4a), not generated.
-
-- **Campaign funding** is not AI-generated. It is extracted mechanically from Cal-Access/FEC data: totals, the source-type breakdown, the full itemized contributor list, and independent expenditures. The extraction model is used only to parse documents where no API exists.
-- **Removed:** `strengths`, `criticisms`, `bottomLine`, `voteForIf`. They remain only in the archived June primary data. `voteForIf`-style matching is reserved for a future membership tier and would be computed from the user's own selections, not generated per candidate.
-- **Balance checks** run before publish:
-  - section and length parity across candidates in a contest;
-  - a banned-phrasing lint (evaluative adjectives, "should", "best", rankings, predictions, "critics say" without a named source);
-  - human review for any contest that fails parity.
-- `<mark>` placement (CLAUDE.md design rule) is limited to factual anchors (dates, amounts, office names, measure numbers), pending PRD Open Question 3.
+- **Campaign funding** is not AI-generated. It is extracted mechanically from Cal-Access/FEC data.
+- **Removed:** `strengths`, `criticisms`. **Returned in neutral form (owner, 2026-10-30):** `bottomLine` as In Brief and `voteForIf` as "Might fit if you…" (PRD FR-K4, §14).
+- **Balance checks** before storing: the 5 checks above; section parity across a race's candidates; the fairness pass (rewrite, not drop). There is no human approval queue: the checks are the gate.
+- `<mark>` placement: the model places 2–3 per prose section; code enforces the rules in `specs/design-system.md` (Highlight system), and `AI_HIGHLIGHTS=off` strips them.
 
 ## 6. Cost controls
 

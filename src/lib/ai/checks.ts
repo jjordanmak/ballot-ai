@@ -41,6 +41,8 @@ const BANNED: { re: RegExp; reason: string }[] = [
   { re: /\b(best|worst|strongest|weakest|greatest|leading|frontrunner|front-runner)\b/i, reason: "ranking" },
   { re: /\b(will|is likely to|is expected to|probably) (win|lose|pass|fail)\b/i, reason: "prediction" },
   { re: /\b(controversial|radical|extreme|dangerous|reckless|common-?sense|commonsense|disastrous|excellent|terrible|brilliant|failed|misguided|wasteful|bold|visionary)\b/i, reason: "judgment" },
+  // The June prototype's framing (WRITING_PIPELINE_PLAN.md): momentum and faction words. "Establishment of a fund" is fine.
+  { re: /\b(surged|surging|fractured|aggressively|elites?)\b|\b(anti-)?establishment\b(?!\s+of\b)/i, reason: "judgment" },
   { re: /\bcritics (say|argue|claim)\b/i, reason: "unnamed critics" },
   { re: /\b(unfortunately|fortunately|clearly|obviously|of course)\b/i, reason: "editorializing" },
 ];

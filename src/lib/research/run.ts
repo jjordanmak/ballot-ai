@@ -11,9 +11,12 @@
  *   gather its documents (official pages, county PDFs, .gov/Ballotpedia via
  *   search; read politely, re-read at most every 6 hours)
  *   → skip if nothing changed since the last run
- *   → Claude extracts answers with exact quotes (structured output)
- *   → quotes must be in the cited document, wording passes the lint,
- *     a second call confirms each quote supports its sentence
+ *   → offices: Claude extracts answers with exact quotes; quotes must be in
+ *     the cited document, wording passes the lint, a second call confirms
+ *     each quote supports its sentence
+ *   → races, people, measures: Claude writes the sections (write.ts); every
+ *     sentence's excerpts, hard facts, meaning and wording are checked, one
+ *     repair pass, and a race's candidates get a fairness pass
  *   → synthesized_field_versions: compare mode stores every setting's result
  *     as held ("model comparison") for review; publish mode publishes.
  *
@@ -24,21 +27,22 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Database, Json } from "@/lib/supabase/types";
-import { aiConfig, settingId, type AiConfig, type Setting } from "@/lib/ai/config";
+import { aiConfig, ROUND_CONFIG, settingId, type AiConfig, type Setting } from "@/lib/ai/config";
 import { checkSupport, extract, PROMPT_VERSION, type CallResult, type Doc } from "@/lib/ai/extract";
-import { MeasureResearch, OfficeResearch, PersonBio, PersonFacts } from "@/lib/ai/schemas";
-import { BIO_SYSTEM, bioTask } from "@/lib/ai/prompts";
+import { OfficeResearch } from "@/lib/ai/schemas";
 import { getEnrichment } from "@/lib/ballot/enrichment";
 import { billingPeriod } from "@/lib/usage/quota";
 import type { Resolver } from "@/lib/feeds/safeFetch";
 import { logEvent } from "@/lib/observability/log";
-import compareSet from "@/data/research/compare-set.json";
 import { focusText, getDocument, REREAD_AFTER_MS, type Fetched, type FetchDeps } from "./fetch";
 import { ballotpediaCampaignSite, isBallotpedia, isGov, isVettedNews, isWikipedia, searchUrls } from "./search";
 import { buildTargets, pdfHostOk, taskFor, type ContestRow, type Target, type TargetPage } from "./targets";
 import { findLinkEntries } from "./text";
-import { checkBio, factList, screenFacts, TIER_RANK, usedSources, type PersonPayloadV2, type StoredBioSentence } from "./person";
-import { buildPayload, payloadIsEmpty, screenMeasure, screenOffice, type FetchedDoc, type Payload, type Pending, type Rejection, type SourceTier } from "./verify";
+import { TIER_RANK } from "./person";
+import { buildPayload, payloadIsEmpty, screenOffice, type FetchedDoc, type Payload, type Rejection, type SourceTier } from "./verify";
+import { runSet } from "./runSet";
+import type { PersonPayloadV3 } from "./synthesis";
+import { parityPass, writeItem } from "./write";
 
 type Db = SupabaseClient<Database>;
 
@@ -49,6 +53,10 @@ const MAX_FOLLOW = 4;
 const SEARCH_TTL_MS = 7 * 24 * 3600_000;
 const RECHECK_MS = 6 * 3600_000;
 const COMPARE_RECHECK_MS = 7 * 24 * 3600_000;
+/** Writing rounds re-use the pages read in round 1 instead of reading them again (WRITING_PIPELINE_PLAN.md). */
+const ROUND_REREAD_MS = 14 * 24 * 3600_000;
+/** A race intro waits this many times (2 minutes apart) for its candidates' results, then runs with what's there. */
+const MAX_RACE_WAITS = 30;
 const LOCK_SECONDS = 300;
 
 export interface Job {
@@ -72,7 +80,7 @@ export interface ResearchDeps {
   sleep?: (ms: number) => Promise<void>;
   /** How the dispatcher runs a claimed job (default: a call to this route). */
   runRemote?: (stateKey: string) => Promise<unknown>;
-  /** Compare mode's items (default: src/data/research/compare-set.json). */
+  /** Compare mode's items (default: the round's run set, src/data/research/round.json). */
   compareKeys?: string[];
 }
 
@@ -83,7 +91,7 @@ export async function loadContests(db: Db, electionId: string): Promise<ContestR
   for (let from = 0; ; from += 500) {
     const { data, error } = await db
       .from("contests")
-      .select("id, kind, contest_type, title, division_key, divisions(name, state, scope), contest_candidates(id, ballot_name, display_name, campaign_url)")
+      .select("id, kind, contest_type, title, division_key, divisions(name, state, scope), contest_candidates(id, ballot_name, display_name, campaign_url, party)")
       .eq("election_id", electionId)
       .order("id")
       .range(from, from + 499);
@@ -96,8 +104,8 @@ export async function loadContests(db: Db, electionId: string): Promise<ContestR
   }
 }
 
-/** The jobs for this mode: compare = the comparison set × every setting; publish = every target × its kind's setting. */
-export function jobsFor(cfg: AiConfig, targets: Target[], election: string, compareKeys: string[] = (compareSet as { targets: { key: string }[] }).targets.map((t) => t.key)): Job[] {
+/** The jobs for this mode: compare = the round's run set × every setting; publish = every target × its kind's setting. */
+export function jobsFor(cfg: AiConfig, targets: Target[], election: string, compareKeys: string[] = runSet(ROUND_CONFIG.runSet).targets.map((t) => t.key)): Job[] {
   if (cfg.mode === "compare") {
     const wanted = new Set(compareKeys);
     return targets
@@ -107,7 +115,7 @@ export function jobsFor(cfg: AiConfig, targets: Target[], election: string, comp
   return targets.map((t) => ({
     stateKey: t.key,
     target: t,
-    setting: cfg.publish[t.field === "measure" ? "measure" : t.field === "office" ? "office" : "profile"],
+    setting: cfg.publish[t.field === "measure" ? "measure" : t.field === "office" ? "office" : t.field === "race" ? "race" : "profile"],
     compare: false,
     election,
   }));
@@ -186,12 +194,13 @@ const SHARED_LOCK_MS = 240_000;
 async function prepareShared(
   deps: ResearchDeps & { now: Date },
   t: Target,
+  maxAgeMs = REREAD_AFTER_MS,
 ): Promise<{ cache: SearchCache | null; owner: boolean; cost: number; wait?: boolean }> {
   const key = `${t.key}#search`;
   const { db, now } = deps;
   const { data: row } = await db.from("research_state").select("discovered, locked_until").eq("key", key).maybeSingle();
   const cached = row?.discovered as SearchCache | null | undefined;
-  if (cached && now.getTime() - Date.parse(cached.at) < REREAD_AFTER_MS) return { cache: cached, owner: false, cost: 0 };
+  if (cached && now.getTime() - Date.parse(cached.at) < maxAgeMs) return { cache: cached, owner: false, cost: 0 };
   // Another setting's job is gathering right now: try again shortly.
   if (row?.locked_until && Date.parse(row.locked_until) > now.getTime()) return { cache: null, owner: false, cost: 0, wait: true };
   await db
@@ -251,6 +260,7 @@ async function gatherDocuments(
   t: Target,
   cache: SearchCache | null,
   owner = true,
+  maxAgeMs = REREAD_AFTER_MS,
 ): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; refs: string[]; busy: number; tried: Tried[] }> {
   const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
   const got: { f: Fetched; page: TargetPage }[] = [];
@@ -268,7 +278,7 @@ async function gatherDocuments(
       fdeps,
       page.url,
       { official: page.official, publisher: page.publisher, allowPdf: page.allowPdf, sourceType: finder ? "finder" : tier === "ballotpedia" ? "civic" : tier },
-      needHtml ? 0 : undefined,
+      needHtml ? 0 : maxAgeMs,
       { needHtml },
     );
     if ("skipped" in r) {
@@ -335,9 +345,35 @@ async function gatherDocuments(
   return { docs, campaign, followed, refs, busy, tried };
 }
 
-function inputHash(t: Target, setting: Setting, docs: FetchedDoc[]): string {
+function inputHash(t: Target, setting: Setting, docs: FetchedDoc[], extra: string[] = []): string {
   const parts = docs.map((d) => `${d.meta.url}:${sha(d.text)}`).sort();
-  return sha([t.key, t.label, settingId(setting), PROMPT_VERSION, ...parts].join("\n"));
+  return sha([t.key, t.label, settingId(setting), PROMPT_VERSION, ...parts, ...extra].join("\n"));
+}
+
+interface RaceCandidate {
+  target: string;
+  label: string;
+  payload: PersonPayloadV3;
+  hash: string;
+}
+
+/** A race's candidates' current results for this setting (the fairness pass reads them). */
+async function raceCandidates(db: Db, t: Target & { compare: boolean }, setting: Setting): Promise<RaceCandidate[]> {
+  const ids = t.candidateIds ?? [];
+  if (!ids.length) return [];
+  const field = t.compare ? `profile@${settingId(setting)}` : "profile";
+  const { data } = await db
+    .from("synthesized_field_versions")
+    .select("target_id, content, payload")
+    .eq("target_type", "candidate")
+    .in("target_id", ids)
+    .eq("field_name", field)
+    .eq("is_current", true);
+  const names = new Map(ids.map((id, i) => [id, t.candidateNames?.[i] ?? id]));
+  return (data ?? [])
+    .filter((r) => (r.payload as { v?: number } | null)?.v === 3)
+    .map((r) => ({ target: r.target_id, label: names.get(r.target_id) ?? r.target_id, payload: r.payload as unknown as PersonPayloadV3, hash: sha(r.content ?? "") }))
+    .sort((a, b) => ids.indexOf(a.target) - ids.indexOf(b.target));
 }
 
 const transient = (problem?: string) => !!problem && /^api_(429|500|502|503|529|error)$|^error$/.test(problem);
@@ -376,17 +412,28 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
   const setting = stored.setting;
   let spent = 0;
 
-  const shared = await prepareShared(d, t);
+  // A race intro's fairness pass needs its candidates' results first.
+  let candidates: RaceCandidate[] = [];
+  if (t.kind === "race") {
+    candidates = await raceCandidates(db, stored, setting);
+    const waits = state.failures ?? 0;
+    if (candidates.length < (t.candidateIds?.length ?? 0) && waits < MAX_RACE_WAITS) {
+      await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 2 * 60_000, failures: waits + 1 });
+      return { key: stateKey, outcome: "waiting", spentMicroUsd: 0 };
+    }
+  }
+  const maxAge = stored.compare ? ROUND_REREAD_MS : REREAD_AFTER_MS;
+  const shared = await prepareShared(d, t, maxAge);
   spent += shared.cost;
   if (shared.wait) {
     await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000, failures: state.failures });
     return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
   }
-  const { docs, campaign, followed, refs, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner);
+  const { docs, campaign, followed, refs, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner, maxAge);
   await recordSpend(db, now, shared.cost);
   // A site was too busy to read right now: wait and try again rather than run on fewer documents
   // (after a few tries, run with what's there).
-  const busyWaits = state.failures ?? 0;
+  const busyWaits = t.kind === "race" ? 0 : state.failures ?? 0;
   if (busy && busyWaits < MAX_BUSY_WAITS) {
     // Keep the search; mark the document set stale so the next job gathers it again.
     if (shared.owner) await releaseShared(db, t, now, shared.cache ? { ...shared.cache, searchedAt: shared.cache.searchedAt ?? shared.cache.at, at: new Date(0).toISOString() } : null);
@@ -407,7 +454,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
     await finishState(db, stateKey, now, { outcome: "no documents", afterMs: RECHECK_MS });
     return { key: stateKey, outcome: "no documents", spentMicroUsd: spent };
   }
-  const hash = inputHash(t, setting, docs);
+  const hash = inputHash(t, setting, docs, candidates.map((c) => `${c.target}:${c.hash}`));
   if (hash === state.input_hash) {
     await finishState(db, stateKey, now, { outcome: "unchanged", hash, afterMs: stored.compare ? COMPARE_RECHECK_MS : RECHECK_MS });
     return { key: stateKey, outcome: "unchanged", spentMicroUsd: spent };
@@ -417,7 +464,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
     return { key: stateKey, outcome: "budget", spentMicroUsd: spent };
   }
 
-  const r = await researchOne(d, cfg, stored, setting, docs, hash, tried);
+  const r = await researchOne(d, cfg, stored, setting, docs, hash, tried, candidates);
   spent += r.spent;
   if (r.outcome === "failed" && transient(r.problem)) {
     await finishState(db, stateKey, now, { outcome: "rate limited", afterMs: 2 * 60_000, failures: state.failures });
@@ -441,6 +488,7 @@ async function researchOne(
   docs: FetchedDoc[],
   hash: string,
   tried: Tried[],
+  candidates: RaceCandidate[] = [],
 ): Promise<{ outcome: "published" | "held" | "compared" | "failed"; spent: number; problem?: string }> {
   const { db, now } = deps;
   const field = t.compare ? `${t.field}@${settingId(setting)}` : t.field;
@@ -464,17 +512,12 @@ async function researchOne(
     .single();
   const runId = run?.id ?? null;
 
+  if (t.kind !== "office") return synthesizeOne(deps, cfg, t, setting, docs, tried, candidates, { runId, field, started });
+
+  // Offices: what the office does, as quoted answers (not part of the writing rounds).
   const modelDocs: Doc[] = docs.map((d) => ({ id: d.id, title: d.meta.title, url: d.meta.url, text: d.text }));
-  const call = { model: setting.model, effort: setting.effort, task: taskFor(t), docs: modelDocs, client: deps.client };
-  const person = t.kind === "candidate" || t.kind === "retention";
-  const first: CallResult<unknown> =
-    t.kind === "measure"
-      ? await extract({ ...call, schema: MeasureResearch })
-      : t.kind === "office"
-        ? await extract({ ...call, schema: OfficeResearch })
-        : await extract({ ...call, schema: PersonFacts });
+  const first: CallResult<unknown> = await extract({ model: setting.model, effort: setting.effort, task: taskFor(t), docs: modelDocs, client: deps.client, schema: OfficeResearch });
   let spent = first.costMicroUsd;
-  let bioRaw: unknown = null;
   const usage: unknown[] = [first.usage ?? null];
 
   const finish = async (status: "succeeded" | "failed", extra: Record<string, unknown>, error?: string) => {
@@ -493,7 +536,6 @@ async function researchOne(
             seconds: Math.round((Date.now() - started) / 100) / 10,
             usage: sumUsage(usage),
             raw: first.data ?? null,
-            bioRaw,
             documents: docs.map((d) => ({ id: d.id, url: d.meta.url, tier: d.meta.tier ?? null })),
             tried,
             ...extra,
@@ -508,72 +550,35 @@ async function researchOne(
     return { outcome: "failed", spent, problem: first.problem };
   }
 
-  // Prose claims (measure and office answers, a candidate's platform) still get the AI support check;
-  // in compare mode the other checker settings judge the same claims, for calibration.
-  const checkClaims = async (pending: Pending[]) => {
-    const claims = pending.map((p) => ({ text: p.text, quote: p.quote }));
-    const support = await checkSupport({ model: cfg.checkModel, effort: cfg.checkEffort, claims, client: deps.client });
-    spent += support.costMicroUsd;
-    const calibration: Record<string, boolean[]> = {};
-    if (t.compare && claims.length) {
-      for (const c of cfg.checkCompare) {
-        const r = await checkSupport({ model: c.model, effort: c.effort, claims, client: deps.client });
-        spent += r.costMicroUsd;
-        calibration[settingId(c)] = r.supported;
-      }
+  // Prose claims get the AI support check; in compare mode the other checker settings judge the same claims, for calibration.
+  const screened = screenOffice(first.data as OfficeResearch, docs);
+  const claims = screened.pending.map((p) => ({ text: p.text, quote: p.quote }));
+  const support = await checkSupport({ model: cfg.checkModel, effort: cfg.checkEffort, claims, client: deps.client });
+  spent += support.costMicroUsd;
+  const calibration: Record<string, boolean[]> = {};
+  if (t.compare && claims.length) {
+    for (const c of cfg.checkCompare) {
+      const r = await checkSupport({ model: c.model, effort: c.effort, claims, client: deps.client });
+      spent += r.costMicroUsd;
+      calibration[settingId(c)] = r.supported;
     }
-    return { support, calibration };
-  };
-
-  let payloadCore: Payload;
-  let sourceIds: string[];
-  let rejected: Rejection[];
-  let extra: Record<string, unknown> = {};
-
-  if (person) {
-    const facts = first.data as PersonFacts;
-    const screened = screenFacts(facts, docs, { local: !!t.local, judge: t.kind === "retention", now });
-    const { support, calibration } = await checkClaims(screened.platform);
-    const platform = screened.platform.filter((_, i) => support.supported[i]).map((p) => ({ text: p.text, quote: p.quote, source: p.source }));
-    rejected = [...screened.rejected, ...screened.platform.filter((_, i) => !support.supported[i]).map((p) => ({ field: p.field, reason: "unsupported" as const }))];
-    const strip = <T extends { tier?: unknown }>(x: T) => {
-      const { tier: _tier, ...rest } = x;
-      return rest;
-    };
-    const verified = { education: screened.education.map(strip), positions: screened.positions.map(strip), platform, residence: screened.residence };
-    const list = factList(verified);
-    let bio: StoredBioSentence[] = [];
-    if (list.length) {
-      // Compare mode: each column writes its own bio. Publish mode: the bio setting the owner chose.
-      const writer = t.compare ? setting : cfg.bio;
-      const b = await extract({ model: writer.model, effort: writer.effort, schema: PersonBio, system: BIO_SYSTEM, task: bioTask(t.personName ?? t.label, list, !!t.local), docs: [], client: deps.client });
-      spent += b.costMicroUsd;
-      usage.push(b.usage ?? null);
-      bioRaw = b.data ?? { problem: b.problem };
-      if (b.data) {
-        const checked = checkBio(b.data as PersonBio, list, t.personName ?? "");
-        bio = checked.kept;
-        rejected.push(...checked.rejected);
-      }
-    }
-    const used = [...verified.education, ...verified.positions, ...platform, ...(verified.residence ? [verified.residence] : [])].map((x) => x.source);
-    payloadCore = { kind: "person", v: 2, ...verified, bio, sources: usedSources(docs, used) } as PersonPayloadV2;
-    sourceIds = [...new Set(used)];
-    extra = { leftOut: t.compare ? (facts.leftOut ?? []).slice(0, 10) : undefined, conflicts: screened.conflicts, supportProblem: support.problem ?? null, calibration };
-  } else {
-    const kind = t.kind === "measure" ? "measure" : "office";
-    const screened = kind === "measure" ? screenMeasure(first.data as MeasureResearch, docs) : screenOffice(first.data as OfficeResearch, docs);
-    const { support, calibration } = await checkClaims(screened.pending);
-    const built = buildPayload(kind, screened.pending, support.supported, docs);
-    payloadCore = built.payload;
-    sourceIds = built.sourceIds;
-    rejected = [...screened.rejected, ...built.rejected];
-    extra = { supportProblem: support.problem ?? null, calibration, claims: t.compare ? screened.pending.map((p) => ({ field: p.field, text: p.text, quote: p.quote })) : undefined };
   }
+  const built = buildPayload("office", screened.pending, support.supported, docs);
+  const payloadCore: Payload = built.payload;
+  const sourceIds = built.sourceIds;
+  const rejected: Rejection[] = [...screened.rejected, ...built.rejected];
+  const extra = { supportProblem: support.problem ?? null, calibration, claims: t.compare ? screened.pending.map((p) => ({ field: p.field, text: p.text, quote: p.quote })) : undefined };
 
+  const stored = await storeVersion(db, t, field, runId, payloadCore, sourceIds, rejected);
+  await finish("succeeded", { rejected, ...extra, output_hash: stored.outputHash });
+  return { outcome: t.compare ? "compared" : stored.status, spent };
+}
+
+/** The current version of a field: compare mode and empty results are held; the previous version stops being current. */
+async function storeVersion(db: Db, t: Target & { compare: boolean; election: string }, field: string, runId: string | null, payloadCore: Payload, sourceIds: string[], rejected: Rejection[]) {
   const empty = payloadIsEmpty(payloadCore);
   const payload: Payload = { ...payloadCore, ...(t.state ? { scope: { election: t.election, state: t.state } } : {}) };
-  const status = t.compare || empty ? "held" : "published";
+  const status: "held" | "published" = t.compare || empty ? "held" : "published";
   const heldReason = t.compare
     ? "model comparison"
     : empty
@@ -596,8 +601,57 @@ async function researchOne(
     status,
     held_reason: heldReason,
   });
-  await finish("succeeded", { rejected, ...extra, output_hash: sha(content) });
-  return { outcome: t.compare ? "compared" : status, spent };
+  return { status, outputHash: sha(content) };
+}
+
+/** Races, people and measures: written prose, every sentence checked (write.ts); races add the fairness pass. */
+async function synthesizeOne(
+  deps: ResearchDeps & { now: Date },
+  cfg: AiConfig,
+  t: Target & { compare: boolean; election: string },
+  setting: Setting,
+  docs: FetchedDoc[],
+  tried: Tried[],
+  candidates: RaceCandidate[],
+  run: { runId: string | null; field: string; started: number },
+): Promise<{ outcome: "published" | "held" | "compared" | "failed"; spent: number; problem?: string }> {
+  const { db, now } = deps;
+  const w = await writeItem({ cfg, setting, t, docs, now, client: deps.client });
+  let spent = w.spent;
+  const usage = [...w.usage];
+  let parityProblem: string | undefined;
+  if (w.payload?.kind === "race") {
+    const missing = (t.candidateIds ?? []).filter((id) => !candidates.some((c) => c.target === id));
+    const pp = await parityPass({ cfg, t, candidates, missing, client: deps.client });
+    spent += pp.spent;
+    usage.push(...pp.usage);
+    w.payload.parity = pp.parity;
+    parityProblem = pp.problem;
+  }
+  await recordSpend(db, now, spent);
+  const metadata = (extra: Record<string, unknown>) =>
+    ({
+      setting,
+      compare: t.compare,
+      costMicroUsd: spent,
+      seconds: Math.round((Date.now() - run.started) / 100) / 10,
+      usage: sumUsage(usage),
+      raw: w.raw,
+      documents: docs.map((d) => ({ id: d.id, url: d.meta.url, tier: d.meta.tier ?? null })),
+      tried,
+      rejected: w.rejected,
+      ...w.extra,
+      ...extra,
+    }) as unknown as Json;
+  // A failed parity review must not publish an unreviewed race: fail and retry.
+  const problem = w.payload ? parityProblem : w.problem;
+  if (!w.payload || problem) {
+    if (run.runId) await db.from("synthesis_runs").update({ status: "failed", error: problem ?? null, completed_at: new Date().toISOString(), metadata: metadata({}) }).eq("id", run.runId);
+    return { outcome: "failed", spent, problem };
+  }
+  const stored = await storeVersion(db, t, run.field, run.runId, w.payload, w.sourceIds, w.rejected);
+  if (run.runId) await db.from("synthesis_runs").update({ status: "succeeded", error: null, completed_at: new Date().toISOString(), metadata: metadata({ output_hash: stored.outputHash }) }).eq("id", run.runId);
+  return { outcome: t.compare ? "compared" : stored.status, spent };
 }
 
 /** Token counts across the calls of one run. */

@@ -6,6 +6,7 @@
 import { cleanText, neutralityProblem, quoteFound } from "@/lib/ai/checks";
 import { CAPS, MEASURE_FIELDS, OFFICE_FIELDS, type Answer, type MeasureResearch, type OfficeResearch } from "@/lib/ai/schemas";
 import type { PersonPayloadV2 } from "./person";
+import type { MeasureSynthPayload, PersonPayloadV3, RacePayload } from "./synthesis";
 
 /** Where a document comes from, in trust order (owner, 2026-10-29). */
 export type SourceTier = "official" | "ballotpedia" | "news" | "campaign";
@@ -30,6 +31,7 @@ export type MeasureField = (typeof MEASURE_FIELDS)[number];
 
 export interface MeasurePayload {
   kind: "measure";
+  v?: 1;
   answers: Partial<Record<MeasureField, StoredAnswer>>;
   sources: Record<string, StoredSource>;
 }
@@ -50,7 +52,10 @@ export interface PayloadScope {
   state: string;
 }
 
-export type Payload = (MeasurePayload | PersonPayload | OfficePayload) & { scope?: PayloadScope };
+/** Synthesized writing (WRITING_PIPELINE_PLAN.md): race intros, measures v2, people v3. */
+export type SynthPayload = RacePayload | MeasureSynthPayload | PersonPayloadV3;
+
+export type Payload = (MeasurePayload | PersonPayload | OfficePayload | SynthPayload) & { scope?: PayloadScope };
 
 export interface FetchedDoc {
   /** "D1"… as shown to the model. */
@@ -65,6 +70,8 @@ export interface Rejection {
   field: string;
   reason: "unknown source" | "quote not found" | "neutrality" | "unsupported";
   detail?: string;
+  /** Synthesis: the dropped sentence, for review on the comparison page. */
+  text?: string;
 }
 
 /** A claim waiting for the support check, with where to put it if it passes. */
@@ -145,7 +152,9 @@ export function buildPayload(
 }
 
 export function payloadIsEmpty(p: Payload): boolean {
-  return p.kind === "person"
-    ? !p.education.length && !p.positions.length && !p.platform.length && !p.bio.length
-    : Object.keys(p.answers).length === 0;
+  if ("sections" in p) {
+    const sections = Object.values(p.sections).some((l) => l?.length);
+    return p.kind === "person" ? !sections && !p.education.length && !p.positions.length && !p.mightFit.length && !p.timeline.length && !p.endorsements.length : !sections;
+  }
+  return p.kind === "person" ? !p.education.length && !p.positions.length && !p.platform.length && !p.bio.length : Object.keys(p.answers).length === 0;
 }

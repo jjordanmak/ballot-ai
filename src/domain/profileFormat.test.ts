@@ -18,7 +18,13 @@ describe("profile formatting", () => {
   });
 
   it("doesn't repeat the organization or district already in the title", () => {
-    expect(positionLine({ title: "Member, California State Assembly", organization: "California State Assembly", district: "59th District" })).toBe("Member, California State Assembly (59th District)");
+    expect(positionLine({ title: "Member, California State Assembly", organization: "California State Assembly", district: "59th District" })).toBe("Member, California State Assembly, 59th District");
+  });
+
+  it("writes Title (years), with the district in full (owner, 2026-10-30)", () => {
+    expect(positionLine({ title: "U.S. Secretary of Health and Human Services", startYear: 2021, endYear: 2025 })).toBe("U.S. Secretary of Health and Human Services (2021–2025)");
+    expect(positionLine({ title: "Chair", organization: "House Democratic Caucus", startYear: 2013, endYear: 2017 })).toBe("Chair, House Democratic Caucus (2013–2017)");
+    expect(positionLine({ title: "U.S. Representative", district: "TX-18", startYear: 2019, endYear: "present" })).toBe("U.S. Representative, Texas's 18th congressional district (2019–present)");
   });
 
   it("orders newest first, current roles on top, undated last", () => {

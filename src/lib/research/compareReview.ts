@@ -7,10 +7,11 @@ import type { Setting } from "@/lib/ai/config";
 import { settingId } from "@/lib/ai/config";
 import { educationLine, positionLine } from "@/domain/profileFormat";
 import type { Payload, StoredAnswer, StoredSource } from "./verify";
+import type { Parity, StoredSentence } from "./synthesis";
 
 export interface CompareTarget {
   key: string;
-  kind: "measure" | "retention" | "candidate" | "office";
+  kind: "measure" | "retention" | "candidate" | "office" | "race";
   label: string;
   group: string;
 }
@@ -18,7 +19,7 @@ export interface CompareTarget {
 export interface RunInfo {
   costMicroUsd?: number;
   seconds?: number;
-  rejected?: { field: string; reason: string; detail?: string }[];
+  rejected?: { field: string; reason: string; detail?: string; text?: string }[];
   raw?: unknown;
   /** Facts the model found but left out under the rules, and why (compare mode, people). */
   leftOut?: { fact: string; reason: string }[];
@@ -56,7 +57,11 @@ export interface Cell {
   status: "done" | "pending" | "no documents" | "failed" | "other";
   outcome?: string | null;
   fields: Record<string, Line[]>;
-  rejected: { field: string; reason: string; detail?: string }[];
+  rejected: { field: string; reason: string; detail?: string; text?: string }[];
+  /** Race intros: the fairness pass (rewrites, unresolved, missing candidates, thin coverage). */
+  parity?: Parity;
+  /** Sections the sources don't support. */
+  limited: string[];
   leftOut: { fact: string; reason: string }[];
   conflicts: { fact: string; kept: string; dropped: string }[];
   tried: { url: string; outcome: string }[];
@@ -104,26 +109,53 @@ const FIELDS: Record<CompareTarget["kind"], { key: string; label: string }[]> = 
     { key: "salary", label: "Salary" },
   ],
   retention: [
-    { key: "bio", label: "Bio" },
+    { key: "background", label: "Background" },
     { key: "currentRole", label: "Current role" },
     { key: "education", label: "Education" },
     { key: "pastPositions", label: "Past positions" },
+    { key: "timeline", label: "Timeline" },
   ],
   candidate: [
-    { key: "bio", label: "Bio" },
-    { key: "currentRole", label: "Current role" },
-    { key: "education", label: "Education" },
+    { key: "inBrief", label: "In Brief" },
+    { key: "background", label: "Background" },
     { key: "pastPositions", label: "Past positions" },
-    { key: "platform", label: "Platform" },
+    { key: "education", label: "Education" },
+    { key: "priorities", label: "Key Priorities" },
+    { key: "stances", label: "Key Stances" },
+    { key: "endorsements", label: "Endorsements" },
+    { key: "mightFit", label: "Might fit if you…" },
+    { key: "timeline", label: "Timeline" },
+  ],
+  race: [
+    { key: "context", label: "Context" },
+    { key: "whyItMatters", label: "Why it matters" },
+    { key: "whatsAtStake", label: "What's at stake" },
+    { key: "bigPicture", label: "The big picture" },
   ],
 };
 
 function linesFor(p: Payload, field: string): Line[] {
   const ref = (x: { quote: string; source: string }): Ref => ({ quote: x.quote, source: p.sources[x.source] });
   const one = (a?: StoredAnswer) => (a ? [{ text: a.text, refs: [ref(a)] }] : []);
+  // Synthesized writing: one line per sentence, each with its excerpts.
+  const sentences = (list?: StoredSentence[]) => (list ?? []).map((s) => ({ text: s.text, refs: s.refs.map((r) => ({ quote: r.excerpt, source: p.sources[r.source] })) }));
+  if ("sections" in p) {
+    if (p.kind !== "person") return sentences((p.sections as Record<string, StoredSentence[] | undefined>)[field]);
+    if (field === "mightFit") return sentences(p.mightFit);
+    if (field === "timeline") return p.timeline.map((t) => ({ ...sentences([t])[0], text: `${t.when}: ${t.text}` }));
+    if (field === "endorsements") return p.endorsements.map((e) => ({ ...sentences([{ text: e.name, refs: e.refs }])[0], sub: e.category }));
+    if (field in p.sections) return sentences(p.sections[field as keyof typeof p.sections]);
+    if (field === "currentRole") {
+      const c = p.positions.find((x) => x.endYear === "present");
+      return c ? [{ text: [c.title, c.organization].filter(Boolean).join(", "), refs: [ref(c)] }] : [];
+    }
+    if (field === "education") return p.education.map((e) => ({ text: educationLine(e), refs: [ref(e)] }));
+    if (field === "pastPositions") return p.positions.map((x) => ({ text: positionLine(x), refs: [ref(x)], sub: x.committees?.length ? `Committees: ${x.committees.join(", ")}` : undefined }));
+    return [];
+  }
   if (p.kind === "measure" || p.kind === "office") return one((p.answers as Record<string, StoredAnswer | undefined>)[field]);
   if (p.v !== 2) return []; // superseded shape from the first pass
-  if (field === "bio") {
+  if (field === "bio" || field === "background") {
     const facts = new Map<string, { quote: string; source: string }>([
       ...p.positions.map((x, i) => [`P${i}`, x] as const),
       ...p.education.map((x, i) => [`E${i}`, x] as const),
@@ -155,10 +187,12 @@ export function buildComparison(targets: CompareTarget[], settings: Setting[], c
     const row: Cell[] = ids.map((setting) => {
       const input = cells.get(`${target.key}@${setting}`);
       const sum = summary.get(setting)!;
-      const out: Cell = { setting, status: "pending", outcome: input?.outcome ?? null, fields: {}, rejected: [], leftOut: [], conflicts: [], tried: [], costMicroUsd: 0 };
+      const out: Cell = { setting, status: "pending", outcome: input?.outcome ?? null, fields: {}, rejected: [], limited: [], leftOut: [], conflicts: [], tried: [], costMicroUsd: 0 };
       if (input?.payload) {
         out.status = "done";
         sum.done++;
+        if ("limited" in input.payload) out.limited = input.payload.limited;
+        if (input.payload.kind === "race" && "parity" in input.payload) out.parity = input.payload.parity;
         for (const f of fields) {
           out.fields[f.key] = linesFor(input.payload, f.key);
           if (out.fields[f.key].length) sum.kept += out.fields[f.key].length;
@@ -198,10 +232,10 @@ export function buildComparison(targets: CompareTarget[], settings: Setting[], c
 
 const MODEL_NAMES: Record<string, string> = { "claude-haiku-5-5": "Haiku", "claude-sonnet-5-5": "Sonnet", "claude-opus-5-5": "Opus" };
 
-/** "claude-haiku-5-5:low" → "Haiku · low". */
+/** "claude-haiku-5-5:low" → "Haiku · low"; a writing round adds its tag ("Haiku · medium · r1"). */
 export function settingLabel(id: string): string {
-  const [model, effort] = id.split(":");
-  return `${MODEL_NAMES[model] ?? model} · ${effort}`;
+  const [model, effort, round] = id.split(":");
+  return [MODEL_NAMES[model] ?? model, effort, round].filter(Boolean).join(" · ");
 }
 
 /** Split a comparison target key ("measure:<id>:measure") into its synthesized_field_versions coordinates. */

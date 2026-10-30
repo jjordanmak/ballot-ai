@@ -146,16 +146,14 @@ Navigation: a desktop sidebar and a mobile top nav, with scroll-spy between cont
 - FR-K1: Show every valid candidate with the **exact ballot name**, and party or ballot designation where applicable.
 - FR-K2: Missing enrichment shows "Profile not yet available". The candidate is never hidden.
 - FR-K3: Profile tiers: Tier 1 (party, URL, incumbency) → Tier 2 (role, experience, education, bio) → Tier 3 (documented positions, finance, endorsements as factual records).
-- FR-K4: **Profile sections** (Tier 2/3). Every candidate in a contest gets the same sections in the same order. **Every item carries a citation**: an inline source marker that opens the source name, URL, and retrieved date.
-  - **Their platform.** The 3–5 main claims of the candidate's platform, attributed and in their own framing ("Proposes…", "Pledges to…"). This replaces the prototype's "Bottom line". The profile header already carries name, party, and current role.
-  - **Background.** A short factual bio: education, career arc, residence.
-  - **Past positions.** Everything they have done in adult life, in reverse-chronological order: elected and appointed offices, jobs, nonprofit roles, board seats, military service, and advisory roles. Each entry has a title, organization, years, and a citation. Users draw their own conclusions from this list, so the product never states "experience gaps".
-  - **Relevant experience.** How the past positions relate to *this office's official responsibilities* and to the candidate's platform for this race, written descriptively and cited.
-  - **Track record on their priorities.** For each platform claim, what the candidate has documented doing about it: votes, bills, actions in office, outcomes with figures. Substantive concerns from the prototype's "criticisms" belong here as facts, never as "critics say".
-  - **Key priorities** and **key stances** (per-issue positions). Kept from the prototype, now cited per item.
-  - **Timeline.** Kept, with a citation per event.
-  - **Notable facts.** Verifiable milestones applied by consistent rule, for example "If elected, would be the first Latino governor of California". The rule applies to any candidate who qualifies.
-  - **Endorsements.** Kept, as factual records with a citation per endorsement (the endorser's own announcement where possible).
+- FR-K4: **Profile sections** (Tier 2/3; owner, 2026-10-30, `docs/elections/2026-11-03/WRITING_PIPELINE_PLAN.md`). Every candidate in a contest gets the same sections in the same order. **Every item carries a citation**: an inline source marker that opens the supporting excerpt, the source name, URL, and retrieved date. Written prose carries a marker per sentence.
+  - **In Brief.** 2–3 cited sentences in the Bottom Line callout, in this order: experience (offices held, with durations code computes from the cited years), track record (the most-cited fact from their record in office), and positioning and platform, attributed to the campaign. Never comparisons with other candidates, strengths or criticisms, "critics say", electability or momentum, "establishment"/"outsider" labels, rankings, or character judgments. Every candidate's In Brief follows the same template.
+  - **Background.** Narrative prose (the eyebrow reads "Background", never "Bio"), with notable facts merged in under one rule for everyone, for example "the first Latino to serve as attorney general". There is no separate Notable facts section.
+  - **Past positions.** Everything they have done in adult life, newest first, one line per position as `Title (years)` with the district written out in full: elected and appointed offices, paid jobs, private practice, business roles, board seats, military service, and nonprofit roles. Chairs get their own line; committee memberships go on a line under their position. Education is a short code-written list underneath Background. Users draw their own conclusions from this list, so the product never states "experience gaps".
+  - **Key priorities** | **Key stances.** Two columns of short noun phrases in the candidate's own framing (no "Says…" in front, no topic label in front), cited per item; each column's ⓘ tooltip does the attribution.
+  - **Endorsements.** In the slot Key Strengths and Key Criticisms used to hold, as 2 rows of 2: Elected Officials | Unions, then Advocacy & Industry | Local Leaders. Only confirmed, cited, named endorsements (no "soft" endorsements, no unnamed "leadership").
+  - **Might fit if you….** Exactly 4 lines, each a voter priority that matches one of the candidate's own cited positions ("…want the state to keep Medi-Cal coverage for undocumented adults"), on the 4 issues the candidate emphasizes most in their own materials, each a different issue. Drawn only from the candidate's stated platform and issue stances: never experience, identity, party, demographics, electability or other candidates. Each line starts "…want", "…support", "…oppose" or "…prefer"; no "vote for", "should", "best", party names or identity terms; never highlighted; every candidate in a race has the same count (fewer documented positions show what exists plus the Limited line). Its ⓘ reads: "These lines pair this candidate's own stated positions with priorities a voter might hold. They cover the four issues the candidate emphasizes most in their own materials. ballot.ai does not recommend or rank candidates."
+  - **Timeline.** Offices, past elections and results, key decisions and track-record events, and this election (debates, primary result, Nov 3), a citation per event.
   - **Campaign funding.** All available funding information, not just top donors, each figure with an as-of date:
     - totals: raised, spent, and cash on hand;
     - breakdown by source type: individuals (itemized and unitemized), PACs and committees, party, self-funding and loans, small-dollar share, and in-state vs. out-of-state where reported;
@@ -208,9 +206,9 @@ Details: [PROVIDER_ARCHITECTURE.md](../architecture/PROVIDER_ARCHITECTURE.md), [
 
 ## 14. Neutrality requirements
 
-**Allowed:** factual background; documented positions with attribution; sourced voting records; attributed campaign statements; office responsibilities; measure effects; official arguments; campaign-finance facts; neutral comparisons.
+**Allowed:** factual background; documented positions with attribution; sourced voting records; attributed campaign statements; office responsibilities; measure effects; official arguments; campaign-finance facts; neutral comparisons; insights that follow from cited facts ("The next governor will oversee a $X budget and appoint judges"); and the two neutral forms in FR-K4, **In Brief** and **Might fit if you…** (a candidate's own cited positions paired with priorities a voter might hold, with an ⓘ saying ballot.ai does not recommend or rank).
 
-**Not allowed:** a "best" or "worst" candidate; scores; rankings; recommended votes; partisan persuasion; outcome predictions; inference of user preferences.
+**Not allowed:** a "best" or "worst" candidate; scores; rankings; recommended votes ("vote for X"); partisan persuasion; outcome predictions; verdicts on character; inference of user preferences.
 
 **Neutrality is procedural.** Balance comes from identical sections, identical prompts and inputs, attribution, sourcing, and mechanical selection rules. Mixing left and right critiques does not create balance on its own.
 
@@ -218,12 +216,12 @@ Details: [PROVIDER_ARCHITECTURE.md](../architecture/PROVIDER_ARCHITECTURE.md), [
 
 | Prototype field | Decision |
 |---|---|
-| `bottomLine` | **Replaced** by "Their platform" (FR-K4). |
-| `strengths` / `criticisms` | **Removed.** They are written from a point of view, their selection is editorial, and their attribution is often vague ("critics on the left", "elites"). The factual substance moves to *Relevant experience* and *Track record*. Opinion-only content ("vague and untested") has no neutral form and is dropped. |
-| `voteForIf` | **Removed from the free product.** It is reserved for a possible future membership tier as user-driven matching (§22). |
+| `bottomLine` | **Returned in a neutral form (owner, 2026-10-30)** as **In Brief** (FR-K4): experience, track record, platform attributed to the campaign; no comparisons or judgments. ("Their platform", its 2026-10-28 replacement, is now Key priorities.) |
+| `strengths` / `criticisms` | **Removed.** They are written from a point of view, their selection is editorial, and their attribution is often vague ("critics on the left", "elites"). Their slot holds Endorsements; factual record goes in Past positions and the Timeline. Opinion-only content ("vague and untested") has no neutral form and is dropped. |
+| `voteForIf` | **Returned in a neutral form (owner, 2026-10-30)** as **Might fit if you…** (FR-K4): the candidate's own cited positions only, never "vote for". User-driven matching against a voter's own selections stays a membership-tier idea (§22). |
 | Polling "Frontrunner / Long shot" labels | **Removed.** These are predictive framing. |
 | Wording rules | Plain verbs. No evaluative adjectives ("strong", "weak", "impressive", "controversial"). Experience gaps are never stated: the complete past-positions list lets users judge for themselves. |
-| Prototype sections kept | Background, Past positions (broadened), Key priorities, Key stances, Timeline, Endorsements, and In the news are kept and now cite every item. |
+| Prototype sections kept | Race intros (Context, Why it matters, What's at stake, The big picture), Background, Past positions (broadened), Key priorities, Key stances, Timeline, Endorsements, and In the news are kept and now cite every item. "Their platform", "Relevant experience", "Track record" and "Notable facts" (2026-10-28) are folded into Key priorities, Past positions, the Timeline and Background (2026-10-30). |
 
 The deprecated June primary view (internal only) keeps its original fields with a "Deprecated · internal only" label.
 - Party colors (red and blue) encode party only. Ordering never implies preference.
@@ -327,7 +325,7 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 | Quota exhaustion | One Civic call per new address (page views and shared links are served from the cache); `RATE_LIMITED` state with retry copy; quota monitoring; quota increase request before peak |
 | Stale data | Freshness timestamps; lifecycle states; validators for stale elections |
 | Misinformation | Neutrality rules; provenance on every fact; official sources win |
-| AI hallucination | AI excluded from Tier 0; schema and provenance validation; human review for flagged synthesis |
+| AI hallucination | AI excluded from Tier 0; schema and provenance validation; every synthesized sentence checked (excerpts found, hard facts in its excerpts, a verifier, the neutrality lint and reviewer, parity), repaired once, else dropped; no human approval queue (owner, 2026-10-30) |
 | Source conflicts | Recorded conflicts; priority order; manual override audit trail |
 | Privacy | Address never persisted or logged; geography keys; noindex; redaction in logging |
 | Late timing (6 days before Nov 3) | Tier 0 first; enrichment explicitly deferred |
@@ -336,7 +334,7 @@ Dimensions are limited to state, election, provider, status, and contest counts.
 
 1. **Candidate-coverage rules** (`specs/phase-4-ingestion.md`: debate qualification, ≥3% poll, ≥$50K raised, or major-party nominee). Proposed resolution: these rules govern **enrichment priority only**. Every ballot-qualified candidate always appears at Tier 0. *Needs owner confirmation.*
 2. ~~Editorial fields~~. **Resolved 2026-10-28**, see the §14 decisions table.
-3. **Auto-highlighting (`<mark>`)** chooses which phrases to emphasize. Is that editorializing? Proposed: restrict to factual anchors (dates, amounts, office names) in new surfaces.
+3. **Auto-highlighting (`<mark>`)** chooses which phrases to emphasize. Is that editorializing? **Partly resolved 2026-10-30:** the page's highlighter marks structural facts only (`auto="neutral"`); in written prose the model places 2–3 marks per section under code-checked rules (no evaluative words, parity across candidates, never a measure's own name, never in Might fit), with an off switch. Open: the owner's highlight workshop turns marked example paragraphs into rules and tests.
 4. **News feeds.** Kept (decided 2026-10-28). Open: the source-balance policy, meaning which publishers are included and how they are mixed across candidates.
 5. **Durable storage of Civic-derived contest lists** beyond cache TTL is subject to the Google API terms review. The fallback is to store only officially verified contests durably.
 6. ~~Places Autocomplete~~. **Resolved 2026-10-28:** shipped as a server-side proxy (owner request). Costs are capped by a daily quota and a budget alert; see [PRIVACY](../architecture/PRIVACY.md) §2.

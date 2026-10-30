@@ -7,7 +7,9 @@ import { LivePoll } from "./ballot/LivePoll";
 import { MapYearInfo } from "./ballot/MapYearInfo";
 import { SuspendedList } from "./SuspendedList";
 import { AiLabel, Cite, Researching, SourceList } from "./ballot/Citations";
-import type { Cited, SourceDoc } from "@/domain/enrichment";
+import { LIMITED_COPY, type Cited, type SourceDoc } from "@/domain/enrichment";
+
+const INTRO_FIELDS = ["context", "whyItMatters", "whatsAtStake", "bigPicture"];
 
 export function RaceHeader({ race, index }: { race: Race; index: number }) {
   // "General" mode = address-resolved ballot (Nov 2026+): cited content,
@@ -78,6 +80,8 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
       <div className="mt-12 grid grid-cols-1 md:grid-cols-12 gap-y-10 gap-x-8">
         {/* The office: what it does, term, seats (researched, cited) */}
         {g && <OfficeBlock office={e?.office} ai={!!e?.aiFields?.some((f) => f.startsWith("office."))} docs={g.sourceDocs} className="md:col-span-12" />}
+        {/* The race intro is written from the cited sources (research job): labeled as such. */}
+        {e?.aiFields?.some((f) => INTRO_FIELDS.includes(f)) && <AiLabel className="md:col-span-12 -mb-6" />}
 
         {/* Context — wide */}
         <IntroBlock
@@ -86,6 +90,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           className="md:col-span-7 md:row-span-2"
           isLead
           cited={g ? e?.context ?? null : undefined}
+          limited={!!e?.limited?.includes("context")}
           docs={g?.sourceDocs}
         />
 
@@ -95,6 +100,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           body={race.intro.whyItMatters}
           className="md:col-span-5"
           cited={g ? e?.whyItMatters ?? null : undefined}
+          limited={!!e?.limited?.includes("whyItMatters")}
           docs={g?.sourceDocs}
         />
 
@@ -104,6 +110,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           body={race.intro.whatsAtStake}
           className="md:col-span-5"
           cited={g ? e?.whatsAtStake ?? null : undefined}
+          limited={!!e?.limited?.includes("whatsAtStake")}
           docs={g?.sourceDocs}
         />
 
@@ -113,6 +120,7 @@ export function RaceHeader({ race, index }: { race: Race; index: number }) {
           body={race.intro.bigPicture}
           className="md:col-span-7"
           cited={g ? e?.bigPicture ?? null : undefined}
+          limited={!!e?.limited?.includes("bigPicture")}
           docs={g?.sourceDocs}
         />
 
@@ -212,6 +220,7 @@ function IntroBlock({
   className,
   isLead,
   cited,
+  limited,
   docs,
 }: {
   eyebrow: string;
@@ -220,8 +229,13 @@ function IntroBlock({
   isLead?: boolean;
   /** General mode only: the cited item (null = not yet researched). */
   cited?: Cited | null;
+  /** Researched, and the sources don't support it. */
+  limited?: boolean;
   docs?: Record<string, SourceDoc>;
 }) {
+  const style = isLead
+    ? "font-display text-[22px] leading-[1.4] text-[var(--color-paper)] text-pretty"
+    : "text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty";
   if (cited === null) {
     return (
       <div className={className}>
@@ -229,7 +243,27 @@ function IntroBlock({
           <span className="w-3 h-px bg-[var(--color-accent)]" />
           {eyebrow}
         </div>
-        <Researching />
+        {limited ? <p className="text-[13px] italic text-[var(--color-paper-3)]">{LIMITED_COPY}</p> : <Researching />}
+      </div>
+    );
+  }
+  // Synthesized prose: every sentence carries its own [n].
+  if (cited?.sentences?.length && docs) {
+    return (
+      <div className={className}>
+        <div className="font-mono-cap text-[10px] text-[var(--color-paper-3)] mb-3 flex items-center gap-2">
+          <span className="w-3 h-px bg-[var(--color-accent)]" />
+          {eyebrow}
+        </div>
+        <p className={style}>
+          {cited.sentences.map((x, i) => (
+            <span key={i}>
+              {i > 0 && " "}
+              <RichText text={x.text} auto="neutral" />
+              <Cite ids={x.sources} docs={docs} quotes={x.quotes} />
+            </span>
+          ))}
+        </p>
       </div>
     );
   }
@@ -242,11 +276,7 @@ function IntroBlock({
       <RichBlock
         text={body}
         auto={docs ? "neutral" : "archive"}
-        className={
-          isLead
-            ? "font-display text-[22px] leading-[1.4] text-[var(--color-paper)] text-pretty"
-            : "text-[15px] leading-[1.65] text-[var(--color-paper-2)] text-pretty"
-        }
+        className={style}
       />
       {cited && docs && <Cite ids={cited.sources} docs={docs} quotes={cited.quotes} />}
     </div>
