@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gdeltQuery, gdeltUrl, isGdeltThrottle, isOpinionKind, nytTagged, nytUrl, parseGdelt, parseNyt, tidyGdeltTitle } from "./apis";
+import { gdeltRaceQuery, gdeltUrl, isGdeltThrottle, isOpinionKind, nytTagged, nytUrl, parseGdelt, namedInHeadline, parseNyt, raceQueries, tidyGdeltTitle } from "./apis";
 import { candidateQueries, type TrackedContest } from "./match";
 
 const CONTESTS: TrackedContest[] = [
@@ -35,6 +35,24 @@ const CONTESTS: TrackedContest[] = [
     state: "CA",
     candidates: [{ id: "kim", names: ["Jane Kim"] }, { id: "lee", names: ["Ann Lee"] }],
   },
+  {
+    id: "ohio-issue-1",
+    kind: "measure",
+    title: "Issue 1",
+    divisionName: "Ohio",
+    state: "OH",
+    stateLevel: true,
+    candidates: [],
+  },
+  {
+    id: "appeals",
+    kind: "candidate",
+    title: "Associate Justice, Court of Appeal, Fourth District, Division Three",
+    divisionName: "Fourth Appellate District",
+    state: "CA",
+    stateLevel: true,
+    candidates: [{ id: "motoike", names: ["Joanne Motoike"] }],
+  },
 ];
 const people = candidateQueries(CONTESTS);
 const by = (id: string) => people.find((p) => p.candidateId === id)!;
@@ -51,16 +69,40 @@ describe("candidateQueries", () => {
 });
 
 describe("GDELT", () => {
-  it("asks for the full name, a word identifying the race, the last name twice, and only our outlets", () => {
-    const q = gdeltQuery(by("becerra"), ["politico.com", "wsj.com"]);
-    expect(q).toContain('"Xavier Becerra"');
+  const races = raceQueries(CONTESTS);
+  const race = (id: string) => races.find((r) => r.contestId === id)!;
+
+  it("asks once per race: any candidate's full name, a word identifying the race, the office twice, and only our outlets", () => {
+    const q = gdeltRaceQuery(race("gov"), ["politico.com", "wsj.com"]);
+    expect(q).toContain('("Xavier Becerra" OR "Steve Hilton")');
     expect(q).toMatch(/\(governor OR .*california/);
-    expect(q).toContain('repeat2:"becerra"');
+    expect(q).toContain('repeat2:"governor"');
     expect(q).toContain("(domainis:politico.com OR domainis:wsj.com)");
-    // A local race needs its own place, not just the state.
-    expect(gdeltQuery(by("kim"), ["ocregister.com"])).not.toMatch(/\bcalifornia\b/);
-    expect(gdeltQuery(by("kim"), ["ocregister.com"])).toContain("placentia");
     expect(gdeltUrl("x", "3d")).toContain("mode=artlist");
+  });
+
+  it("gives a local race its own place, never just the state, and a statewide measure its number and state (non-CA)", () => {
+    expect(race("council").context).toContain("placentia");
+    expect(race("council").context).not.toContain("california");
+    expect(race("ohio-issue-1")).toMatchObject({ phrases: ["issue 1"], context: ["ohio"], people: [] });
+    expect(race("tx-ag").phrases).toEqual(["Rosalind Alvarado", "Tom Brennan"]);
+  });
+
+  it("ranks statewide races first, then other state-level ones, then local", () => {
+    expect(race("gov").tier).toBe(0);
+    expect(race("tx-ag").tier).toBe(0);
+    expect(race("appeals").tier).toBe(1);
+    expect(race("council").tier).toBe(2);
+    expect(by("motoike").judicial).toBe(true);
+    expect(by("becerra").judicial).toBe(false);
+  });
+
+  it("attaches a story to a candidate only when its headline names them", () => {
+    expect(namedInHeadline("Becerra pitches insurance freeze", race("gov"))).toEqual(["becerra"]);
+    expect(namedInHeadline("Becerra and Hilton spar over gas prices", race("gov"))).toEqual(["becerra", "hilton"]);
+    expect(namedInHeadline("California's governor race tightens", race("gov"))).toEqual([]);
+    // Whole words only: "Hiltons" is not Hilton.
+    expect(namedInHeadline("The Hiltons sell a hotel", race("gov"))).toEqual([]);
   });
 
   it("parses English results and puts tokenized punctuation back", () => {

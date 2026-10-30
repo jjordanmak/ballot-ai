@@ -2,16 +2,17 @@
  * News found through APIs, for outlets whose pages we can't read (owner,
  * 2026-10-30): the New York Times Article Search API and GDELT's DOC API
  * (which indexes Politico, The Hill, WSJ, Bloomberg, NPR, AP and others).
- * Both are queried by candidate name, so a story that names someone only
- * in its body still reaches their profile. Pure: queries and parsers here,
- * fetching and storage in collect-apis.ts.
+ * They search article text, so a story that names someone only in its body
+ * still reaches their race. Pure: queries and parsers here, fetching and
+ * storage in collect-apis.ts.
  *
  * GDELT returns only the URL, title and date (it reads the article for us);
  * the query itself carries the identity rules our matcher applies to text we
- * read: the full name, at least one word identifying the race, and the last
- * name at least twice.
+ * read: a candidate's full name, at least one word identifying the race, and
+ * the office named at least twice. The NYT is asked one person at a time.
  */
-import type { CandidateQuery } from "./match";
+import { candidateQueries, contestTier, measureIds, officeTerms, placeTerm, STATE_NAMES, type CandidateQuery, type TrackedContest } from "./match";
+import { normalizeForMatch } from "@/domain/text";
 
 export const NYT_ENDPOINT = "https://api.nytimes.com/svc/search/v2/articlesearch.json";
 export const GDELT_ENDPOINT = "https://api.gdeltproject.org/api/v2/doc/doc";
@@ -33,20 +34,68 @@ export interface ApiArticle {
 const quote = (t: string) => (/\s/.test(t) ? `"${t}"` : t);
 
 /**
- * `"Xavier Becerra" (governor OR california OR hilton) repeat2:"becerra" (domainis:politico.com OR …)`.
- * A local race's context is its own place (or an opponent), never just the state.
+ * One GDELT search per race (owner-approved fix, 2026-10-30: per-person
+ * searches got throttled). A story attaches to the race, and to a candidate
+ * only when its headline names them.
  */
-export function gdeltQuery(c: CandidateQuery, domains: string[]): string {
-  const ctx = c.stateLevel ? c.context : c.context.filter((t) => t !== "california" && !STATE_WORDS.has(t));
-  const parts = [`"${c.name}"`];
-  if (ctx.length) parts.push(ctx.length === 1 ? quote(ctx[0]) : `(${ctx.map(quote).join(" OR ")})`);
-  parts.push(`repeat2:"${c.surname.toLowerCase()}"`);
-  if (domains.length) parts.push(domains.length === 1 ? `domainis:${domains[0]}` : `(${domains.map((d) => `domainis:${d}`).join(" OR ")})`);
+export interface RaceQuery {
+  contestId: string;
+  state?: string;
+  tier: 0 | 1 | 2;
+  /** Candidates' full names, or a measure's identifiers ("proposition 40", "prop 40"). */
+  phrases: string[];
+  people: { candidateId: string; surname: string }[];
+  /** Office words and the place or state; one must appear. */
+  context: string[];
+  /** A one-word office term the story must use at least twice ("governor"), when there is one. */
+  anchor?: string;
+}
+
+const MEASURE_ID = /^(proposition|prop|measure|question|issue|amendment) [a-z0-9]{1,4}$/;
+
+export function raceQueries(contests: TrackedContest[]): RaceQuery[] {
+  const people = candidateQueries(contests);
+  const out: RaceQuery[] = [];
+  for (const c of contests) {
+    const stateName = c.state ? STATE_NAMES[c.state] : undefined;
+    const where = c.stateLevel ? stateName : placeTerm(c.divisionName) || undefined;
+    if (c.kind === "measure") {
+      const ids = measureIds(c.title).filter((i) => MEASURE_ID.test(i));
+      if (ids.length && where) out.push({ contestId: c.id, state: c.state, tier: contestTier(c), phrases: ids, people: [], context: [where] });
+      continue;
+    }
+    const ps = people.filter((p) => p.contestId === c.id);
+    if (!ps.length) continue;
+    const office = officeTerms(c.title);
+    out.push({
+      contestId: c.id,
+      state: c.state,
+      tier: contestTier(c),
+      phrases: ps.map((p) => p.name),
+      people: ps.map((p) => ({ candidateId: p.candidateId, surname: p.surname })),
+      context: [...new Set([...office, where ?? ""].filter((t) => t.length > 2))],
+      anchor: office.find((t) => !/\s/.test(t)),
+    });
+  }
+  return out;
+}
+
+const orList = (xs: string[], f: (x: string) => string) => (xs.length === 1 ? f(xs[0]) : `(${xs.map(f).join(" OR ")})`);
+
+/** `("Xavier Becerra" OR "Steve Hilton") (governor OR california) repeat2:"governor" (domainis:… OR …)`. */
+export function gdeltRaceQuery(r: RaceQuery, domains: string[]): string {
+  const parts = [orList(r.phrases, (p) => `"${p}"`)];
+  if (r.context.length) parts.push(orList(r.context, quote));
+  if (r.anchor) parts.push(`repeat2:"${r.anchor}"`);
+  if (domains.length) parts.push(orList(domains, (d) => `domainis:${d}`));
   return parts.join(" ");
 }
 
-/** State names are fine context for a statewide race but too broad for a local one. */
-const STATE_WORDS = new Set(["alabama", "alaska", "arizona", "arkansas", "colorado", "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming", "district of columbia"]);
+/** Candidates in the race whose last name is in the headline. */
+export function namedInHeadline(title: string, r: RaceQuery): string[] {
+  const t = ` ${normalizeForMatch(title)} `;
+  return r.people.filter((p) => t.includes(` ${normalizeForMatch(p.surname)} `)).map((p) => p.candidateId);
+}
 
 export function gdeltUrl(query: string, timespan = "3d"): string {
   const p = new URLSearchParams({ query, mode: "artlist", format: "json", timespan, maxrecords: "50", sort: "datedesc" });

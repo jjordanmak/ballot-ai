@@ -9,7 +9,7 @@ export interface NewsSource extends SourceContext {
   /** Why a source is turned off (e.g. the publisher blocks automated readers). */
   disabledReason?: string;
   note?: string;
-  /** Site GDELT indexes this outlet under: searched by candidate name, since we can't read its pages. */
+  /** Site GDELT indexes this outlet under: searched by race, since we can't read its pages. */
   gdeltDomain?: string;
 }
 
