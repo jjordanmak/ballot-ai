@@ -179,6 +179,12 @@ export type Rewrite = z.infer<typeof Rewrite>;
 
 /** The neutrality reviewer: only the units that break a rule. */
 export const NeutralityReview = z.object({
-  flags: z.array(z.object({ id: z.string(), reason: z.string().describe("Which rule, in a few words.") })),
+  flags: z.array(
+    z.object({
+      id: z.string(),
+      reason: z.string().describe("Which rule, in a few words."),
+      highlightOnly: z.boolean().describe("True when only a <mark> highlight breaks a rule and the sentence itself is fine."),
+    }),
+  ),
 });
 export type NeutralityReview = z.infer<typeof NeutralityReview>;

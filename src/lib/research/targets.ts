@@ -56,6 +56,10 @@ export interface Target {
   local?: boolean;
   /** The party as the ballot prints it (people): one of the item's own names in the writing checks. */
   party?: string;
+  /** The ballot designation (people), e.g. "Teacher/Business Owner": official ballot data. */
+  designation?: string;
+  /** Race intros: each candidate's party as the ballot prints it (same order as candidateNames). */
+  candidateParties?: (string | null)[];
   /** Race intros: the candidates' target ids (the fairness pass reads their results) and names. */
   candidateIds?: string[];
   candidateNames?: string[];
@@ -68,7 +72,7 @@ export interface ContestRow {
   title: string;
   division_key: string;
   divisions: { name: string; state: string | null; scope: string | null } | null;
-  contest_candidates: { id: string; ballot_name: string; display_name: string | null; campaign_url: string | null; party?: string | null }[];
+  contest_candidates: { id: string; ballot_name: string; display_name: string | null; campaign_url: string | null; party?: string | null; designation?: string | null }[];
 }
 
 interface CountyGuide {
@@ -228,6 +232,7 @@ export function buildTargets(rows: ContestRow[], bundle?: EnrichmentBundle): Tar
         local: !statewide && !LEGISLATIVE.test(c.title),
         candidateIds: c.contest_candidates.map((k) => k.id),
         candidateNames: names,
+        candidateParties: c.contest_candidates.map((k) => k.party ?? null),
       });
     }
     for (const k of c.contest_candidates) {
@@ -261,6 +266,7 @@ export function buildTargets(rows: ContestRow[], bundle?: EnrichmentBundle): Tar
         division: where,
         local: !retention && !statewide && !LEGISLATIVE.test(c.title),
         ...(k.party ? { party: k.party } : {}),
+        ...(k.designation ? { designation: k.designation } : {}),
       });
     }
   }
