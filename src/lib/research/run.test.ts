@@ -29,6 +29,8 @@ function fakeDb(seed: Record<string, Row[]>, clock: () => Date, slotWait: () => 
       eq: (k: string, v: unknown) => ((filters = [...filters, (r) => r[k] === v]), b),
       in: (k: string, vs: unknown[]) => ((filters = [...filters, (r) => vs.includes(r[k])]), b),
       gt: (k: string, v: string) => ((filters = [...filters, (r) => typeof r[k] === "string" && (r[k] as string) > v]), b),
+      gte: (k: string, v: string) => ((filters = [...filters, (r) => typeof r[k] === "string" && (r[k] as string) >= v]), b),
+      contains: (k: string, vs: unknown[]) => ((filters = [...filters, (r) => Array.isArray(r[k]) && vs.every((v) => (r[k] as unknown[]).includes(v))]), b),
       like: (k: string, p: string) => ((filters = [...filters, (r) => new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*")}$`).test(String(r[k]))]), b),
       order: () => b,
       range: (a: number, z: number) => ((from = a), (lim = z - a + 1), b),
@@ -333,6 +335,27 @@ describe("runJob", () => {
     expect(s.parse).not.toHaveBeenCalled();
   });
 
+  it("a highlight the reviewer objects to loses its mark, not the sentence", async () => {
+    const s = setup();
+    const inner = fakeClient();
+    const parse = vi.fn(async (req: Req) => {
+      if (kindOf(req) === "review") return { stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 }, parsed_output: { flags: [{ id: "taxes.0", reason: "highlight on a contestable phrase", highlightOnly: true }] } };
+      return inner.parse(req);
+    });
+    const deps = { ...s.deps(publishCfg), client: { messages: { parse } } as never };
+    await dispatch({ ...deps, runRemote: async () => {} });
+    expect((await runJob(deps, KEY)).outcome).toBe("published");
+    const [v] = s.tables.synthesized_field_versions as { payload: { sections: Record<string, { text: string }[]> } }[];
+    expect(v.payload.sections.taxes[0].text).toBe("Raises the state sales tax from 6% to 7.25%.");
+  });
+
+  it("reads the news coverage the feed matched to a race or person, never for a measure", async () => {
+    const s = setup({ feed_items: [{ url: "https://calmatters.org/a", publisher: "CalMatters", type: "news", status: "published", contest_ids: ["m-7"], candidate_ids: [], published_at: "2026-10-20T00:00:00Z" }] });
+    await dispatch({ ...s.deps(publishCfg), runRemote: async () => {} });
+    await runJob(s.deps(publishCfg), KEY);
+    expect(s.tables.sources.map((x) => x.url)).not.toContain("https://calmatters.org/a");
+  });
+
   it("keeps the API's error message on a rejected request, so it can be diagnosed", async () => {
     const s = setup();
     const err = new Anthropic.BadRequestError(400, { type: "error", error: { type: "invalid_request_error", message: "Schema is too complex for compilation." } }, "Schema is too complex for compilation.", new Headers());
@@ -502,7 +525,7 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
       {
         contests: candidateContests,
         // The race's search already ran (shared document set): the city's election page.
-        research_state: [{ key: `${RKEY}#search`, target: {}, discovered: { urls: ["https://www.springfield.il.gov/elections"], at: now.toISOString(), searchedAt: now.toISOString() }, failures: 0 }],
+        research_state: [{ key: `${RKEY}#search`, target: {}, discovered: { v: 2, urls: ["https://www.springfield.il.gov/elections"], at: now.toISOString(), searchedAt: now.toISOString() }, failures: 0 }],
       },
       () => now,
     );
@@ -522,6 +545,22 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
         return { stop_reason: "end_turn", usage, parsed_output: { flags: [] } };
       }
       if (kind === "rewrite") return { stop_reason: "end_turn", usage, parsed_output: { units: [{ id: "c1/background.0", text: "Bee has served on the Springfield City Council since 2019.", refs: [] }] } };
+      if (kind === "repair") {
+        // Thin sections get filled: one cited sentence, one uncited explanation (owner, 2026-10-30).
+        expect(textOf(req.messages[2])).toMatch(/empty or thin: .*whatsAtStake.*bigPicture/);
+        return {
+          stop_reason: "end_turn",
+          usage,
+          parsed_output: {
+            units: [
+              { id: "bigPicture.new1", text: "Springfield elects its mayor to a 4-year term.", refs: [{ sourceId: "D1", excerpt: "The mayor of Springfield is elected to a four-year term" }] },
+              { id: "whatsAtStake.new1", text: "The next mayor will shape how the city spends its money.", refs: [] },
+              { id: "whatsAtStake.new2", text: "Ann Bee would expand bus service.", refs: [] },
+            ],
+          },
+        };
+      }
+      // The ballot data (candidates and their parties) is given to the writer as always true.
       expect(textOf(req.messages[0])).toContain("Candidates on the ballot: Ann Bee, Cy Cole.");
       return {
         stop_reason: "end_turn",
@@ -550,12 +589,15 @@ ${"<p>More about the city election, for length.</p>".repeat(8)}</main></body></h
     expect((await runJob(deps(now), `${RKEY}@${SETTING}`)).outcome).toBe("compared");
     const row = (fake.tables.synthesized_field_versions as { target_type: string; payload: { kind: string; sections: Record<string, unknown[]>; limited: string[]; parity: { rewrites: unknown[]; unresolved: unknown[] } } }[]).find((r) => r.target_type === "race")!;
     expect(row.payload.kind).toBe("race");
-    expect(Object.keys(row.payload.sections).sort()).toEqual(["context", "whyItMatters"]);
-    expect(row.payload.limited).toEqual(["whatsAtStake", "bigPicture"]);
+    expect(Object.keys(row.payload.sections).sort()).toEqual(["bigPicture", "context", "whatsAtStake", "whyItMatters"]);
+    expect(row.payload.limited).toEqual([]);
+    // An uncited explanation is kept without a source; an uncited sentence about a candidate isn't.
+    const stake = (row.payload.sections as Record<string, { text: string; refs: unknown[] }[]>).whatsAtStake;
+    expect(stake).toEqual([{ text: "The next mayor will shape how the city spends its money.", refs: [] }]);
     expect(row.payload.parity.rewrites).toEqual([
       expect.objectContaining({ target: "k-bee", unit: "background.0", text: "Bee has served on the Springfield City Council since 2019." }),
     ]);
     expect(row.payload.parity.unresolved).toEqual([]);
-    expect(calls).toEqual(["write", "verify", "review", "review", "rewrite", "verify", "review"]);
+    expect(calls).toEqual(["write", "verify", "review", "repair", "verify", "review", "review", "rewrite", "verify", "review"]);
   });
 });

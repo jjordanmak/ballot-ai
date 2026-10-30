@@ -206,6 +206,8 @@ Details: [PROVIDER_ARCHITECTURE.md](../architecture/PROVIDER_ARCHITECTURE.md), [
 
 ## 14. Neutrality requirements
 
+**Voice (owner, 2026-10-30):** ballot.ai reads like a nonpartisan news outlet. Positions, claims and specific facts are cited and attributed; explanatory and connecting sentences (how an office works, why a fact matters) may be uncited when they add no specific fact and stay descriptive, symmetric and plain. Sources span official pages, campaign materials (positions only) and vetted news coverage, including current events.
+
 **Allowed:** factual background; documented positions with attribution; sourced voting records; attributed campaign statements; office responsibilities; measure effects; official arguments; campaign-finance facts; neutral comparisons; insights that follow from cited facts ("The next governor will oversee a $X budget and appoint judges"); and the two neutral forms in FR-K4, **In Brief** and **Might fit if you…** (a candidate's own cited positions paired with priorities a voter might hold, with an ⓘ saying ballot.ai does not recommend or rank).
 
 **Not allowed:** a "best" or "worst" candidate; scores; rankings; recommended votes ("vote for X"); partisan persuasion; outcome predictions; verdicts on character; inference of user preferences.

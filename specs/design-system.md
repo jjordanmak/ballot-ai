@@ -120,6 +120,8 @@ ballot.ai's own words follow the **AP Stylebook**, with these house exceptions, 
 
 AP otherwise: state names abbreviated AP-style only after a city ("Fresno, Calif."); titles capitalized before a name, lowercase after ("Gov. Jerry Brown", "Brown, the governor"); AP dates and times ("Nov. 3", "May 5, 2026").
 
+**Cited vs uncited (owner, 2026-10-30):** like a nonpartisan news outlet, claims and positions are cited and attributed; explanation around them (how an office works, connecting sentences) may be uncited, carries no [n], adds no specific fact, and stays descriptive, symmetric and in plain common terms. No generic filler: a sentence true of any race doesn't belong.
+
 Voice (from the June prototype, minus its evaluative framing): lead with the most important fact; be concrete (numbers, dates, named programs); connect facts ("which means…", "because…") only when the sources do; 2–4 sentences per section; plain words a 9th grader can follow; attribute claims ("His campaign says…", "The Legislative Analyst estimates…"). Never "surged", "struggled", "frontrunner", "fractured", "establishment", "elites", strengths or criticisms, or rankings. In the writing pipeline, code flags common AP slips (`apSlips`, `src/lib/research/synthesis.ts`) and the repair pass fixes them; a sentence is never dropped for style.
 
 ---

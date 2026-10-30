@@ -48,7 +48,14 @@ type Db = SupabaseClient<Database>;
 
 const SPEND_METRIC = "anthropic.microusd";
 const MAX_DOC_CHARS = 60_000;
-const MAX_TOTAL_CHARS = 200_000; // ~50K tokens: well under Haiku's 100K-token price tier
+/** A news article is narrowed to the passages about the target, so several fit alongside the official pages. */
+const MAX_NEWS_CHARS = 15_000;
+const MAX_TOTAL_CHARS = 240_000; // ~60K tokens: under Haiku's 100K-token price tier
+/** Articles the news feed matched to a race or candidate (round 2, owner 2026-10-30): newest first, this recent. */
+const FEED_ARTICLES = { race: 4, person: 3 } as const;
+const FEED_WINDOW_DAYS = 75;
+/** Bump when the search queries change, so the shared search runs again instead of reusing last week's results. */
+const SEARCH_VERSION = 2;
 const MAX_FOLLOW = 4;
 const SEARCH_TTL_MS = 7 * 24 * 3600_000;
 const RECHECK_MS = 6 * 3600_000;
@@ -91,7 +98,7 @@ export async function loadContests(db: Db, electionId: string): Promise<ContestR
   for (let from = 0; ; from += 500) {
     const { data, error } = await db
       .from("contests")
-      .select("id, kind, contest_type, title, division_key, divisions(name, state, scope), contest_candidates(id, ballot_name, display_name, campaign_url, party)")
+      .select("id, kind, contest_type, title, division_key, divisions(name, state, scope), contest_candidates(id, ballot_name, display_name, campaign_url, party, designation)")
       .eq("election_id", electionId)
       .order("id")
       .range(from, from + 499);
@@ -170,6 +177,8 @@ export async function dispatch(deps: ResearchDeps): Promise<DispatchSummary> {
 }
 
 interface SearchCache {
+  /** SEARCH_VERSION the search ran under. */
+  v?: number;
   urls: string[];
   campaign?: string | null;
   followed?: string[];
@@ -179,6 +188,8 @@ interface SearchCache {
   refs?: string[];
   /** When the document set was last gathered (shared while the stored pages are fresh). */
   at: string;
+  /** Articles the news feed matched to this target, when the set was gathered (every setting reads the same ones). */
+  feed?: { url: string; publisher: string }[];
 }
 
 /** Waits for a busy site before running anyway with what's there. */
@@ -200,18 +211,19 @@ async function prepareShared(
   const { db, now } = deps;
   const { data: row } = await db.from("research_state").select("discovered, locked_until").eq("key", key).maybeSingle();
   const cached = row?.discovered as SearchCache | null | undefined;
-  if (cached && now.getTime() - Date.parse(cached.at) < maxAgeMs) return { cache: cached, owner: false, cost: 0 };
+  const current = (cached?.v ?? 1) >= SEARCH_VERSION;
+  if (cached && current && now.getTime() - Date.parse(cached.at) < maxAgeMs) return { cache: cached, owner: false, cost: 0 };
   // Another setting's job is gathering right now: try again shortly.
   if (row?.locked_until && Date.parse(row.locked_until) > now.getTime()) return { cache: null, owner: false, cost: 0, wait: true };
   await db
     .from("research_state")
     .upsert({ key, target: { kind: "documents", of: t.key } as Json, next_check_at: "2999-01-01T00:00:00Z", locked_until: new Date(now.getTime() + SHARED_LOCK_MS).toISOString() }, { onConflict: "key" });
   const searchedAt = cached?.searchedAt ?? cached?.at;
-  if (!t.search || (cached && searchedAt && now.getTime() - Date.parse(searchedAt) < SEARCH_TTL_MS)) {
+  if (!t.search || (cached && searchedAt && current && now.getTime() - Date.parse(searchedAt) < SEARCH_TTL_MS)) {
     return { cache: cached ?? null, owner: true, cost: 0 };
   }
   const res = await searchUrls({ kind: t.search.kind, query: t.search.query, mustMention: t.search.mustMention, client: deps.client });
-  return { cache: { urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], searchedAt: now.toISOString(), at: now.toISOString() }, owner: true, cost: res.costMicroUsd };
+  return { cache: { v: SEARCH_VERSION, urls: res.urls, campaign: cached?.campaign ?? null, followed: cached?.followed ?? [], searchedAt: now.toISOString(), at: now.toISOString() }, owner: true, cost: res.costMicroUsd };
 }
 
 async function releaseShared(db: Db, t: Target, now: Date, cache: SearchCache | null) {
@@ -249,6 +261,34 @@ function wikipediaReferences(html: string, mustMention: string[]): string[] {
   return out.slice(0, 3);
 }
 
+/** Which documents fill the budget first: official, Ballotpedia, the campaign's own pages, then news. */
+const INCLUDE_ORDER: Record<SourceTier, number> = { official: 0, ballotpedia: 1, campaign: 2, news: 3 };
+
+/**
+ * The newest articles the news feed matched to this race or person (published,
+ * vetted outlets, recent). Read-only: the feed's own tables (src/lib/feeds/).
+ * Measures stay official-only (CLAUDE.md), so they get none.
+ */
+async function feedArticles(db: Db, t: Target, now: Date): Promise<{ url: string; publisher: string }[]> {
+  const column = t.kind === "race" ? "contest_ids" : t.kind === "candidate" || t.kind === "retention" ? "candidate_ids" : null;
+  if (!column) return [];
+  const since = new Date(now.getTime() - FEED_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data, error } = await db
+    .from("feed_items")
+    .select("url, publisher")
+    .eq("type", "news")
+    .eq("status", "published")
+    .contains(column, [t.targetId])
+    .gte("published_at", since)
+    .order("published_at", { ascending: false })
+    .limit(t.kind === "race" ? FEED_ARTICLES.race : FEED_ARTICLES.person);
+  if (error) {
+    logEvent("research.feed_read_failed", { error: error.message });
+    return [];
+  }
+  return (data ?? []).map((r) => ({ url: r.url, publisher: r.publisher }));
+}
+
 export interface Tried {
   url: string;
   outcome: string;
@@ -261,7 +301,7 @@ async function gatherDocuments(
   cache: SearchCache | null,
   owner = true,
   maxAgeMs = REREAD_AFTER_MS,
-): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; refs: string[]; busy: number; tried: Tried[] }> {
+): Promise<{ docs: FetchedDoc[]; campaign?: string | null; followed: string[]; refs: string[]; feed: { url: string; publisher: string }[]; busy: number; tried: Tried[] }> {
   const fdeps: FetchDeps = { db: deps.db, now: deps.now, fetchImpl: deps.fetchImpl, resolve: deps.resolve, sleep: deps.sleep };
   const got: { f: Fetched; page: TargetPage }[] = [];
   const seen = new Set<string>();
@@ -325,15 +365,20 @@ async function gatherDocuments(
   for (const u of refs) await read({ url: u, official: isGovHost(u), publisher: new URL(u).hostname });
   if (campaign && t.kind === "candidate") await read({ url: campaign, official: false });
 
-  // Most trusted first; long documents narrowed to this target.
+  // 3. News coverage the feed already matched to this race or person (vetted outlets only; never for measures).
+  const feed = cache?.feed && !owner ? cache.feed : owner ? await feedArticles(deps.db, t, deps.now) : cache?.feed ?? [];
+  for (const a of feed) await read({ url: a.url, official: false, publisher: a.publisher });
+
+  // Official first, then Ballotpedia, the campaign's own pages, then news (so a long official guide can't crowd out the
+  // campaign site); long documents narrowed to this target, news articles more tightly.
   let total = 0;
   const docs: FetchedDoc[] = [];
   const ranked = got
     .map((g) => ({ ...g, tier: tierFor(g.f.url, g.page.official) }))
-    .sort((x, y) => TIER_RANK[x.tier] - TIER_RANK[y.tier]);
+    .sort((x, y) => INCLUDE_ORDER[x.tier] - INCLUDE_ORDER[y.tier]);
   for (const { f, page, tier } of ranked) {
     if (total >= MAX_TOTAL_CHARS) break;
-    const text = focusText(f.text, t.focus, Math.min(MAX_DOC_CHARS, MAX_TOTAL_CHARS - total));
+    const text = focusText(f.text, t.focus, Math.min(tier === "news" ? MAX_NEWS_CHARS : MAX_DOC_CHARS, MAX_TOTAL_CHARS - total));
     total += text.length;
     docs.push({
       id: `D${docs.length + 1}`,
@@ -342,7 +387,7 @@ async function gatherDocuments(
       meta: { url: f.url, title: f.title, publisher: page.publisher ?? new URL(f.url).hostname, official: tier === "official", fetchedAt: f.fetchedAt, tier },
     });
   }
-  return { docs, campaign, followed, refs, busy, tried };
+  return { docs, campaign, followed, refs, feed, busy, tried };
 }
 
 function inputHash(t: Target, setting: Setting, docs: FetchedDoc[], extra: string[] = []): string {
@@ -429,7 +474,7 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
     await finishState(db, stateKey, now, { outcome: "waiting", afterMs: 60_000, failures: state.failures });
     return { key: stateKey, outcome: "waiting", spentMicroUsd: spent };
   }
-  const { docs, campaign, followed, refs, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner, maxAge);
+  const { docs, campaign, followed, refs, feed, busy, tried } = await gatherDocuments(d, t, shared.cache, shared.owner, maxAge);
   await recordSpend(db, now, shared.cost);
   // A site was too busy to read right now: wait and try again rather than run on fewer documents
   // (after a few tries, run with what's there).
@@ -442,6 +487,8 @@ export async function runJob(deps: ResearchDeps, stateKey: string): Promise<JobO
   }
   if (shared.owner) {
     await releaseShared(db, t, now, {
+      v: SEARCH_VERSION,
+      feed,
       urls: shared.cache?.urls ?? [],
       campaign,
       followed: followed.length ? followed : shared.cache?.followed ?? [],
@@ -616,7 +663,7 @@ async function synthesizeOne(
   run: { runId: string | null; field: string; started: number },
 ): Promise<{ outcome: "published" | "held" | "compared" | "failed"; spent: number; problem?: string }> {
   const { db, now } = deps;
-  const w = await writeItem({ cfg, setting, t, docs, now, client: deps.client });
+  const w = await writeItem({ cfg, setting, t, docs, now, client: deps.client, electionDate: apDate(deps.electionSlug ?? "2026-11-03") });
   let spent = w.spent;
   const usage = [...w.usage];
   let parityProblem: string | undefined;
@@ -652,6 +699,14 @@ async function synthesizeOne(
   const stored = await storeVersion(db, t, run.field, run.runId, w.payload, w.sourceIds, w.rejected);
   if (run.runId) await db.from("synthesis_runs").update({ status: "succeeded", error: null, completed_at: new Date().toISOString(), metadata: metadata({ output_hash: stored.outputHash }) }).eq("id", run.runId);
   return { outcome: t.compare ? "compared" : stored.status, spent };
+}
+
+const AP_MONTHS = ["Jan.", "Feb.", "March", "April", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."];
+
+/** "2026-11-03" → "Nov. 3, 2026" (AP style). */
+export function apDate(slug: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(slug);
+  return m ? `${AP_MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : slug;
 }
 
 /** Token counts across the calls of one run. */

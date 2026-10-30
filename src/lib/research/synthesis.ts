@@ -126,7 +126,7 @@ export interface Unit {
 
 export type SynthKind = "race" | "measure" | "person";
 
-const LIST_SECTIONS = new Set(["priorities", "stances"]);
+export const LIST_SECTIONS = new Set(["priorities", "stances"]);
 
 function sectionUnits(sections: { section: string; sentences: { text: string; refs: SynthRef[] }[] }[]): Unit[] {
   const seen = new Set<string>();
@@ -191,6 +191,23 @@ const COMMON = new Set([
   "some", "many", "one", "over", "among", "between", "through", "by", "to", "of", "but", "or", "nor", "so", "there", "here", "what", "how",
 ]);
 
+/**
+ * Capitalized words that aren't names: parties, institutions, offices, months
+ * and days (round 2: "Democratic", "House", "November" dropped true sentences).
+ * Real names (people, places, organizations, programs) are still checked.
+ */
+const GENERIC = new Set([
+  "democrat", "democrats", "democratic", "republican", "republicans", "libertarian", "green", "independent", "party", "nonpartisan",
+  "house", "senate", "assembly", "legislature", "legislative", "congress", "congressional", "state", "states", "county", "city", "district",
+  "division", "board", "court", "courts", "department", "office", "member", "members", "governor", "lieutenant", "secretary", "attorney",
+  "general", "controller", "treasurer", "commissioner", "superintendent", "supervisor", "supervisors", "justice", "justices", "judge", "president",
+  "mayor", "council", "committee", "commission", "trustee", "trustees", "area", "election", "elections", "day", "primary", "constitution",
+  "constitutional", "federal", "supreme", "appeal", "appeals", "appellate", "bill", "act", "proposition", "measure", "amendment", "initiative",
+  "referendum", "public", "instruction", "equalization", "insurance", "community", "college", "school", "unified", "high", "united",
+  "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "u.s.", "us", "american", "americans", "voters", "voter",
+]);
+
 const wordIn = (w: string, hay: string) => new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`).test(hay);
 
 /**
@@ -218,6 +235,7 @@ export function hardFactProblem(text: string, excerpts: string[], ownNames: stri
     const w = factText(raw);
     if (!w) continue;
     if (starts.has(m.index!) && COMMON.has(w)) continue;
+    if (GENERIC.has(w) || GENERIC.has(w.replace(/s$/, ""))) continue;
     // A capitalized first word is usually an ordinary word ("Brings…"); it's checked only when it starts a longer name ("Gavin Newsom").
     if (starts.has(m.index!) && !/^\s+[A-Z]/.test(plain.slice(m.index! + m[0].length))) continue;
     if (wordIn(w, support) || wordIn(w.replace(/s$/, ""), support)) continue;
@@ -267,6 +285,16 @@ export function apSlips(text: string): string[] {
 export interface ScreenContext {
   /** By the id the model saw ("D1"). */
   docs: Map<string, FetchedDoc>;
+  /**
+   * The official ballot data for the item (names, parties, designations, the
+   * office, the election date), as text. Always true, so it supports any
+   * sentence without a citation, like the ballot block itself.
+   */
+  ballotFacts?: string;
+  /** Candidates' names (race intros): an uncited sentence may not be about a candidate. */
+  personNames?: string[];
+  /** What the item is: uncited sentences are explanatory context in race intros and measures, ballot data alone in profiles. */
+  kind?: SynthKind;
   /** The item's own names: candidate, office, jurisdiction, state, the parties as printed on the ballot. */
   ownNames: string[];
   /** A person's verified positions by the model's ids ("P3") → years held, for {{years:P3}}. */
@@ -275,6 +303,12 @@ export interface ScreenContext {
 
 export interface Screened {
   unit: Unit;
+  /**
+   * Written without a citation (owner, 2026-10-30): "general" = explanatory
+   * context in a race intro or measure (reviewer only); "ballot" = a profile
+   * sentence that states only official ballot data (verified against it).
+   */
+  uncited?: "general" | "ballot";
   /** The text as it will be stored ({{years}} filled, tags other than <mark> stripped). */
   text: string;
   refs: StoredRef[];
@@ -304,14 +338,29 @@ export function screenUnit(u: Unit, ctx: ScreenContext): Screened {
     refs.push({ source: doc.sourceId, excerpt });
     excerpts.push(excerpt);
   }
-  if (!refs.length) problems.push(unknown ? "cites an unknown document" : "excerpt not found in its document");
   if (!text) problems.push("empty");
-
   const plain = text.replace(/<\/?mark>/g, "");
-  if (refs.length) {
-    const facts = `${u.when ? `${u.when}: ` : ""}${plain.replace(/\{\{years:P\d+\}\}/g, " ")}`;
-    const hf = hardFactProblem(facts, excerpts, ctx.ownNames);
-    if (hf) problems.push(hf);
+  const facts = `${u.when ? `${u.when}: ` : ""}${plain.replace(/\{\{years:P\d+\}\}/g, " ")}`;
+  const ballot = ctx.ballotFacts ? [ctx.ballotFacts] : [];
+  let uncited: Screened["uncited"];
+  if (u.refs.length) {
+    // A cited sentence: its excerpts (and the ballot data) must hold every hard fact.
+    if (!refs.length) problems.push(unknown ? "cites an unknown document" : "excerpt not found in its document");
+    else {
+      const hf = hardFactProblem(facts, [...excerpts, ...ballot], ctx.ownNames);
+      if (hf) problems.push(hf);
+    }
+  } else {
+    // Uncited (owner, 2026-10-30): explanatory context in race intros and measures, or ballot data alone in a profile.
+    // Either way it may add no new fact: every number, date and name must be the item's own or the ballot's.
+    uncited = ctx.kind === "person" ? (u.kind === "prose" || u.kind === "list" ? "ballot" : undefined) : u.kind === "prose" ? "general" : undefined;
+    if (!uncited) problems.push("needs a source: positions, claims and facts about a candidate are always cited");
+    else {
+      const hf = hardFactProblem(facts, ballot, ctx.ownNames);
+      if (hf) problems.push(`needs a source: ${hf}`);
+      const named = uncited === "general" && ctx.personNames?.find((n) => n.length > 2 && new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(plain));
+      if (named) problems.push(`needs a source: about ${named}`);
+    }
   }
   const lint = neutralityProblem(plain);
   if (lint) problems.push(`neutrality: ${lint}`);
@@ -339,7 +388,7 @@ export function screenUnit(u: Unit, ctx: ScreenContext): Screened {
   if (/\{\{|\}\}/.test(text)) problems.push("unfilled placeholder");
 
   const style = u.kind === "endorsement" ? [] : apSlips(plain);
-  return { unit: u, text, refs, problems: [...new Set(problems)], style };
+  return { unit: u, text, refs, problems: [...new Set(problems)], style, ...(uncited ? { uncited } : {}) };
 }
 
 /** Years each checked position was held, by the ids the writer sees ("P0" = the first checked position), from code-checked start and end years. */
@@ -397,7 +446,7 @@ export interface ShapeOptions {
   judge?: boolean;
 }
 
-const expected = (kind: SynthKind, judge = false): string[] =>
+export const expected = (kind: SynthKind, judge = false): string[] =>
   kind === "race"
     ? [...RACE_SECTIONS]
     : kind === "measure"
