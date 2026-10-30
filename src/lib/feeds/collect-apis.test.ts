@@ -48,6 +48,7 @@ function fakeDb(existingUrls: string[] = [], priorStates: Record<string, unknown
         return { data: null, error: null };
       }
       if (table === "contests") return { data: contests, error: null };
+      if (table === "elections") return { data: { date: "2026-11-03", cycle_start: "2024-11-06" }, error: null };
       if (table === "feed_items") return { data: existingUrls.map((url) => ({ url })), error: null };
       if (table === "feed_source_state") return { data: single ? (priorStates.find((r) => r.source_key === "gdelt:_backoff") ?? null) : priorStates, error: null };
       return { data: [], error: null };

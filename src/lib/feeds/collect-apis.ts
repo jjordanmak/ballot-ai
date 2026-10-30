@@ -22,7 +22,7 @@ import type { Database } from "@/lib/supabase/types";
 import { gdeltRaceQuery, gdeltUrl, isGdeltThrottle, isOpinionKind, namedInHeadline, nytTagged, nytUrl, parseGdelt, parseNyt, raceQueries, type ApiArticle } from "./apis";
 import { canonicalUrl } from "./canonical";
 import { checkEntry } from "./checks";
-import { loadTracked } from "./collect-news";
+import { loadCycle, loadTracked } from "./collect-news";
 import { siteOf } from "./discover";
 import { buildMatcher, candidateQueries, type CandidateQuery } from "./match";
 import { safeFetch, type Resolver } from "./safeFetch";
@@ -39,7 +39,7 @@ const BACKOFF_FIRST_MS = 10 * 60_000;
 const BACKOFF_MAX_MS = 2 * 3600_000;
 const NYT_SPACING_MS = 12_000;
 const NYT_PER_RUN = 5;
-/** Stories older than this aren't looked for (the feed checks skip anything past 14 days). */
+/** Regular runs look back this far; older coverage in the election cycle is the backfill's job. */
 const LOOKBACK_DAYS = 3;
 const USER_AGENT = "ballot.ai news collector (+https://ballot-ai.vercel.app)";
 const NYT_KEY = "nyt-politics";
@@ -98,6 +98,7 @@ export async function collectApiNews(opts: {
   const tracked = await loadTracked(db, electionId);
   const people = candidateQueries(tracked);
   if (!people.length) return summary;
+  const cycle = await loadCycle(db, electionId);
   const match = buildMatcher(tracked);
   const since = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000);
   const rows = new Map<string, FeedInsert>();
@@ -106,7 +107,7 @@ export async function collectApiNews(opts: {
   const add = (a: ApiArticle, src: { key: string; name: string }, on: { contestId: string; candidateIds: string[] }, via: "gdelt" | "nyt-api", terms: string[]) => {
     const link = canonicalUrl(a.link);
     if (!link) return;
-    const verdict = checkEntry({ title: a.title, link, categories: a.kind ? [a.kind] : [], published: a.published }, now);
+    const verdict = checkEntry({ title: a.title, link, categories: a.kind ? [a.kind] : [], published: a.published, summary: a.summary }, now, cycle);
     if (verdict.status === "skip") return;
     const existing = rows.get(link);
     if (existing) {

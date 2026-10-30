@@ -16,7 +16,7 @@ import { logEvent } from "@/lib/observability/log";
 import type { Database } from "@/lib/supabase/types";
 import { readArticle, type ReadOutcome } from "./article";
 import { canonicalUrl } from "./canonical";
-import { checkEntry } from "./checks";
+import { checkEntry, cycleWindow, type CycleWindow } from "./checks";
 import { buildHint, buildMatcher, isStateLevelDivision, type MatchResult, type TrackedContest } from "./match";
 import { discoverFeed } from "./discover";
 import { looksLikeFeed, parseFeed, type FeedEntry } from "./parse";
@@ -97,6 +97,13 @@ export interface CollectSummary {
 const PAGE = 1000;
 
 /** Every tracked contest for the election, paged past PostgREST's row cap. */
+/** The election's news window (`elections.cycle_start`, else its default). */
+export async function loadCycle(db: Db, electionId: string): Promise<CycleWindow> {
+  const { data, error } = await db.from("elections").select("date, cycle_start").eq("id", electionId).maybeSingle();
+  if (error || !data) throw new Error(`election ${electionId}: ${error?.message ?? "not found"}`);
+  return cycleWindow(data);
+}
+
 export async function loadTracked(db: Db, electionId: string): Promise<TrackedContest[]> {
   const out: TrackedContest[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -189,6 +196,7 @@ export async function collectNews(opts: {
   summary.released = await releaseHeld(db, electionId, now, publish);
   const tracked = await loadTracked(db, electionId);
   if (!tracked.length) return summary;
+  const cycle = await loadCycle(db, electionId);
   const match = buildMatcher(tracked);
   const hint = buildHint(tracked);
   const trackedStates = new Set(tracked.map((c) => c.state).filter(Boolean));
@@ -325,7 +333,7 @@ export async function collectNews(opts: {
           for (const e of entries) {
             const link = canonicalUrl(e.link);
             if (!link) continue;
-            const verdict = checkEntry(e, now);
+            const verdict = checkEntry(e, now, cycle);
             if (verdict.status === "skip") continue;
             const m = match(e.title, e.summary, src) ?? (e.content ? match(e.title, e.summary, src, e.content) : null);
             if (m) {

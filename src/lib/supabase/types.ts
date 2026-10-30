@@ -474,6 +474,7 @@ export type Database = {
       elections: {
         Row: {
           created_at: string
+          cycle_start: string | null
           date: string
           external_ids: Json
           id: string
@@ -486,6 +487,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cycle_start?: string | null
           date: string
           external_ids?: Json
           id: string
@@ -498,6 +500,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cycle_start?: string | null
           date?: string
           external_ids?: Json
           id?: string
@@ -1499,6 +1502,30 @@ export type Database = {
       consume_api_quota: {
         Args: { p_limit: number; p_metric: string; p_period: string }
         Returns: boolean
+      }
+      feed_page: {
+        Args: {
+          p_before_at: string | null
+          p_before_id: string | null
+          p_candidate_id: string | null
+          p_contest_id: string | null
+          p_election_id: string
+          p_limit?: number
+        }
+        Returns: {
+          candidate_ids: string[]
+          contest_ids: string[]
+          excerpt: string
+          id: string
+          ingested_at: string
+          payload: Json
+          published_at: string
+          publisher: string
+          status: string
+          title: string
+          type: string
+          url: string
+        }[]
       }
       reserve_host_slot:
         | {
