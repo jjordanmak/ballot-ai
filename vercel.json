@@ -6,6 +6,10 @@
       "schedule": "*/2 * * * *"
     },
     {
+      "path": "/api/cron/news-apis",
+      "schedule": "1-59/2 * * * *"
+    },
+    {
       "path": "/api/cron/news-recheck",
       "schedule": "17 10 * * *"
     },

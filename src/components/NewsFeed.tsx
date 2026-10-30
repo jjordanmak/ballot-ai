@@ -264,6 +264,14 @@ export function NewsFeed({
               ))}
             </div>
           </div>
+          {/* NYT API terms ask for this credit wherever its results appear (owner, 2026-10-30). */}
+          {sorted.some((i) => i.source === "The New York Times") && (
+            <p className="mt-3 text-[11px] text-[var(--color-paper-4)]">
+              <a href="https://developer.nytimes.com" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--color-accent)]">
+                Data provided by The New York Times
+              </a>
+            </p>
+          )}
         </div>
       )}
     </section>
