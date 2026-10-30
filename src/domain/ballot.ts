@@ -213,7 +213,9 @@ export type WarningCode =
   | "PROVIDER_SHAPE_CHANGE"
   | "PROVIDER_PARTIAL"
   /** A contest certified by the election authority was missing from the provider and was added. */
-  | "PROVIDER_GAP";
+  | "PROVIDER_GAP"
+  /** A measure that names a judge but wasn't read as a retention contest; detail says which fields the feed filled. */
+  | "UNREAD_RETENTION";
 
 export interface BallotWarning {
   code: WarningCode;
