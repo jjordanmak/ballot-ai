@@ -545,6 +545,27 @@ export type Database = {
           },
         ]
       }
+      feed_article_reads: {
+        Row: {
+          matched: boolean
+          outcome: string
+          read_at: string
+          url: string
+        }
+        Insert: {
+          matched?: boolean
+          outcome: string
+          read_at?: string
+          url: string
+        }
+        Update: {
+          matched?: boolean
+          outcome?: string
+          read_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       feed_item_checks: {
         Row: {
           checked_at: string

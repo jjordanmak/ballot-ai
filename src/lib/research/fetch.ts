@@ -58,7 +58,8 @@ export async function pdfText(bytes: Uint8Array): Promise<string> {
   return text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-async function robotsOk(deps: FetchDeps, url: URL): Promise<boolean> {
+/** Whether robots.txt lets us read this page (also used by the news collector's article reads). */
+export async function robotsOk(deps: FetchDeps, url: URL): Promise<boolean> {
   const { db, now } = deps;
   const { data: host } = await db.from("fetch_hosts").select("robots_txt, robots_fetched_at").eq("host", url.hostname).maybeSingle();
   let txt = host?.robots_txt ?? null;
@@ -76,19 +77,22 @@ async function robotsOk(deps: FetchDeps, url: URL): Promise<boolean> {
   return robotsAllows(txt, url.toString());
 }
 
-/** Wait for this site's next free slot; false if it's too busy right now. */
-async function takeSlot(deps: FetchDeps, host: string): Promise<boolean> {
+/**
+ * Wait for this site's next free slot; false if it's too busy right now.
+ * Shared with the news collector, so one site sees one queue from ballot.ai.
+ */
+export async function takeSlot(deps: FetchDeps, host: string, maxWaitMs = MAX_WAIT_MS): Promise<boolean> {
   const jitter = Math.floor(Math.random() * 3000);
-  // Past MAX_WAIT_MS the function reserves nothing, so callers that give up don't push the site's queue out (0013).
-  const { data, error } = await deps.db.rpc("reserve_host_slot", { p_host: host, p_spacing_ms: SPACING_MS + jitter, p_max_wait_ms: MAX_WAIT_MS });
+  // Past the max wait the function reserves nothing, so callers that give up don't push the site's queue out (0013).
+  const { data, error } = await deps.db.rpc("reserve_host_slot", { p_host: host, p_spacing_ms: SPACING_MS + jitter, p_max_wait_ms: maxWaitMs });
   if (error) return false;
   const ms = Number(data ?? 0);
-  if (ms > MAX_WAIT_MS) return false;
+  if (ms > maxWaitMs) return false;
   if (ms > 0) await (deps.sleep ?? wait)(ms);
   return true;
 }
 
-async function adjustSpeed(deps: FetchDeps, host: string, slower: boolean) {
+export async function adjustSpeed(deps: FetchDeps, host: string, slower: boolean) {
   const { data } = await deps.db.from("fetch_hosts").select("slow_factor").eq("host", host).maybeSingle();
   const f = data?.slow_factor ?? 1;
   const next = slower ? Math.min(16, f * 2) : Math.max(1, Math.floor(f / 2));

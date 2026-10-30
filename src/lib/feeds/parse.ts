@@ -8,12 +8,22 @@ export interface FeedEntry {
   title: string;
   link: string;
   summary: string;
+  /** The article's full text, when the feed carries it (`content:encoded`, Atom `content`). */
+  content?: string;
   published?: Date;
   categories: string[];
   image?: string;
 }
 
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_", textNodeName: "#text" });
+
+/** Feed text this long or longer is treated as the article itself, not a teaser. */
+const FULL_TEXT_CHARS = 1500;
+
+function fullText(html: string): string | undefined {
+  const t = plainText(html);
+  return t.length >= FULL_TEXT_CHARS ? t.slice(0, 100_000) : undefined;
+}
 
 const asArray = <T>(x: T | T[] | undefined): T[] => (x === undefined ? [] : Array.isArray(x) ? x : [x]);
 
@@ -75,6 +85,7 @@ export function parseFeed(xml: string): FeedEntry[] {
           title,
           link: link.trim(),
           summary: plainText(text(it.description) || text(it["content:encoded"])).slice(0, 600),
+          content: fullText(text(it["content:encoded"]) || text(it.description)),
           published: date(it.pubDate, it["dc:date"], it.published),
           categories: asArray(it.category as unknown).map((c) => plainText(text(c))).filter(Boolean),
           image: (media?.["@_url"] as string | undefined) ?? (enclosure?.["@_type"]?.toString().startsWith("image") ? (enclosure["@_url"] as string) : undefined),
@@ -95,6 +106,7 @@ export function parseFeed(xml: string): FeedEntry[] {
           title,
           link: link.trim(),
           summary: plainText(text(e.summary) || text(e.content)).slice(0, 600),
+          content: fullText(text(e.content)),
           published: date(e.published, e.updated),
           categories: asArray(e.category as Node | Node[]).map((c) => String(c["@_term"] ?? "")).filter(Boolean),
         },

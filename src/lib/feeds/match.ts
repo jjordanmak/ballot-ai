@@ -1,11 +1,18 @@
 /**
  * Decides which tracked contests and candidates an article is about.
  *
- * Deliberately strict: a trusted outlet can still write about a different
- * "Jane Kim" or another county's "Measure M". A candidate needs their name
- * plus context (office, place, election words, or an opponent); short,
+ * The context rules are about identity, not topic (owner, 2026-10-30: any
+ * news about a candidate's personal or political life counts). A trusted
+ * outlet can still write about a different "Jane Kim" or another county's
+ * "Measure M", so a candidate needs their name plus context (office, place,
+ * election words, or an opponent) anywhere in the article; short,
  * collision-prone names need two pieces of context. A measure needs its
- * identifier plus its jurisdiction. Pure and unit-tested.
+ * identifier plus its jurisdiction.
+ *
+ * Given the article's own text, a name that appears only there needs
+ * stronger context (office, opponent, place or state, not just "vote"), and a
+ * measure named only there must be named at least twice: a passing mention
+ * in a long story is rarely about the race. Pure and unit-tested.
  */
 import { splitMapYear } from "@/domain/districtMaps";
 import { normalizeForMatch } from "@/domain/text";
@@ -49,7 +56,12 @@ export interface MatchResult {
   contestIds: string[];
   candidateIds: string[];
   terms: string[];
+  /** "article" when the article's text was given (the collector tries the headline and summary first). */
+  via: "headline" | "article";
 }
+
+/** Article text past this is ignored (long pages are mostly related-story lists by then). */
+export const MAX_ARTICLE_CHARS = 60_000;
 
 const ELECTION_TERMS = ["candidate", "campaign", "election", "race", "ballot", "elected", "reelection", "re election", "incumbent", "challenger", "vote", "voters", "debate", "endorse", "endorsed", "endorsement"];
 
@@ -133,6 +145,8 @@ interface CompiledCandidate {
   anchors: string[];
   variants: string[];
   context: string[];
+  /** Context that identifies the race (office, opponents, place, state), unlike bare election words. */
+  strong: string[];
   needed: number;
 }
 
@@ -175,13 +189,19 @@ export function buildMatcher(contests: TrackedContest[]) {
         anchors: c.stateLevel ? [] : [place, ...opponents].filter(Boolean),
         variants,
         context: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...ELECTION_TERMS, ...opponents].filter(Boolean))],
+        strong: [...new Set([...officeTerms(c.title), place, stateName ?? "", ...opponents].filter(Boolean))],
         needed: shared || shortest <= 9 ? 2 : 1,
       });
     }
   }
 
-  return function match(title: string, summary: string, source: SourceContext): MatchResult | null {
-    const text = ` ${normalizeForMatch(`${title} ${summary}`)} `;
+  /**
+   * `article` is the story's own text (from the feed or the page), when the
+   * headline and summary alone don't match.
+   */
+  return function match(title: string, summary: string, source: SourceContext, article?: string): MatchResult | null {
+    const head = ` ${normalizeForMatch(`${title} ${summary}`)} `;
+    const text = article ? ` ${normalizeForMatch(`${title} ${summary} ${article.slice(0, MAX_ARTICLE_CHARS)}`)} ` : head;
     const national = source.scope === "national";
     // A state or local outlet's "Smith" is about that state's Smith, never another state's.
     const inScope = (state?: string) => national || (!!source.state && state === source.state);
@@ -197,7 +217,8 @@ export function buildMatcher(contests: TrackedContest[]) {
 
     for (const k of candidates) {
       if (!inScope(k.state)) continue;
-      const name = k.variants.find((v) => has(text, v));
+      const inHead = k.variants.find((v) => has(head, v));
+      const name = inHead ?? (article ? k.variants.find((v) => has(text, v)) : undefined);
       if (!name) continue;
       // The outlet's own state is implied context only for state-level contests,
       // and implied context never stands alone: the article must say something.
@@ -206,6 +227,8 @@ export function buildMatcher(contests: TrackedContest[]) {
       const ctx = k.context.filter((t) => has(text, t) || (implied.includes(t) && (t !== impliedState || k.stateLevel)));
       if (ctx.length < k.needed) continue;
       if (k.anchors.length && !k.anchors.some((a) => ctx.includes(a))) continue;
+      // Named only in the story: election words alone don't say which person this is.
+      if (!inHead && k.strong.filter((t) => has(text, t)).length < k.needed) continue;
       candidateIds.add(k.id);
       contestIds.add(k.contestId);
       terms.add(name);
@@ -213,7 +236,8 @@ export function buildMatcher(contests: TrackedContest[]) {
     }
     for (const m of measures) {
       if (!inScope(m.state)) continue;
-      const id = m.ids.find((i) => has(text, i));
+      const inHead = m.ids.find((i) => has(head, i));
+      const id = inHead ?? (article ? m.ids.find((i) => count(text, i) >= 2) : undefined);
       if (!id) continue;
       const place = m.places.find(inContext);
       if (!place) continue;
@@ -221,6 +245,34 @@ export function buildMatcher(contests: TrackedContest[]) {
       terms.add(id);
       terms.add(place);
     }
-    return contestIds.size ? { contestIds: [...contestIds], candidateIds: [...candidateIds], terms: [...terms] } : null;
+    return contestIds.size ? { contestIds: [...contestIds], candidateIds: [...candidateIds], terms: [...terms], via: article ? "article" : "headline" } : null;
+  };
+}
+
+function count(hay: string, needle: string): number {
+  let n = 0;
+  for (let at = hay.indexOf(` ${needle} `); at >= 0; at = hay.indexOf(` ${needle} `, at + needle.length + 1)) n++;
+  return n;
+}
+
+/**
+ * How promising an unmatched headline is, for choosing which articles to
+ * read first: 2 for a tracked surname or measure, 1 for an office or
+ * election word, else 0. Ordering only; it never decides a match.
+ */
+export function buildHint(contests: TrackedContest[]): (title: string, summary: string) => number {
+  const strong = new Set<string>();
+  const weak = new Set<string>(ELECTION_TERMS);
+  for (const c of contests) {
+    officeTerms(c.title).forEach((t) => weak.add(t));
+    if (c.kind === "measure") measureIds(c.title).forEach((i) => strong.add(i));
+    for (const k of c.candidates) for (const v of k.names.flatMap(nameVariants)) strong.add(v.split(" ").pop()!);
+  }
+  const strongList = [...strong].filter((t) => t.length > 2);
+  const weakList = [...weak];
+  return (title, summary) => {
+    const text = ` ${normalizeForMatch(`${title} ${summary}`)} `;
+    if (strongList.some((t) => has(text, t))) return 2;
+    return weakList.some((t) => has(text, t)) ? 1 : 0;
   };
 }

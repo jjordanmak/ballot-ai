@@ -125,6 +125,53 @@ describe("feed matcher", () => {
   });
 });
 
+describe("feed matcher on article text", () => {
+  const long = (s: string) => `${"Unrelated reporting on the region. ".repeat(30)} ${s} ${"More background. ".repeat(30)}`;
+
+  it("matches a candidate named only in the story, whatever the topic", () => {
+    const m = match("Wildfire insurance rates jump again", "Homeowners face higher premiums.", national, long("Xavier Becerra, who is running for governor, said rates should be frozen."));
+    expect(m).toMatchObject({ candidateIds: ["becerra"], via: "article" });
+    // Personal news counts: identity, not topic, decides.
+    expect(
+      match("Family business sold", "A longtime shop changes hands.", national, long("The shop belongs to the family of Xavier Becerra, the former California attorney general."))?.candidateIds,
+    ).toEqual(["becerra"]);
+  });
+
+  it("doesn't take bare election words as proof of who a story-only name is", () => {
+    expect(match("Town news", "Around town.", national, long("Xavier Becerra said residents should vote."))).toBeNull();
+    // A short name needs 2 identifying terms in the story, not just the state and an election word.
+    expect(match("Restaurant week", "New openings.", national, long("Chef Jane Kim of California opened a stall; voters in the poll liked it."))).toBeNull();
+    expect(match("Rate fight", "Premiums rise.", national, long("Jane Kim, running for insurance commissioner in California, criticized the plan."))?.candidateIds).toEqual(["kim"]);
+  });
+
+  it("needs a measure named twice when only the story names it", () => {
+    expect(match("Housing costs climb", "Rents rise.", national, long("California passed Proposition 1 in an earlier year."))).toBeNull();
+    expect(
+      match("Housing costs climb", "Rents rise.", national, long("California voters will decide Proposition 1 in November. Supporters of Proposition 1 say it builds homes."))?.contestIds,
+    ).toEqual(["prop1"]);
+  });
+
+  it("keeps a state outlet to its own state's races (a non-CA case)", () => {
+    const tx = buildMatcher([
+      {
+        id: "tx-ag",
+        kind: "candidate",
+        title: "Attorney General",
+        divisionName: "Texas",
+        state: "TX",
+        stateLevel: true,
+        candidates: [
+          { id: "alvarado", names: ["Rosalind Alvarado"] },
+          { id: "brennan", names: ["Thomas Brennan"] },
+        ],
+      },
+    ]);
+    const story = long("Rosalind Alvarado, the attorney general candidate, met with farmers.");
+    expect(tx("Drought hits farms", "Crops suffer.", { scope: "state", state: "TX" }, story)?.candidateIds).toEqual(["alvarado"]);
+    expect(tx("Drought hits farms", "Crops suffer.", { scope: "state", state: "OK" }, story)).toBeNull();
+  });
+});
+
 describe("canonicalUrl", () => {
   it("drops tracking params, fragments and trailing slashes", () => {
     expect(canonicalUrl("https://CalMatters.org/politics/2026/10/story/?utm_source=rss&utm_medium=feed#comments")).toBe(
