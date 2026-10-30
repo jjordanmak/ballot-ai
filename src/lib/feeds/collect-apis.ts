@@ -56,6 +56,8 @@ export interface ApiSummary {
   /** Of those, how many the NYT itself tagged with the person. */
   nytTagged: number;
   nytFound: number;
+  /** A few NYT articles we didn't keep, with the NYT's own person tags, so a miss shows its cause. Titles are public. */
+  nytRejected?: { title: string; persons: string[]; kind?: string }[];
   nytSkipped?: string;
   stored: number;
   published: number;
@@ -213,7 +215,10 @@ export async function collectApiNews(opts: {
             const tagged = nytTagged(a.persons, c);
             if (tagged) summary.nytTagged++;
             const m = tagged ? null : match(a.title, a.summary ?? "", { scope: "national" }, a.body);
-            if (!tagged && !m?.candidateIds.includes(c.candidateId)) continue;
+            if (!tagged && !m?.candidateIds.includes(c.candidateId)) {
+              if ((summary.nytRejected ??= []).length < 5) summary.nytRejected.push({ title: a.title.slice(0, 120), persons: (a.persons ?? []).slice(0, 6), kind: a.kind });
+              continue;
+            }
             summary.nytFound++;
             add(a, { key: NYT_KEY, name: NYT_NAME }, { contestId: c.contestId, candidateIds: [c.candidateId] }, "nyt-api", tagged ? [`nyt tag: ${c.name.toLowerCase()}`] : (m?.terms ?? []));
           }
@@ -245,6 +250,8 @@ export async function collectApiNews(opts: {
   if (asked.length) await db.from("feed_source_state").upsert(asked);
   summary.stored = fresh.length;
   summary.published = fresh.filter((r) => r.status === "published").length;
-  logEvent("feeds.apis", { ...summary });
+  const { nytRejected, ...counts } = summary;
+  // Rejected NYT articles go in as one string (titles and the NYT's person tags; no key, no address).
+  logEvent("feeds.apis", { ...counts, nytRejected: nytRejected?.length ? JSON.stringify(nytRejected) : undefined });
   return summary;
 }

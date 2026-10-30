@@ -18,12 +18,12 @@
       "schedule": "*/20 * * * *"
     },
     {
-      "path": "/api/cron/qa-matrix",
-      "schedule": "23 * * * *"
-    },
-    {
       "path": "/api/cron/research",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/qa-counties",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
