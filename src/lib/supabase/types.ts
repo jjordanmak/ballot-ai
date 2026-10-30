@@ -1165,6 +1165,48 @@ export type Database = {
         }
         Relationships: []
       }
+      qa_runs: {
+        Row: {
+          categories: Json
+          contest_count: number
+          error: string | null
+          id: string
+          inventory: Json
+          label: string
+          run_at: string
+          run_id: string
+          state: string | null
+          status: string
+          warnings: Json
+        }
+        Insert: {
+          categories?: Json
+          contest_count?: number
+          error?: string | null
+          id?: string
+          inventory?: Json
+          label: string
+          run_at?: string
+          run_id: string
+          state?: string | null
+          status: string
+          warnings?: Json
+        }
+        Update: {
+          categories?: Json
+          contest_count?: number
+          error?: string | null
+          id?: string
+          inventory?: Json
+          label?: string
+          run_at?: string
+          run_id?: string
+          state?: string | null
+          status?: string
+          warnings?: Json
+        }
+        Relationships: []
+      }
       resolution_events: {
         Row: {
           cache_hit: boolean

@@ -71,3 +71,5 @@ New items reach open pages over Realtime Broadcast on a topic named only by elec
 ## 9. QA
 
 `BALLOT_QA_ADDRESS_94015` (and any other QA address) is read from the environment only by `scripts/qa-resolve.ts`. The output fixtures and reports contain only normalized, address-free data. CI never has access to QA addresses.
+
+The national test list (`/api/cron/qa-matrix`, `src/lib/qa/matrix.ts`) looks up public civic buildings (city halls), never homes. The list lives only in the private env var `QA_CIVIC_BUILDINGS`; the addresses go only to the ballot provider. Results in `qa_runs` carry each location's label ("WA · Seattle City Hall") and the provider's ballot wording, never the address. The run saves no ballot and registers no contests.
