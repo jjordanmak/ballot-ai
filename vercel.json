@@ -22,10 +22,6 @@
       "schedule": "* * * * *"
     },
     {
-      "path": "/api/cron/qa-counties",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron/qa-gdelt-probe",
       "schedule": "7-59/15 * * * *"
     }
