@@ -22,6 +22,22 @@ export function parseLastUpdate(text: string): GdeltFile | null {
   return null;
 }
 
+/** "YYYYMMDDHHMMSS" (UTC) → Date. */
+const fromStamp = (s: string) => new Date(Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8), +s.slice(8, 10), +s.slice(10, 12), +s.slice(12, 14)));
+const toStamp = (d: Date) => d.toISOString().replace(/[-:T]/g, "").slice(0, 14);
+
+/**
+ * The `n` GKG files before this one, newest first, 15 minutes apart (GDELT
+ * keeps every past file at its timestamp's URL). Empty for a URL that isn't
+ * a GKG file.
+ */
+export function gkgFilesBefore(url: string, n: number): string[] {
+  const m = /^(.*\/)(\d{14})\.gkg\.csv\.zip$/i.exec(url);
+  if (!m) return [];
+  const at = fromStamp(m[2]).getTime();
+  return Array.from({ length: n }, (_, i) => `${m[1]}${toStamp(new Date(at - (i + 1) * 15 * 60_000))}.gkg.csv.zip`);
+}
+
 export interface GkgRow {
   /** Outlet domain as GDELT writes it ("politico.com"). */
   domain: string;
