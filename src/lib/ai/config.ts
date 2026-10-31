@@ -54,6 +54,8 @@ export interface AiConfig {
   publish: Record<ResearchKindKey, Setting>;
   /** The neutrality reviewer (synthesis): Haiku by default (`ANTHROPIC_MODEL_REVIEW`). */
   review: Setting;
+  /** The news person check (src/lib/feeds/about.ts): Haiku by default (`ANTHROPIC_MODEL_NEWS`); off with `NEWS_AI_CHECK=off` or no key. */
+  news: Setting & { enabled: boolean };
   /** Highlights in synthesized prose (`AI_HIGHLIGHTS=off` strips them at read time). */
   highlights: boolean;
   /** The verifier: "does this follow from its excerpts?" (`ANTHROPIC_MODEL_CHECK`, default Haiku high). */
@@ -106,6 +108,7 @@ export function aiConfig(env: Record<string, string | undefined> = process.env):
       race: parseSetting(env.ANTHROPIC_MODEL_RACE, base),
     },
     review: parseSetting(env.ANTHROPIC_MODEL_REVIEW, { model: DEFAULT_MODEL, effort: "medium" }),
+    news: { ...parseSetting(env.ANTHROPIC_MODEL_NEWS, { model: DEFAULT_MODEL, effort: "medium" }), enabled: env.NEWS_AI_CHECK !== "off" && !!env.ANTHROPIC_API_KEY },
     highlights: env.AI_HIGHLIGHTS !== "off",
     ...(() => {
       // Haiku high by default (owner, 2026-10-30, from the calibration data): Haiku low and Sonnet low rejected plainly

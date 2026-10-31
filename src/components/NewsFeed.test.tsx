@@ -130,6 +130,20 @@ describe("NewsFeed", () => {
       expect(html).not.toContain("Mentions:");
     });
 
+    it("shows a story about one candidate on their carousel, not the race's (race_ids)", () => {
+      const rows = [
+        row("about-ruiz", at, { contest_ids: ["tx-gov"], race_ids: [], candidate_ids: ["tx-c1"], title: "Ruiz tours a refinery" }),
+        row("the-race", at, { contest_ids: ["tx-gov"], race_ids: ["tx-gov"], candidate_ids: ["tx-c1", "tx-c2"], title: "Governor's race tightens" }),
+        // Rows stored before race_ids existed stay on the race, as before.
+        row("legacy", at, { contest_ids: ["tx-gov"], candidate_ids: [], title: "Early look at the field" }),
+      ];
+      const race = render(rows);
+      expect(race).not.toContain("Ruiz tours a refinery");
+      expect(race).toContain("Governor&#x27;s race tightens");
+      expect(race).toContain("Early look at the field");
+      expect(render(rows, { candidateId: "tx-c1" })).toContain("Ruiz tours a refinery");
+    });
+
     it("renders no tag row when there's nothing to say, and never a contest tag", () => {
       const html = render([row("a", at, { contest_ids: ["tx-gov"], candidate_ids: ["not-on-this-ballot"], title: "Early voting opens" })]);
       expect(html).not.toContain("data-news-tags");

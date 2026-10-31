@@ -7,13 +7,18 @@
  * Matching tries the headline and feed summary first, then the article's own
  * text: the feed's full text when it carries it, else the page, read once
  * and politely (`article.ts`) within a per-run cap, most promising first.
+ * A candidate the rules can't decide on is checked by the AI person check
+ * (`about.ts`), a few per run within the monthly AI budget.
  *
  * Runs from the Vercel cron route; never touches an address.
  */
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logEvent } from "@/lib/observability/log";
+import { aiConfig } from "@/lib/ai/config";
+import { monthSpendMicroUsd, recordSpendMicroUsd } from "@/lib/ai/spend";
 import type { Database } from "@/lib/supabase/types";
+import { checkAbout, type AboutVerdict } from "./about";
 import { readArticle, type ReadOutcome } from "./article";
 import { canonicalUrl } from "./canonical";
 import { checkEntry, cycleWindow, type CycleWindow } from "./checks";
@@ -41,6 +46,8 @@ const READ_CONCURRENCY = 8;
 /** A site that refused this many reads within REFUSED_FOR_MS isn't read again until that window passes. */
 const REFUSALS_TO_SKIP = 3;
 const REFUSED_FOR_MS = 24 * 3600_000;
+/** AI person checks per run (each a few seconds and a fraction of a cent). */
+const MAX_ABOUT_CHECKS = 12;
 /** Longest a read waits for its site's slot before trying again next run. */
 const READ_MAX_WAIT_MS = 8_000;
 const MINUTE = 60_000;
@@ -92,7 +99,13 @@ export interface CollectSummary {
   held: number;
   /** Held items published this run because their reason no longer applies. */
   released: number;
+  /** AI person checks run, how many put the candidate on, and how many were skipped (cap, budget, switched off). */
+  aboutChecked: number;
+  aboutAccepted: number;
+  aboutSkipped: number;
 }
+
+export type AboutCheck = (args: { name: string; office: string; title: string; url: string; article: string; variants: string[]; surname: string }) => Promise<AboutVerdict>;
 
 const PAGE = 1000;
 
@@ -180,6 +193,8 @@ export async function collectNews(opts: {
   publish?: boolean;
   budgetMs?: number;
   readBudgetMs?: number;
+  /** The AI person check (tests inject one); defaults to Haiku when configured. */
+  aboutCheck?: AboutCheck;
 }): Promise<CollectSummary> {
   const { db, electionId } = opts;
   const now = opts.now ?? new Date();
@@ -191,6 +206,7 @@ export async function collectNews(opts: {
   const summary: CollectSummary = {
     sources: sources.length, due: 0, deferred: 0, fetched: 0, notModified: 0, failed: [], discovered: [],
     entries: 0, matched: 0, matchedOnText: 0, articlesRead: 0, readsFailed: 0, published: 0, held: 0, released: 0,
+    aboutChecked: 0, aboutAccepted: 0, aboutSkipped: 0,
   };
 
   summary.released = await releaseHeld(db, electionId, now, publish);
@@ -202,6 +218,35 @@ export async function collectNews(opts: {
   const trackedStates = new Set(tracked.map((c) => c.state).filter(Boolean));
   // A state or local outlet can only match its own state's contests.
   const canMatch = (src: NewsSource) => src.scope === "national" || (!!src.state && trackedStates.has(src.state));
+
+  // The AI person check: injected, or Haiku when a key is set and the month's AI budget isn't spent.
+  const cfg = aiConfig();
+  const about: AboutCheck | null =
+    opts.aboutCheck ??
+    (cfg.news.enabled && (await monthSpendMicroUsd(db, now).catch(() => Infinity)) < cfg.monthlyBudgetUsd * 1_000_000
+      ? (a) => checkAbout({ ...a, setting: cfg.news })
+      : null);
+  let aboutSpent = 0;
+  /** Decide the candidates the rules left unclear; null when nothing is left to store. */
+  async function settle(m: MatchResult, e: FeedEntry, link: string, article: string): Promise<MatchResult | null> {
+    if (!m.unclear.length) return m.contestIds.length ? m : null;
+    const out = { ...m, contestIds: [...m.contestIds], candidateIds: [...m.candidateIds], decisions: { ...m.decisions, people: [...m.decisions.people] } };
+    for (const u of m.unclear) {
+      if (!about || summary.aboutChecked >= MAX_ABOUT_CHECKS || Date.now() > readUntil) {
+        summary.aboutSkipped++;
+        continue;
+      }
+      summary.aboutChecked++;
+      const v = await about({ name: u.name, office: u.office, title: e.title, url: link, article, variants: u.variants, surname: u.surname }).catch(() => ({ about: false, costMicroUsd: 0 }) as AboutVerdict);
+      aboutSpent += v.costMicroUsd;
+      if (!v.about) continue;
+      summary.aboutAccepted++;
+      out.candidateIds.push(u.candidateId);
+      if (!out.contestIds.includes(u.contestId)) out.contestIds.push(u.contestId);
+      out.decisions.people.push({ id: u.candidateId, how: "ai", sentence: v.quote?.slice(0, 200) });
+    }
+    return out.contestIds.length ? out : null;
+  }
 
   const { data: states } = await db.from("feed_source_state").select("*").in("source_key", sources.map((s) => s.key));
   const stateByKey = new Map((states ?? []).map((s) => [s.source_key, s]));
@@ -221,6 +266,7 @@ export async function collectNews(opts: {
     if (existing) {
       // Same article from another source: keep every contest either one matched.
       existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), ...m.contestIds])];
+      existing.race_ids = [...new Set([...(existing.race_ids ?? []), ...m.raceIds])];
       existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...m.candidateIds])];
       return;
     }
@@ -240,8 +286,11 @@ export async function collectNews(opts: {
       status: held ? "held" : "published",
       held_reason: held,
       contest_ids: m.contestIds,
+      race_ids: m.raceIds,
       candidate_ids: m.candidateIds,
-      match: { terms: m.terms, via: m.via },
+      // v2: the three independent checks (race, person, measure), each with how it decided.
+      // The deciding sentence stays in memory: article text is never stored.
+      match: { v: 2, terms: m.terms, via: m.via, races: m.decisions.races, people: m.decisions.people.map(({ id, how }) => ({ id, how })) },
     });
   };
   // Source state is written only after the items are stored: a 304 next run
@@ -288,7 +337,8 @@ export async function collectNews(opts: {
       const r = await readArticle({ db, now, fetchImpl: opts.fetchImpl, resolve: opts.resolve }, link, USER_AGENT, READ_MAX_WAIT_MS).catch(() => ({ outcome: "error" as const, text: undefined }));
       if (r.outcome === "read") summary.articlesRead++;
       else summary.readsFailed++;
-      const m = r.text ? match(e.title, e.summary, src, r.text) : null;
+      const found = r.text ? match(e.title, e.summary, src, r.text) : null;
+      const m = found && r.text ? await settle(found, e, link, r.text) : null;
       if (m) addRow(e, src, link, verdict, m);
       // A busy site is tried again next run; every other outcome is final.
       if (r.outcome !== "busy") reads.push({ url: link, read_at: now.toISOString(), outcome: r.outcome, matched: !!m });
@@ -335,7 +385,8 @@ export async function collectNews(opts: {
             if (!link) continue;
             const verdict = checkEntry(e, now, cycle);
             if (verdict.status === "skip") continue;
-            const m = match(e.title, e.summary, src) ?? (e.content ? match(e.title, e.summary, src, e.content) : null);
+            const found = match(e.title, e.summary, src) ?? (e.content ? match(e.title, e.summary, src, e.content) : null);
+            const m = found ? await settle(found, e, link, found.via === "article" ? e.content ?? "" : "") : null;
             if (m) {
               addRow(e, src, link, verdict, m);
               toRead.delete(link);
@@ -398,13 +449,13 @@ export async function collectNews(opts: {
   // through an API (GDELT, the NYT) takes the outlet's own headline, summary and
   // image when its feed brings it (collect-apis.ts).
   const urls = [...rows.keys()];
-  const upgrades: { url: string; row: FeedInsert; prior: { contest_ids: string[]; candidate_ids: string[] } }[] = [];
+  const upgrades: { url: string; row: FeedInsert; prior: { contest_ids: string[]; race_ids: string[]; candidate_ids: string[] } }[] = [];
   for (let i = 0; i < urls.length; i += 50) {
-    const { data, error } = await db.from("feed_items").select("url, match, contest_ids, candidate_ids").in("url", urls.slice(i, i + 50));
+    const { data, error } = await db.from("feed_items").select("url, match, contest_ids, race_ids, candidate_ids").in("url", urls.slice(i, i + 50));
     if (error) throw new Error(`feed_items lookup: ${error.message}`);
     for (const r of data ?? []) {
       const via = (r.match as { via?: string } | null)?.via;
-      if (via === "gdelt" || via === "nyt-api") upgrades.push({ url: r.url, row: rows.get(r.url)!, prior: { contest_ids: r.contest_ids ?? [], candidate_ids: r.candidate_ids ?? [] } });
+      if (via === "gdelt" || via === "nyt-api") upgrades.push({ url: r.url, row: rows.get(r.url)!, prior: { contest_ids: r.contest_ids ?? [], race_ids: r.race_ids ?? [], candidate_ids: r.candidate_ids ?? [] } });
       rows.delete(r.url);
     }
   }
@@ -416,6 +467,7 @@ export async function collectNews(opts: {
         excerpt: row.excerpt,
         image_url: row.image_url,
         contest_ids: [...new Set([...prior.contest_ids, ...(row.contest_ids ?? [])])],
+        race_ids: [...new Set([...prior.race_ids, ...(row.race_ids ?? [])])],
         candidate_ids: [...new Set([...prior.candidate_ids, ...(row.candidate_ids ?? [])])],
       })
       .eq("url", url);
@@ -427,6 +479,7 @@ export async function collectNews(opts: {
   }
   if (nextStates.length) await db.from("feed_source_state").upsert(nextStates);
   if (reads.length) await db.from("feed_article_reads").upsert(reads, { onConflict: "url", ignoreDuplicates: true });
+  await recordSpendMicroUsd(db, now, aboutSpent);
   summary.published = fresh.filter((r) => r.status === "published").length;
   summary.held = fresh.length - summary.published;
   logEvent("feeds.news", { ...summary, failed: summary.failed.join("; "), discovered: summary.discovered.join("; ") });

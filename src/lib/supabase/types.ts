@@ -599,6 +599,7 @@ export type Database = {
         Row: {
           candidate_ids: string[]
           contest_ids: string[]
+          race_ids: string[] | null
           election_id: string
           excerpt: string | null
           held_reason: string | null
@@ -619,6 +620,7 @@ export type Database = {
         Insert: {
           candidate_ids?: string[]
           contest_ids?: string[]
+          race_ids?: string[] | null
           election_id: string
           excerpt?: string | null
           held_reason?: string | null
@@ -639,6 +641,7 @@ export type Database = {
         Update: {
           candidate_ids?: string[]
           contest_ids?: string[]
+          race_ids?: string[] | null
           election_id?: string
           excerpt?: string | null
           held_reason?: string | null
@@ -1483,6 +1486,7 @@ export type Database = {
         Returns: {
           candidate_ids: string[]
           contest_ids: string[]
+          race_ids: string[] | null
           excerpt: string
           id: string
           ingested_at: string
@@ -1515,6 +1519,7 @@ export type Database = {
         Returns: {
           candidate_ids: string[]
           contest_ids: string[]
+          race_ids: string[] | null
           excerpt: string
           id: string
           ingested_at: string

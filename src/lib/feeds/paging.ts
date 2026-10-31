@@ -56,9 +56,10 @@ export function nextPage(rows: PagedRow[], pageSize = FEED_PAGE): PageState {
 }
 
 /**
- * A target's paging state. Every story tagged with a candidate is also tagged
- * with their race, so once a race is fully loaded its candidates are too: no
- * request needed.
+ * A target's paging state. Every story tagged with a candidate also carries
+ * their race in `contest_ids` (even when it isn't on the race's own feed), and
+ * the page load and its cursors go by `contest_ids`, so once a race is fully
+ * loaded its candidates are too: no request needed.
  */
 export function pageFor<P extends PageState>(pages: Map<string, P>, t: Target): P | PageState | undefined {
   const own = pages.get(targetKey(t));

@@ -110,7 +110,8 @@ export async function collectApiNews(opts: {
   const rows = new Map<string, FeedInsert>();
   const asked: { source_key: string; last_fetched_at: string; last_status: number | null; last_error: string | null; failures: number; retry_at?: string | null; items_seen?: number }[] = [];
 
-  const add = (a: ApiArticle, src: { key: string; name: string }, on: { contestId: string; candidateIds: string[] }, via: "gdelt" | "nyt-api", terms: string[]) => {
+  /** `on.race`: the race check passed on the headline, so the story goes on the race's own feed too. */
+  const add = (a: ApiArticle, src: { key: string; name: string }, on: { contestId: string; candidateIds: string[]; race: boolean }, via: "gdelt" | "nyt-api", terms: string[]) => {
     const link = canonicalUrl(a.link);
     if (!link) return;
     const verdict = checkEntry({ title: a.title, link, categories: a.kind ? [a.kind] : [], published: a.published, summary: a.summary }, now, cycle);
@@ -118,6 +119,7 @@ export async function collectApiNews(opts: {
     const existing = rows.get(link);
     if (existing) {
       existing.contest_ids = [...new Set([...(existing.contest_ids ?? []), on.contestId])];
+      if (on.race) existing.race_ids = [...new Set([...(existing.race_ids ?? []), on.contestId])];
       existing.candidate_ids = [...new Set([...(existing.candidate_ids ?? []), ...on.candidateIds])];
       return;
     }
@@ -135,8 +137,9 @@ export async function collectApiNews(opts: {
       status: held ? "held" : "published",
       held_reason: held,
       contest_ids: [on.contestId],
+      race_ids: on.race ? [on.contestId] : [],
       candidate_ids: on.candidateIds,
-      match: { terms, via },
+      match: { v: 2, terms, via, races: on.race ? [{ id: on.contestId, how: "headline" }] : [], people: on.candidateIds.map((id) => ({ id, how: via === "nyt-api" ? "nyt" : "headline" })) },
     });
   };
 
@@ -170,8 +173,12 @@ export async function collectApiNews(opts: {
         for (const a of parseGdelt(body)) {
           const src = srcs.find((s) => a.domain && siteOf(a.domain) === s.gdeltDomain);
           if (!src) continue;
+          // Search finds the race's names; the race and person checks still decide where it goes, on the headline.
+          const race = !!match(a.title, "", src)?.raceIds.includes(r.contestId);
+          const candidateIds = namedInHeadline(a.title, r);
+          if (!race && !candidateIds.length) continue;
           summary.gdeltFound++;
-          add(a, src, { contestId: r.contestId, candidateIds: namedInHeadline(a.title, r) }, "gdelt", r.phrases.map((p) => p.toLowerCase()));
+          add(a, src, { contestId: r.contestId, candidateIds, race }, "gdelt", r.phrases.map((p) => p.toLowerCase()));
         }
       } catch (e) {
         error = e instanceof Error ? e.name : "fetch failed";
@@ -220,7 +227,8 @@ export async function collectApiNews(opts: {
               continue;
             }
             summary.nytFound++;
-            add(a, { key: NYT_KEY, name: NYT_NAME }, { contestId: c.contestId, candidateIds: [c.candidateId] }, "nyt-api", tagged ? [`nyt tag: ${c.name.toLowerCase()}`] : (m?.terms ?? []));
+            const race = !!match(a.title, a.summary ?? "", { scope: "national" })?.raceIds.includes(c.contestId);
+            add(a, { key: NYT_KEY, name: NYT_NAME }, { contestId: c.contestId, candidateIds: [c.candidateId], race }, "nyt-api", tagged ? [`nyt tag: ${c.name.toLowerCase()}`] : (m?.terms ?? []));
           }
         } else {
           error = `HTTP ${res.status}`;
