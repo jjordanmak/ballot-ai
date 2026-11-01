@@ -9,8 +9,8 @@ export const maxDuration = 300;
 
 /**
  * Every 15 minutes (vercel.json) until done: the one-time GDELT data-file
- * check (src/lib/qa/gdeltProbe.ts), one file a run. Does nothing after 4
- * files; remove the cron entry afterwards.
+ * check (src/lib/qa/gdeltProbe.ts), a 24-hour replay in one run. Does
+ * nothing once its row is stored; remove the cron entry afterwards.
  */
 export async function GET(req: Request) {
   if (!cronAuthorized(req)) return new Response("Unauthorized", { status: 401 });
