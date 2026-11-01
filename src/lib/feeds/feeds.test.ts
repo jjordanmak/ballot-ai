@@ -271,6 +271,57 @@ describe("three independent checks: race, person, measure", () => {
   });
 });
 
+describe("race check on real headlines that #32 missed (production, 2026-10-31 to 11-01)", () => {
+  const ca = { scope: "state" as const, state: "CA" };
+  const local = { scope: "local" as const, state: "CA", jurisdictions: ["San Francisco"] };
+  const races = buildMatcher([
+    ...CONTESTS,
+    { id: "ltgov", kind: "candidate", title: "Lieutenant Governor", divisionName: "California", state: "CA", stateLevel: true, candidates: [{ id: "lt1", names: ["Ana Example"] }, { id: "lt2", names: ["Bo Placeholder"] }] },
+    { id: "ca11", kind: "candidate", title: "US HOUSE OF REP DISTRICT 11", divisionName: "11TH CONG", state: "CA", stateLevel: true, candidates: [{ id: "wiener", names: ["Scott Wiener", "SCOTT WIENER"] }, { id: "chan", names: ["Connie Chan", "CONNIE CHAN"] }] },
+    { id: "oc4", kind: "candidate", title: "Supervisor 4th District", divisionName: "4th Supervisorial District", state: "CA", candidates: [{ id: "oc-a", names: ["Dina Sample"] }, { id: "oc-b", names: ["Raul Example"] }] },
+  ]);
+
+  it("2 candidates by surname in the headline", () => {
+    expect(races("From an LGBTQ+ rally to Trunk or Treat, Becerra and Hilton barnstorm California hoping to be next governor", "", ca)?.raceIds).toEqual(["gov"]);
+    expect(races("Wiener vs. Chan: Two very different urbanist visions in San Francisco's congressional race", "", local)?.raceIds).toEqual(["ca11"]);
+    // Short surnames never pair on their own, and surnames alone need the race's state or place.
+    expect(races("Kim and Lee open a bakery", "", ca)).toBeNull();
+    expect(races("Becerra and Hilton: a tale of two hotel chains", "", { scope: "national" })).toBeNull();
+  });
+
+  it("the office with its district and a race word", () => {
+    expect(races("Orange County Supervisor, District 4: Who's running on Nov. 3 and why it matters", "", ca)?.raceIds).toEqual(["oc4"]);
+    // Office and state but no race word: about the officeholder, not the race.
+    expect(races("California governor signs election security bill", "", ca)).toBeNull();
+  });
+
+  it("a section heading for the office in a guide that names its candidates", () => {
+    const guide = [
+      "California voters will fill several statewide offices that rarely make headlines. Here is a look at each contest and the people running.",
+      "Lieutenant governor",
+      "Ana Example, a former mayor, faces Bo Placeholder, a business owner. Example said she would focus on the state's universities.",
+      "Insurance commissioner",
+      "Jane Kim and Ben Allen, both Democrats, are competing. Kim said rates are too high; Allen said he would expand the FAIR Plan.",
+    ].join("\n");
+    const m = races("Your last-minute guide to obscure but important statewide races in California", "Down-ballot offices explained.", ca, guide);
+    expect(m?.raceIds).toEqual(expect.arrayContaining(["ltgov", "ins"]));
+    expect(m?.decisions.races.find((r) => r.id === "ltgov")?.how).toBe("section heading");
+  });
+
+  it("still keeps one-candidate stories off the race", () => {
+    expect(races("Xavier Becerra roasted for bizarre deflection on California housing debate: 'Maybe in my backyard?'", "", ca)?.raceIds).toEqual([]);
+    expect(races("Steve Hilton unveils plan to cut state rules", "The Republican gubernatorial candidate wants fewer regulations.", ca)?.raceIds).toEqual([]);
+  });
+
+  it("matches a district race by its headline in another state (non-CA)", () => {
+    const tx = buildMatcher([
+      { id: "tx-h7", kind: "candidate", title: "State Representative, District 7", divisionName: "Texas House District 7", state: "TX", stateLevel: true, candidates: [{ id: "t1", names: ["Alma Rivera"] }, { id: "t2", names: ["Ben Ortiz"] }] },
+    ]);
+    expect(tx("Who's running for Texas House District 7", "", { scope: "state", state: "TX" })?.raceIds).toEqual(["tx-h7"]);
+    expect(tx("Who's running for Texas House District 7", "", { scope: "state", state: "CA" })).toBeNull();
+  });
+});
+
 describe("canonicalUrl", () => {
   it("drops tracking params, fragments and trailing slashes", () => {
     expect(canonicalUrl("https://CalMatters.org/politics/2026/10/story/?utm_source=rss&utm_medium=feed#comments")).toBe(
