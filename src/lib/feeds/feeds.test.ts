@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalUrl } from "./canonical";
-import { aboutInText, buildMatcher, districtTerms, nameVariants, placeTerm, type TrackedContest } from "./match";
+import { aboutInText, buildMatcher, districtTerms, nameVariants, placeTerm, statesNamed, type TrackedContest } from "./match";
 import { parseFeed } from "./parse";
 
 const CONTESTS: TrackedContest[] = [
@@ -319,6 +319,51 @@ describe("race check on real headlines that #32 missed (production, 2026-10-31 t
     ]);
     expect(tx("Who's running for Texas House District 7", "", { scope: "state", state: "TX" })?.raceIds).toEqual(["tx-h7"]);
     expect(tx("Who's running for Texas House District 7", "", { scope: "state", state: "CA" })).toBeNull();
+  });
+});
+
+describe("another state's race is never this one (owner, 2026-11-03)", () => {
+  const national = { scope: "national" as const };
+  const withCourt = buildMatcher([
+    ...CONTESTS,
+    { id: "ca-sc", kind: "candidate", title: "Associate Justice of the Supreme Court", divisionName: "Supreme Court", state: "CA", stateLevel: true, candidates: [{ id: "j1", names: ["Kelli Evans"] }] },
+  ]);
+  // California named only deep in the page, as in a related-stories list.
+  const deep = (lead: string) => `${lead} ${"More reporting on the race and the campaign. ".repeat(60)} Related: California voters head to the polls.`;
+
+  it("the Votebeat and Ballotpedia stories stay off California's races", () => {
+    const vb = withCourt(
+      "Election administration and the 2020 election are hot topics in the Michigan gubernatorial race",
+      "When Michigan voters weigh in on who should be their next governor…",
+      national,
+      deep("When Michigan voters weigh in on who should be their next governor, they will be choosing between two candidates."),
+    );
+    expect(vb?.raceIds ?? []).not.toContain("gov");
+    expect(withCourt("North Carolina Supreme Court race on Nov. 3 could shape 2028 majority", "", national, deep("North Carolina voters will decide a Supreme Court seat."))?.raceIds ?? []).not.toContain("ca-sc");
+    // A statewide race's state must be near the top, not only deep in the page.
+    expect(withCourt("Governor's race tightens", "A look at the final days.", national, deep("Both campaigns made a final push on Saturday."))?.raceIds ?? []).not.toContain("gov");
+  });
+
+  it("still matches when the headline names this race's state too", () => {
+    expect(withCourt("Becerra and Hilton barnstorm California hoping to be next governor", "", national)?.raceIds).toEqual(["gov"]);
+    expect(withCourt("California and Michigan governor's races draw record spending", "", national)?.raceIds).toEqual(["gov"]);
+  });
+
+  it("reads state names carefully: West Virginia isn't Virginia, Washington alone is D.C.", () => {
+    expect([...statesNamed(" west virginia governor race ")]).toEqual(["west virginia"]);
+    expect([...statesNamed(" examining becerra s quarter of a century in washington ")]).toEqual([]);
+    expect([...statesNamed(" washington state voters ")]).toEqual(["washington"]);
+  });
+
+  it("keeps a state outlet's own state's race (a non-CA case)", () => {
+    const tx = buildMatcher([{ id: "tx-gov", kind: "candidate", title: "Governor", divisionName: "Texas", state: "TX", stateLevel: true, candidates: [{ id: "a", names: ["Alma Rivera"] }, { id: "b", names: ["Ben Ortiz"] }] }]);
+    expect(tx("Governor's race tightens in final week", "", { scope: "state", state: "TX" })?.raceIds).toEqual(["tx-gov"]);
+    expect(tx("Governor's race tightens in Oklahoma", "", { scope: "state", state: "TX" })).toBeNull();
+  });
+
+  it("keeps a measure off another state's story", () => {
+    expect(withCourt("Prop 1 explained", "What Texas voters will decide", national)).toBeNull();
+    expect(withCourt("Nevada's Prop 1 and California's Prop 1 compared", "", national)?.raceIds).toEqual(["prop1"]);
   });
 });
 
