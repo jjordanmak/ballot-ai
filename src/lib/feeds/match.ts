@@ -4,10 +4,14 @@
  *
  * - Race: the race itself is the subject (a roundup, a debate, a poll, the
  *   contest): one of its race phrases ("governor's race", "District 8
- *   candidates") in the headline or summary, 2 of its candidates in the
- *   headline, a poll headline naming the office, or race phrases repeated in
- *   the story and in its lead. A story about one candidate stays off the
- *   race's feed. Only these go in `raceIds`.
+ *   candidates") in the headline or summary; 2 of its candidates in the
+ *   headline, by full name or surname ("Wiener vs. Chan"); the office with
+ *   its district, place or state and a race word ("Orange County
+ *   Supervisor, District 4: Who's running"); a poll headline naming the
+ *   office; a section heading for the office in a guide that names its
+ *   candidates; or race phrases repeated in the story and in its lead. A
+ *   story about one candidate stays off the race's feed. Only these go in
+ *   `raceIds`.
  * - Person: the story is about the candidate, not a passing mention. Named
  *   in the headline or summary, a Q&A block of theirs, or a sentence where
  *   they speak or act ("Becerra said", "according to Hilton") decide it;
@@ -104,7 +108,7 @@ const OFFICE_SYNONYMS: [RegExp, string[]][] = [
   [/insurance commissioner/, ["insurance commissioner"]],
   [/superintendent/, ["superintendent", "schools chief"]],
   [/board of equalization/, ["board of equalization"]],
-  [/representative|congress/, ["congress", "congressional", "house", "representative", "congressman", "congresswoman"]],
+  [/representative|congress|house of rep|\brep\b/, ["congress", "congressional", "house", "representative", "congressman", "congresswoman"]],
   [/assembly/, ["assembly", "assemblymember", "assemblyman", "assemblywoman"]],
   [/senat/, ["senate", "senator"]],
   [/supervisor/, ["supervisor", "supervisors"]],
@@ -123,6 +127,12 @@ const OFFICE_SYNONYMS: [RegExp, string[]][] = [
 /** Nouns that make an office or district the subject: "governor's race", "District 8 candidates". */
 const RACE_NOUNS = ["race", "contest", "election", "candidates", "debate", "matchup", "runoff", "poll", "polls"];
 const POLL_WORDS = ["poll", "polls", "survey"];
+/** With the office and its district, place or state in a headline, these make the race the subject. Not "election", "ballot", "vote" or "campaign": "Governor signs election bill" is about the officeholder. */
+const RACE_CUES = ["race", "races", "candidates", "running", "run for", "debate", "debates", "poll", "polls", "matchup", "contest", "seat"];
+/** A guide's section heading ("Lieutenant governor", "District 4 supervisor") is a short line. */
+const HEADING_WORDS = 8;
+/** Surnames this short ("Kim", "Lee") are too common to pair on alone. */
+const MIN_PAIR_SURNAME = 4;
 /** A story's subject is in its lead: a race phrase must appear this early for the story text alone to put it on the race. */
 const LEAD_CHARS = 1_200;
 
@@ -160,6 +170,25 @@ export const STATE_NAMES: Record<string, string> = {
   TN: "tennessee", TX: "texas", UT: "utah", VT: "vermont", VA: "virginia", WA: "washington",
   WV: "west virginia", WI: "wisconsin", WY: "wyoming",
 };
+/** State names longest first, so "west virginia" is found before "virginia". */
+const STATES_LONGEST_FIRST = Object.values(STATE_NAMES).sort((a, b) => b.length - a.length);
+
+/**
+ * The US states a (normalized, space-padded) text names. "Washington" counts
+ * only as "Washington state": on its own it usually means D.C.
+ */
+export function statesNamed(text: string): Set<string> {
+  let rest = text;
+  const out = new Set<string>();
+  for (const n of STATES_LONGEST_FIRST) {
+    const needle = n === "washington" ? "washington state" : n;
+    if (!rest.includes(` ${needle} `)) continue;
+    out.add(n);
+    rest = rest.split(` ${needle} `).join("  ");
+  }
+  return out;
+}
+
 const GENERIC_PLACE_WORDS = /\b(county|of|city|town|district|unified|high school|elementary|school|community college|college|trustee area \w+|\d+(st|nd|rd|th)|congressional|assembly|supervisorial|\d{4}|the)\b/g;
 const SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
 
@@ -229,6 +258,8 @@ interface CompiledRace {
   statewide: boolean;
   /** Candidates' name variants, by candidate. */
   people: string[][];
+  /** Each candidate's surname when long enough to pair on in a headline, else "". */
+  surnames: string[];
 }
 
 interface CompiledMeasure {
@@ -268,6 +299,10 @@ export function buildMatcher(contests: TrackedContest[]) {
       stateName,
       statewide,
       people: c.candidates.map((k) => [...new Set(k.names.flatMap(nameVariants))]),
+      surnames: c.candidates.map((k) => {
+        const last = nameVariants(k.names[0] ?? "")[0]?.split(" ").filter((t) => !SUFFIXES.has(t)).pop() ?? "";
+        return last.length >= MIN_PAIR_SURNAME ? last : "";
+      }),
     });
     for (const k of c.candidates) {
       const variants = [...new Set(k.names.flatMap(nameVariants))];
@@ -302,6 +337,13 @@ export function buildMatcher(contests: TrackedContest[]) {
     const body = article?.slice(0, MAX_ARTICLE_CHARS);
     const text = body ? ` ${normalizeForMatch(`${title} ${summary} ${body}`)} ` : head;
     const lead = body ? ` ${normalizeForMatch(body.slice(0, LEAD_CHARS))} ` : "";
+    const headings = body
+      ? body
+          .split(/\n+/)
+          .map((l) => l.trim())
+          .filter((l) => l && l.split(/\s+/).length <= HEADING_WORDS)
+          .map((l) => ` ${normalizeForMatch(l)} `)
+      : [];
     const national = source.scope === "national";
     // A state or local outlet's "Smith" is about that state's Smith, never another state's.
     const inScope = (state?: string) => national || (!!source.state && state === source.state);
@@ -311,6 +353,12 @@ export function buildMatcher(contests: TrackedContest[]) {
     ];
     const impliedState = !national && source.state ? STATE_NAMES[source.state] : undefined;
     const inContext = (term: string) => has(text, term) || implied.includes(term);
+    // Near the top: the headline, summary or the story's lead, or implied by the outlet. A state named deep in a page
+    // (a related-stories list, a passing aside) doesn't say which state's race a story is about.
+    const near = (term: string) => has(head, term) || has(lead, term) || implied.includes(term);
+    // A headline about another state's race isn't about this one ("…the Michigan gubernatorial race").
+    const headStates = statesNamed(head);
+    const otherState = (stateName?: string) => !!stateName && headStates.size > 0 && !headStates.has(stateName);
     const contestIds = new Set<string>();
     const raceIds = new Set<string>();
     const candidateIds = new Set<string>();
@@ -320,16 +368,25 @@ export function buildMatcher(contests: TrackedContest[]) {
 
     // Race: the race itself is the subject.
     for (const r of races) {
-      if (!inScope(r.state)) continue;
+      if (!inScope(r.state) || otherState(r.stateName)) continue;
       const named = r.people.filter((vs) => vs.some((v) => has(text, v))).length;
-      // Which race: its district (with the state) or its place in the story, or one of its own candidates named.
-      const inPlace = named > 0 || (r.district.length ? r.district.some((d) => has(text, d)) && (!r.stateName || inContext(r.stateName)) : r.scope.some(inContext));
+      // 2 of its candidates in the headline, by full name or surname ("Wiener vs. Chan"). Surnames alone also
+      // need the race's state or place in the story (or the outlet's own), so "Johnson and Brown" elsewhere doesn't count.
+      const inHead = r.people.map((vs) => vs.some((v) => has(head, v)));
+      const bySurname = r.people.map((_, i) => inHead[i] || (!!r.surnames[i] && has(head, r.surnames[i])));
+      const where = r.district.length ? !r.stateName || near(r.stateName) : r.scope.some(r.statewide ? near : inContext);
+      const pair = r.people.length >= 2 && (inHead.filter(Boolean).length >= 2 || (where && bySurname.filter(Boolean).length >= 2));
+      // Which race: its district (with the state) or its place in the story, or its own candidates named.
+      const inPlace = named > 0 || pair || (r.district.length ? r.district.some((d) => has(text, d)) && (!r.stateName || near(r.stateName)) : r.scope.some(r.statewide ? near : inContext));
       if (!inPlace) continue;
       const phrase = r.phrases.find((p) => has(head, p));
-      const pair = r.people.length >= 2 && r.people.filter((vs) => vs.some((v) => has(head, v))).length >= 2;
+      // The office with this race's own district, place or state, in the headline (the outlet's implied place counts).
+      const identified = r.district.length ? r.district.some((d) => has(head, d)) : r.scope.some((t) => has(head, t) || implied.includes(t));
+      const office = identified && r.offices.some((o) => has(head, o)) && RACE_CUES.some((w) => has(head, w));
       const poll = POLL_WORDS.some((w) => has(head, w)) && r.offices.some((o) => has(head, o)) && (r.statewide || named > 0);
+      const heading = headings.some((h) => r.offices.some((o) => has(h, o)) && (!r.district.length || r.district.some((d) => has(h, d)))) && named >= Math.min(2, r.people.length);
       const told = !!body && r.phrases.some((p) => has(lead, p)) && r.phrases.reduce((n, p) => n + count(text, p), 0) >= 2;
-      const how = phrase ? "headline" : pair ? "candidates in headline" : poll ? "poll headline" : told ? "story" : null;
+      const how = phrase ? "headline" : pair ? "candidates in headline" : office ? "office in headline" : poll ? "poll headline" : heading ? "section heading" : told ? "story" : null;
       if (!how) continue;
       raceIds.add(r.contestId);
       contestIds.add(r.contestId);
@@ -367,7 +424,7 @@ export function buildMatcher(contests: TrackedContest[]) {
 
     // Measure: its identifier plus its jurisdiction.
     for (const m of measures) {
-      if (!inScope(m.state)) continue;
+      if (!inScope(m.state) || otherState(m.state ? STATE_NAMES[m.state] : undefined)) continue;
       const inHead = m.ids.find((i) => has(head, i));
       const id = inHead ?? (body ? m.ids.find((i) => count(text, i) >= 2) : undefined);
       if (!id) continue;

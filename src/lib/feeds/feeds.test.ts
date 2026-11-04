@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalUrl } from "./canonical";
-import { aboutInText, buildMatcher, districtTerms, nameVariants, placeTerm, type TrackedContest } from "./match";
+import { aboutInText, buildMatcher, districtTerms, nameVariants, placeTerm, statesNamed, type TrackedContest } from "./match";
 import { parseFeed } from "./parse";
 
 const CONTESTS: TrackedContest[] = [
@@ -268,6 +268,102 @@ describe("three independent checks: race, person, measure", () => {
     expect(aboutInText("The plan drew fire. “It's too costly,” said Jane Sample, a candidate.", v, "sample")).toMatchObject({ how: "said" });
     expect(aboutInText("Sample, who chairs the committee, proposed a cap on rents.", v, "sample")?.how).toBe("said");
     expect(aboutInText("Mayor Lee said Sample would be a fine pick. The seat was once held by Jane Sample.", v, "sample")).toBeNull();
+  });
+});
+
+describe("race check on real headlines that #32 missed (production, 2026-10-31 to 11-01)", () => {
+  const ca = { scope: "state" as const, state: "CA" };
+  const local = { scope: "local" as const, state: "CA", jurisdictions: ["San Francisco"] };
+  const races = buildMatcher([
+    ...CONTESTS,
+    { id: "ltgov", kind: "candidate", title: "Lieutenant Governor", divisionName: "California", state: "CA", stateLevel: true, candidates: [{ id: "lt1", names: ["Ana Example"] }, { id: "lt2", names: ["Bo Placeholder"] }] },
+    { id: "ca11", kind: "candidate", title: "US HOUSE OF REP DISTRICT 11", divisionName: "11TH CONG", state: "CA", stateLevel: true, candidates: [{ id: "wiener", names: ["Scott Wiener", "SCOTT WIENER"] }, { id: "chan", names: ["Connie Chan", "CONNIE CHAN"] }] },
+    { id: "oc4", kind: "candidate", title: "Supervisor 4th District", divisionName: "4th Supervisorial District", state: "CA", candidates: [{ id: "oc-a", names: ["Dina Sample"] }, { id: "oc-b", names: ["Raul Example"] }] },
+  ]);
+
+  it("2 candidates by surname in the headline", () => {
+    expect(races("From an LGBTQ+ rally to Trunk or Treat, Becerra and Hilton barnstorm California hoping to be next governor", "", ca)?.raceIds).toEqual(["gov"]);
+    expect(races("Wiener vs. Chan: Two very different urbanist visions in San Francisco's congressional race", "", local)?.raceIds).toEqual(["ca11"]);
+    // Short surnames never pair on their own, and surnames alone need the race's state or place.
+    expect(races("Kim and Lee open a bakery", "", ca)).toBeNull();
+    expect(races("Becerra and Hilton: a tale of two hotel chains", "", { scope: "national" })).toBeNull();
+  });
+
+  it("the office with its district and a race word", () => {
+    expect(races("Orange County Supervisor, District 4: Who's running on Nov. 3 and why it matters", "", ca)?.raceIds).toEqual(["oc4"]);
+    // Office and state but no race word: about the officeholder, not the race.
+    expect(races("California governor signs election security bill", "", ca)).toBeNull();
+  });
+
+  it("a section heading for the office in a guide that names its candidates", () => {
+    const guide = [
+      "California voters will fill several statewide offices that rarely make headlines. Here is a look at each contest and the people running.",
+      "Lieutenant governor",
+      "Ana Example, a former mayor, faces Bo Placeholder, a business owner. Example said she would focus on the state's universities.",
+      "Insurance commissioner",
+      "Jane Kim and Ben Allen, both Democrats, are competing. Kim said rates are too high; Allen said he would expand the FAIR Plan.",
+    ].join("\n");
+    const m = races("Your last-minute guide to obscure but important statewide races in California", "Down-ballot offices explained.", ca, guide);
+    expect(m?.raceIds).toEqual(expect.arrayContaining(["ltgov", "ins"]));
+    expect(m?.decisions.races.find((r) => r.id === "ltgov")?.how).toBe("section heading");
+  });
+
+  it("still keeps one-candidate stories off the race", () => {
+    expect(races("Xavier Becerra roasted for bizarre deflection on California housing debate: 'Maybe in my backyard?'", "", ca)?.raceIds).toEqual([]);
+    expect(races("Steve Hilton unveils plan to cut state rules", "The Republican gubernatorial candidate wants fewer regulations.", ca)?.raceIds).toEqual([]);
+  });
+
+  it("matches a district race by its headline in another state (non-CA)", () => {
+    const tx = buildMatcher([
+      { id: "tx-h7", kind: "candidate", title: "State Representative, District 7", divisionName: "Texas House District 7", state: "TX", stateLevel: true, candidates: [{ id: "t1", names: ["Alma Rivera"] }, { id: "t2", names: ["Ben Ortiz"] }] },
+    ]);
+    expect(tx("Who's running for Texas House District 7", "", { scope: "state", state: "TX" })?.raceIds).toEqual(["tx-h7"]);
+    expect(tx("Who's running for Texas House District 7", "", { scope: "state", state: "CA" })).toBeNull();
+  });
+});
+
+describe("another state's race is never this one (owner, 2026-11-03)", () => {
+  const national = { scope: "national" as const };
+  const withCourt = buildMatcher([
+    ...CONTESTS,
+    { id: "ca-sc", kind: "candidate", title: "Associate Justice of the Supreme Court", divisionName: "Supreme Court", state: "CA", stateLevel: true, candidates: [{ id: "j1", names: ["Kelli Evans"] }] },
+  ]);
+  // California named only deep in the page, as in a related-stories list.
+  const deep = (lead: string) => `${lead} ${"More reporting on the race and the campaign. ".repeat(60)} Related: California voters head to the polls.`;
+
+  it("the Votebeat and Ballotpedia stories stay off California's races", () => {
+    const vb = withCourt(
+      "Election administration and the 2020 election are hot topics in the Michigan gubernatorial race",
+      "When Michigan voters weigh in on who should be their next governor…",
+      national,
+      deep("When Michigan voters weigh in on who should be their next governor, they will be choosing between two candidates."),
+    );
+    expect(vb?.raceIds ?? []).not.toContain("gov");
+    expect(withCourt("North Carolina Supreme Court race on Nov. 3 could shape 2028 majority", "", national, deep("North Carolina voters will decide a Supreme Court seat."))?.raceIds ?? []).not.toContain("ca-sc");
+    // A statewide race's state must be near the top, not only deep in the page.
+    expect(withCourt("Governor's race tightens", "A look at the final days.", national, deep("Both campaigns made a final push on Saturday."))?.raceIds ?? []).not.toContain("gov");
+  });
+
+  it("still matches when the headline names this race's state too", () => {
+    expect(withCourt("Becerra and Hilton barnstorm California hoping to be next governor", "", national)?.raceIds).toEqual(["gov"]);
+    expect(withCourt("California and Michigan governor's races draw record spending", "", national)?.raceIds).toEqual(["gov"]);
+  });
+
+  it("reads state names carefully: West Virginia isn't Virginia, Washington alone is D.C.", () => {
+    expect([...statesNamed(" west virginia governor race ")]).toEqual(["west virginia"]);
+    expect([...statesNamed(" examining becerra s quarter of a century in washington ")]).toEqual([]);
+    expect([...statesNamed(" washington state voters ")]).toEqual(["washington"]);
+  });
+
+  it("keeps a state outlet's own state's race (a non-CA case)", () => {
+    const tx = buildMatcher([{ id: "tx-gov", kind: "candidate", title: "Governor", divisionName: "Texas", state: "TX", stateLevel: true, candidates: [{ id: "a", names: ["Alma Rivera"] }, { id: "b", names: ["Ben Ortiz"] }] }]);
+    expect(tx("Governor's race tightens in final week", "", { scope: "state", state: "TX" })?.raceIds).toEqual(["tx-gov"]);
+    expect(tx("Governor's race tightens in Oklahoma", "", { scope: "state", state: "TX" })).toBeNull();
+  });
+
+  it("keeps a measure off another state's story", () => {
+    expect(withCourt("Prop 1 explained", "What Texas voters will decide", national)).toBeNull();
+    expect(withCourt("Nevada's Prop 1 and California's Prop 1 compared", "", national)?.raceIds).toEqual(["prop1"]);
   });
 });
 
